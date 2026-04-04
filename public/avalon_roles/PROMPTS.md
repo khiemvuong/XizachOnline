@@ -15,8 +15,14 @@
 - Prompt:
   "Square 1:1 mystical portrait icon representing ambiguous seer identity (could be Merlin or Morgana), glowing eyes, dual-tone aura blue and violet, arcane symbols, balanced holy and dark hints, elegant fantasy painterly style, centered composition, no text, no watermark"
 
+## 4) Assassin (nhin la sat thu, khac unknown role)
+
+- Prompt:
+  "Square 1:1 portrait icon for the Assassin role in Avalon, masked elite killer in dark leather and steel, ritual dagger held close to chest, sharp angular silhouette, cold moonlight with subtle crimson rim light, tense predatory posture, medieval-fantasy painterly digital art, high contrast, clean centered composition, no text, no watermark"
+
 ## Suggested output file names
 
 - unknown_role.jpeg
 - unknown_evil.jpeg
 - merlin_or_morgana.jpeg
+- assassin.jpeg

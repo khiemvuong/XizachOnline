@@ -11,10 +11,10 @@ const ROLE_IMAGE_MAP: Record<string, string> = {
   Minion_Evil: "/avalon_roles/evil_minion.jpeg",
 };
 
-const FALLBACK_IMAGE = "/avalon_roles/good_minion.jpeg";
-const UNKNOWN_ROLE_IMAGE = "/avalon_roles/good_minion.jpeg";
+const FALLBACK_IMAGE = "/avalon_roles/unknown.jpeg";
+const UNKNOWN_ROLE_IMAGE = "/avalon_roles/unknown.jpeg";
 const UNKNOWN_EVIL_IMAGE = "/avalon_roles/evil_minion.jpeg";
-const MERLIN_OR_MORGANA_IMAGE = "/avalon_roles/merlin.jpeg";
+const MERLIN_OR_MORGANA_IMAGE = "/avalon_roles/merlin_or_morgana.jpeg";
 
 export function getRoleImageSrcForViewer(target: AvalonPlayer, viewer: AvalonPlayer): string {
   if (target.userId === viewer.userId && viewer.role) {

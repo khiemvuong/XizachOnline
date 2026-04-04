@@ -2,6 +2,26 @@ export type AvalonRole = 'Arthur' | 'Merlin' | 'Percival' | 'Mordred' | 'Assassi
 export type AvalonTeam = 'Good' | 'Evil';
 export type AvalonGameState = 'LOBBY' | 'ROLE_REVEAL' | 'TEAM_BUILDING' | 'VOTING' | 'QUEST' | 'ASSASSINATION' | 'GAME_OVER';
 
+export type AvalonVoteOutcome = {
+  id: number;
+  kind: 'team' | 'quest';
+  result: 'approve' | 'reject' | 'success' | 'fail';
+  leaderUserId: string;
+  revealDetailedCountsToLeader: boolean;
+  approveCount?: number;
+  rejectCount?: number;
+  successCount?: number;
+  failCount?: number;
+  totalVotes?: number;
+  questNumber?: number;
+  createdAt: number;
+};
+
+export type AvalonQuestParticipantsRecord = {
+  questNumber: number;
+  participantUserIds: string[];
+};
+
 export interface AvalonPlayer {
   id: string; // socket id
   userId: string;
@@ -29,6 +49,8 @@ export interface AvalonRoom {
     morgana: boolean;
     mordred: boolean;
     oberon: boolean;
+    leaderSeesDetailedVoteCounts: boolean;
+    showQuestParticipantsBoard: boolean;
     lancelotMode?: boolean;
   };
   messages: { senderId: string, senderName: string, text: string, timestamp: number }[];
@@ -45,4 +67,6 @@ export interface AvalonRoom {
   winner?: 'Good' | 'Evil' | 'Abandoned';
   assassinationTarget?: string;
   earlyEndVotes?: string[]; // userIds of players who have voted to end game early
+  voteOutcome?: AvalonVoteOutcome | null;
+  questParticipantsHistory: AvalonQuestParticipantsRecord[];
 }

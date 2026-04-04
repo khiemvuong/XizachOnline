@@ -1,14 +1,22 @@
 "use client";
 
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
+import { useState } from 'react';
 import { Socket } from 'socket.io-client';
 import Image from 'next/image';
 import CenterBoard from './CenterBoard';
 import { getRoleImageSrcForViewer } from './roleImage';
 
 export default function RoundTable({ gameState, me, socket }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null }) {
+   const [isQuestHistoryOpen, setIsQuestHistoryOpen] = useState(false);
   const activePlayers = gameState.players.filter((p: AvalonPlayer) => p.status === 'connected');
   const numPlayers = activePlayers.length;
+   const questParticipantsHistory = gameState.questParticipantsHistory ?? [];
+   const showQuestParticipantsBoard = Boolean(gameState.settings?.showQuestParticipantsBoard);
+   const playerNameById = new Map(gameState.players.map((player) => [player.userId, player.name]));
+   const questRecordByNumber = new Map(
+      questParticipantsHistory.map((record) => [record.questNumber, record]),
+   );
 
   const myIndex = activePlayers.findIndex((p: AvalonPlayer) => p.userId === me.userId);
   
@@ -21,6 +29,69 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
   return (
    <div className="flex-1 w-full min-h-100 h-full relative flex items-center justify-center py-4 px-2">
        <CenterBoard gameState={gameState} me={me} socket={socket} />
+
+          {showQuestParticipantsBoard && (
+               <>
+                  <button
+                     type="button"
+                     onClick={() => setIsQuestHistoryOpen(true)}
+                     className="absolute left-2 top-2 z-30 pointer-events-auto rounded-lg border border-(--tertiary)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--tertiary) shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-colors hover:bg-surface-container"
+                  >
+                     Lịch sử nhiệm vụ
+                  </button>
+
+                  {isQuestHistoryOpen && (
+                     <div
+                        className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-3 pointer-events-auto"
+                        onClick={() => setIsQuestHistoryOpen(false)}
+                     >
+                        <div
+                           className="w-full max-w-lg rounded-xl border border-(--outline-variant)/45 bg-surface-container-low/95 p-4 backdrop-blur-md shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+                           onClick={(event) => event.stopPropagation()}
+                        >
+                           <div className="flex items-center justify-between gap-3">
+                              <p className="text-xs uppercase tracking-[0.22em] font-headline text-(--tertiary)">
+                                 Lịch Sử Đi Nhiệm Vụ
+                              </p>
+                              <button
+                                 type="button"
+                                 onClick={() => setIsQuestHistoryOpen(false)}
+                                 className="rounded-md border border-(--outline-variant)/55 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-(--on-surface-variant) transition-colors hover:bg-surface-container-high cursor-pointer"
+                              >
+                                 Đóng
+                              </button>
+                           </div>
+
+                           <div className="mt-3 max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+                              {gameState.questHistory.map((quest, index) => {
+                                 const questNumber = index + 1;
+                                 const record = questRecordByNumber.get(questNumber);
+                                 const participantNames = record
+                                    ? record.participantUserIds.map((id) => playerNameById.get(id) ?? 'Ẩn danh')
+                                    : [];
+
+                                 return (
+                                    <div key={questNumber} className="rounded-lg border border-(--outline-variant)/30 bg-surface-container-lowest/50 p-2">
+                                       <div className="flex items-center justify-between gap-2">
+                                          <p className="text-[10px] uppercase tracking-[0.18em] text-(--on-surface)">
+                                             Phase {questNumber}
+                                          </p>
+                                          <span className={`text-[10px] uppercase tracking-[0.12em] ${quest.status === 'success' ? 'text-(--primary)' : quest.status === 'fail' ? 'text-(--tertiary)' : 'text-(--on-surface-variant)'}`}>
+                                             {quest.status === 'pending' ? 'Chưa chạy' : quest.status === 'success' ? 'Thành công' : 'Thất bại'}
+                                          </span>
+                                       </div>
+                                       <p className="mt-1 text-[11px] text-(--on-surface-variant)">
+                                          {participantNames.length > 0 ? participantNames.join(', ') : 'Chưa có người đi nhiệm vụ'}
+                                       </p>
+                                    </div>
+                                 );
+                              })}
+                           </div>
+                        </div>
+                     </div>
+                  )}
+               </>
+          )}
 
        {/* Players Circle constraint to fit in viewport strictly minus breathing room */}
        {/* Players Circle constraint to fit in viewport strictly minus breathing room */}

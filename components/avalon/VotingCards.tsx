@@ -16,6 +16,8 @@ export default function VotingCards({
   const isVoting = gameState.state === "VOTING";
   const isQuest = gameState.state === "QUEST";
   const canVoteQuest = isQuest && gameState.proposedTeam.includes(me.userId);
+  const isGoodTeamMember = me.team === "Good";
+  const failCardLocked = canVoteQuest && isGoodTeamMember;
   const showCards = (isVoting && !me.hasVoted) || (canVoteQuest && !me.hasVoted);
 
   if (!showCards) {
@@ -130,13 +132,18 @@ export default function VotingCards({
               </button>
 
               <button
-                className="group relative w-full max-w-75 aspect-2/3 border flex flex-col items-center justify-center transition-transform hover:-translate-y-3 shadow-2xl"
+                className={`group relative w-full max-w-75 aspect-2/3 border flex flex-col items-center justify-center shadow-2xl ${failCardLocked ? "cursor-not-allowed opacity-45 saturate-60" : "transition-transform hover:-translate-y-3 cursor-pointer"}`}
                 style={{
                   backgroundColor: "#3f0f0f",
                   borderColor: "#450a0a",
                   borderRadius: "12px",
                 }}
-                onClick={() => socket?.emit("voteQuest", "fail")}
+                onClick={() => {
+                  if (!failCardLocked) {
+                    socket?.emit("voteQuest", "fail");
+                  }
+                }}
+                disabled={failCardLocked}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -154,10 +161,21 @@ export default function VotingCards({
                 <p className="text-[#991b1b] text-[9px] uppercase tracking-[0.2em] font-sans font-bold">
                   Gieo Rắc Bóng Tối
                 </p>
+                {failCardLocked && (
+                  <p className="mt-3 rounded-md border border-rose-300/35 bg-rose-950/35 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-rose-200">
+                    Phe Thiện bị khóa lá này
+                  </p>
+                )}
               </button>
             </>
           )}
         </div>
+
+        {canVoteQuest && isGoodTeamMember && (
+          <p className="mt-4 text-center text-xs uppercase tracking-[0.16em] text-primary-avalon/90">
+            Lưu ý: Phe tốt không được vote Thất bại.
+          </p>
+        )}
       </div>
     </div>
   );

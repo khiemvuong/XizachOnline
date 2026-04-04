@@ -72,11 +72,11 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
           {me.role && (
             <div className="space-y-6 w-full flex flex-col items-center">
               {/* Role Avatar/Image */}
-              <div className="relative">
+              <div className="relative mt-2">
                 <div 
-                  className="w-28 h-28 lg:w-32 lg:h-32 rounded-full border-2 flex items-center justify-center relative overflow-hidden"
+                  className="w-40 h-40 lg:w-48 lg:h-48 rounded-2xl border-2 flex items-center justify-center relative overflow-hidden shadow-2xl"
                   style={{ 
-                    borderColor: `color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 30%, transparent)`,
+                    borderColor: `color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 40%, transparent)`,
                     background: `linear-gradient(to bottom, color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 20%, transparent), var(--surface-container-high))`
                   }}
                 >
@@ -84,14 +84,15 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
                     src={roleImageSrc}
                     alt={`Role ${me.role ?? 'Unknown'}`}
                     fill
-                    sizes="128px"
+                    sizes="192px"
                     className="object-cover"
                     priority
                   />
-                  <div className="absolute inset-0 bg-linear-to-t from-(--surface-container)/80 to-transparent"></div>
+                  {/* Subtle vignette instead of heavy fade */}
+                  <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.6)] pointer-events-none rounded-2xl"></div>
                 </div>
                 <div 
-                  className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-4 py-1 text-[10px] font-bold tracking-widest uppercase rounded-full shadow-lg whitespace-nowrap"
+                  className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-5 py-1.5 text-[10px] lg:text-[11px] font-bold tracking-widest uppercase rounded-full shadow-lg whitespace-nowrap border border-white/10 z-10"
                   style={{ backgroundColor: `var(--color-${colorTheme}-avalon, var(--${colorTheme}))`, color: isEvil ? '#fff' : '#061423' }}
                 >
                   {factionName}

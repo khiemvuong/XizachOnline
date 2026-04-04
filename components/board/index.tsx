@@ -1060,7 +1060,7 @@ export default function GameBoard({ roomId }: { roomId: string }) {
                 }}
             >
                 <RotateCw className="mx-auto mb-3 h-8 w-8 text-(--accent-primary)" />
-                <h2 className="text-lg font-black">Vui lòng xoay ngang điện thoại</h2>
+                <h2 className="text-lg font-white">Vui lòng xoay ngang điện thoại</h2>
                 <p className="mt-2 text-sm text-(--text-muted)">
                     Giao diện cho điện thoại chỉ hỗ trợ chế độ ngang trong phòng này.
                 </p>

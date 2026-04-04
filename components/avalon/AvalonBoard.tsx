@@ -8,7 +8,10 @@ import RoundTable from './RoundTable';
 import VotingCards from './VotingCards';
 import AssassinationUI from './AssassinationUI';
 import GameOver from './GameOver';
-import { BookOpen, Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, EyeOff, Gavel, Users, AlertTriangle } from 'lucide-react';
+import EarlyEndOverlay from './EarlyEndOverlay';
+import VoteOutcomeOverlay from './VoteOutcomeOverlay';
+import type { LucideIcon } from 'lucide-react';
+import { BookOpen, Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle } from 'lucide-react';
 
 export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -37,9 +40,9 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     const socketio = io('/avalon', {
       reconnectionDelayMax: 10000,
     });
-    setSocket(socketio);
 
     socketio.on('connect', () => {
+      setSocket(socketio);
       socketio.emit('joinRoom', { roomId, playerName, userId });
     });
 
@@ -176,6 +179,8 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       {gameState.state === 'GAME_OVER' && me && (
          <GameOver gameState={gameState} me={me} socket={socket} />
       )}
+
+      {me && <VoteOutcomeOverlay gameState={gameState} me={me} />}
     </div>
   );
 }
@@ -284,6 +289,50 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
             <RoleCard label="Oberon" icon={CloudFog} isOn={gameState.settings.oberon} onToggle={() => handleToggleSetting('oberon')} disabled={!isHost} type="evil" />
           </div>
 
+          <div
+            onClick={() => isHost && handleToggleSetting('leaderSeesDetailedVoteCounts')}
+            className={`mb-8 rounded-xl border p-4 transition-all ${isHost ? 'cursor-pointer hover:bg-[#1e293b]/70' : 'cursor-not-allowed opacity-70'} ${gameState.settings.leaderSeesDetailedVoteCounts ? 'border-(--primary)/45 bg-(--primary)/10' : 'border-(--outline-variant)/35 bg-[#0f172a]/45'}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] font-headline text-(--on-surface)">
+                  Thủ Lĩnh Xem Chi Tiết Phiếu
+                </p>
+                <p className="mt-1 text-[11px] text-(--on-surface-variant)">
+                  Bật: khi hiện kết quả approve/reject hoặc success/fail, chỉ thủ lĩnh thấy số lượt chi tiết.
+                </p>
+                <p className="mt-0.5 text-[11px] text-(--on-surface-variant)">
+                  Tắt: tất cả chỉ thấy kết quả cuối, không hiện số lượng phiếu.
+                </p>
+              </div>
+              <div className={`relative mt-1 h-6 w-11 shrink-0 rounded-full border overflow-hidden ${gameState.settings.leaderSeesDetailedVoteCounts ? 'border-(--primary)/65 bg-(--primary)/35' : 'border-(--outline-variant)/55 bg-(--outline-variant)/35'}`}>
+                <div className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-surface-dim-avalon shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-200 ${gameState.settings.leaderSeesDetailedVoteCounts ? 'translate-x-5' : 'translate-x-0'}`} />
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => isHost && handleToggleSetting('showQuestParticipantsBoard')}
+            className={`mb-8 rounded-xl border p-4 transition-all ${isHost ? 'cursor-pointer hover:bg-[#1e293b]/70' : 'cursor-not-allowed opacity-70'} ${gameState.settings.showQuestParticipantsBoard ? 'border-(--tertiary)/45 bg-(--tertiary)/10' : 'border-(--outline-variant)/35 bg-[#0f172a]/45'}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] font-headline text-(--on-surface)">
+                  Bảng Lịch Sử Nhiệm Vụ
+                </p>
+                <p className="mt-1 text-[11px] text-(--on-surface-variant)">
+                  Bật: trên bàn chơi sẽ hiện bảng ai đã tham gia từng nhiệm vụ theo phase.
+                </p>
+                <p className="mt-0.5 text-[11px] text-(--on-surface-variant)">
+                  Tắt: ẩn hoàn toàn bảng lịch sử nhiệm vụ.
+                </p>
+              </div>
+              <div className={`relative mt-1 h-6 w-11 shrink-0 rounded-full border overflow-hidden ${gameState.settings.showQuestParticipantsBoard ? 'border-(--tertiary)/65 bg-(--tertiary)/35' : 'border-(--outline-variant)/55 bg-(--outline-variant)/35'}`}>
+                <div className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-surface-dim-avalon shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-200 ${gameState.settings.showQuestParticipantsBoard ? 'translate-x-5' : 'translate-x-0'}`} />
+              </div>
+            </div>
+          </div>
+
           {/* Action Button */}
           {isHost ? (
             <div>
@@ -320,7 +369,7 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
   );
 }
 
-function RoleCard({ label, icon: Icon, isOn, onToggle, disabled, type }: { label: string, icon: any, isOn: boolean, onToggle: () => void, disabled: boolean, type: 'good' | 'evil' }) {
+function RoleCard({ label, icon: Icon, isOn, onToggle, disabled, type }: { label: string, icon: LucideIcon, isOn: boolean, onToggle: () => void, disabled: boolean, type: 'good' | 'evil' }) {
   const isGood = type === 'good';
   const colorVar = isGood ? 'var(--primary)' : 'var(--tertiary)';
   const baseBg = isOn ? (isGood ? 'bg-(--primary)/10' : 'bg-(--tertiary)/10') : 'bg-[#0f172a]/50';
@@ -339,46 +388,3 @@ function RoleCard({ label, icon: Icon, isOn, onToggle, disabled, type }: { label
     </div>
   );
 } 
-
-function EarlyEndOverlay({ gameState, userId, socket }: { gameState: AvalonRoom, userId: string, socket: Socket | null }) {
-   const hasVoted = gameState.earlyEndVotes?.includes(userId);
-   const connectedCount = gameState.players.filter(p => p.status === 'connected').length;
-   const voteCount = gameState.earlyEndVotes?.length || 0;
-
-   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/82 backdrop-blur-sm px-4">
-      <div className="w-full max-w-xl bg-surface-container-low/85 border border-outline-variant/35 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.55)] p-6 md:p-8 text-center">
-        <p className="text-[10px] uppercase tracking-[0.28em] text-tertiary-avalon mb-2">The Final Decree</p>
-        <AlertTriangle className="w-12 h-12 text-tertiary-avalon mx-auto mb-4 animate-pulse" />
-        <h2 className="text-2xl md:text-3xl font-headline text-on-surface uppercase tracking-widest mb-3">Huỷ Trận Đấu?</h2>
-        <p className="text-sm md:text-base font-body text-on-surface-variant mb-5">
-          Có người đề xuất huỷ trận đấu hiện tại. Hội đồng có đồng thuận không?
-        </p>
-        <p className="text-xs uppercase tracking-[0.2em] text-tertiary-avalon mb-6 font-bold">
-          {voteCount} / {connectedCount} người đồng ý
-        </p>
-
-        {hasVoted ? (
-          <div className="py-3 px-4 bg-tertiary-container/30 rounded-lg text-tertiary-avalon text-xs font-bold tracking-widest uppercase border border-tertiary/30">
-            Đã ghi nhận phiếu. Chờ mọi người...
-          </div>
-        ) : (
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button 
-              onClick={() => socket?.emit('voteEarlyEnd', false)}
-              className="min-w-40 py-3 px-5 bg-transparent border border-outline-variant text-on-surface-variant rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-surface-container-high/40 transition"
-            >
-              Từ Chối
-            </button>
-            <button 
-              onClick={() => socket?.emit('voteEarlyEnd', true)}
-              className="min-w-40 py-3 px-5 bg-tertiary text-on-tertiary-fixed rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition"
-            >
-              Đồng Ý Huỷ
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-   );
-}

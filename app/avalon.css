@@ -12,10 +12,10 @@
   --primary-container: #0d1b2a;
   --on-primary: #243141;
   --on-primary-container: #768497;
-  
+
   --secondary: #c6c7c3;
   --secondary-container: #4a4c49;
-  
+
   --tertiary: #ffb4a8;
   --tertiary-container: #3e0000;
   --on-tertiary-container: #e25240;
@@ -23,10 +23,17 @@
   --on-surface: #d6e4f9;
   --on-surface-variant: #c4c6cc;
   --outline-variant: #44474c;
+  --ending-primary-glow: rgba(186, 200, 220, 0.34);
+  --ending-tertiary-glow: rgba(255, 180, 168, 0.3);
+  --ending-neutral-glow: rgba(198, 199, 195, 0.2);
 
   color: var(--on-surface);
   background-color: var(--background);
-  background-image: radial-gradient(circle at center, var(--surface) 0%, var(--surface-container-lowest) 100%);
+  background-image: radial-gradient(
+    circle at center,
+    var(--surface) 0%,
+    var(--surface-container-lowest) 100%
+  );
   font-family: var(--font-body), "Manrope", sans-serif;
 }
 
@@ -46,27 +53,112 @@
   box-shadow: 0 0 10px var(--tertiary);
 }
 
-/* Landscape Strict Enforcement */
-.avalon-landscape-wrapper {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+.avalon-castle-bg {
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(to bottom, rgba(6, 20, 35, 0.4), rgba(6, 20, 35, 0.95)),
+    url("https://lh3.googleusercontent.com/aida-public/AB6AXuCX--GK7a96dUItJ3kEtZv_Uwb4VgVk4rWxx0Wy7nz59ytudSiaZUFq_838B5tBz0gsMrgpx6sQ8PvDF9K0GXMuhuE05hnHPzrGfUlCEMqNG8_QqIYLg7oCJo3pkfHthtzkdS5gMQ4Zgc_Xkfk4iEODKnPyOl7wTeNGb4dEPsN-BZWaTGC3kEGyXblRtliWNeEke33Cx_oUPEWOtg9wK5DwfAq92E6ra0kJw2Y-M_3haYtvm50Rif-guleocbzRm69L35KOTouh5g");
+  background-size: cover;
+  background-position: center;
 }
 
-@media screen and (max-aspect-ratio: 1/1) {
-  .avalon-landscape-wrapper {
-    /* If the screen is taller than it is wide (Portrait), rotate it artificially */
-    transform: rotate(90deg);
-    transform-origin: bottom left;
-    
+.avalon-atmospheric-bg {
+  background-color: var(--surface-container-lowest);
+  background-image:
+    linear-gradient(to bottom, rgba(6, 20, 35, 0.4), rgba(62, 0, 0, 0.8)),
+    url("https://lh3.googleusercontent.com/aida-public/AB6AXuAv3DLASwJi8iXen35bpfLhDWI3JS_aSjACEABC9rtsyLJa3puMabEce4kaQ_bW0d_PBcpxWKzPSBx6J-VlYEbgSQH82VX8fV78aN13SnQg4aAZ-f605p5Y4Z1s7p4RmYOC8JPi7CCqWEPggKFVZqAiON0LnVAgt1JADGCa1HAvDh2GJmEps5BP8pDAWaMcAvI5D2becBr3SJI2YjiGzhwt1GlO2V8w4qWrtDeOJiFFnwlMehmXe_VGzxDmkrQXh5IV-CAYKSwhIQ");
+  background-size: cover;
+  background-position: center;
+}
+
+.avalon-ending-panel {
+  background-color: rgba(19, 32, 48, 0.42);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(68, 71, 76, 0.25);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.35);
+}
+
+.avalon-assassin-bg {
+  background-color: var(--surface-container-lowest);
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(6, 20, 35, 0.88),
+      rgba(6, 20, 35, 0.35),
+      rgba(62, 0, 0, 0.78)
+    ),
+    url("https://lh3.googleusercontent.com/aida-public/AB6AXuAm9FdfXlG3JTmwBbV14ETe7Dgx88q_nKHVgWggu2CRTot6xY8fxGdE1VXYybwiZM5LM2RAhALLdQ0TMywZKLawGdjr4GtMd0DfI4Z8feEkdl-FhOgLJy7E97PidEiJBr-_Eg_oun2FW0pTXwnb1V9VIoAgEX4Sc6xNgtSxmQHtD3v-rZLknvjhXIlryzxQXOxx33r-e8qhXS9tSPkdj8Q-64jt59mKv7D5Lm1SGFnRJpXBeD8nCrajujvj1DLFu8tBYkDBIzM60Q");
+  background-size: cover;
+  background-position: center;
+}
+
+/* Mobile Orientation Lock: require real landscape instead of rotating content */
+.avalon-orientation-lock {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--surface-container-lowest);
+}
+
+.avalon-orientation-game {
+  width: 100%;
+  height: 100%;
+}
+
+.avalon-orientation-blocker {
+  display: none;
+}
+
+@media screen and (max-aspect-ratio: 1/1) and (pointer: coarse) {
+  .avalon-orientation-game {
+    display: none;
+  }
+
+  .avalon-orientation-blocker {
     position: absolute;
-    top: -100vw;
-    left: 0;
-    
-    width: 100vh;
-    height: 100vw;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background:
+      radial-gradient(
+        circle at 50% 20%,
+        rgba(186, 200, 220, 0.16),
+        transparent 48%
+      ),
+      linear-gradient(180deg, rgba(2, 15, 30, 0.98), rgba(6, 20, 35, 1));
+  }
+
+  .avalon-orientation-card {
+    width: min(100%, 24rem);
+    border-radius: 1rem;
+    border: 1px solid rgba(68, 71, 76, 0.45);
+    background: rgba(19, 32, 48, 0.78);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 1.25rem;
+    text-align: center;
+    color: var(--on-surface);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  .avalon-orientation-title {
+    font-family: var(--font-headline), "Noto Serif", serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ffffff;
+  }
+
+  .avalon-orientation-note {
+    margin-top: 0.6rem;
+    font-size: 0.84rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.92);
   }
 }
