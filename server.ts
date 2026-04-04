@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import next from 'next';
 import { Server } from 'socket.io';
 import { GameEngine } from './server/game/GameEngine';
+import { AvalonEngine } from './server/game/AvalonEngine';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -22,6 +23,7 @@ app.prepare().then(() => {
   });
 
   const gameEngine = new GameEngine(io);
+  const avalonEngine = new AvalonEngine(io);
 
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);

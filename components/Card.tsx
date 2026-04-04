@@ -4,21 +4,21 @@ import { Diamond } from "lucide-react";
 import Image from "next/image";
 
 const Pips = ({ rank, symbol }: { rank: string, symbol: string }) => {
-  const S = () => <span className="leading-none text-[10px] sm:text-[16px]">{symbol}</span>;
-  const SF = () => <span className="leading-none text-[10px] sm:text-[16px] rotate-180">{symbol}</span>;
+  const renderPip = () => <span className="leading-none text-[10px] sm:text-[16px]">{symbol}</span>;
+  const renderPipFlipped = () => <span className="leading-none text-[10px] sm:text-[16px] rotate-180">{symbol}</span>;
 
   // Standard playing card pip arrangements
   switch(rank) {
     case 'A': return <div className="absolute inset-0 flex items-center justify-center text-[32px] sm:text-[48px] pb-1">{symbol}</div>;
-    case '2': return <div className="absolute inset-0 flex flex-col items-center justify-between"><S/><SF/></div>;
-    case '3': return <div className="absolute inset-0 flex flex-col items-center justify-between"><S/><S/><SF/></div>;
-    case '4': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between"><S/><SF/></div><div className="flex flex-col justify-between"><S/><SF/></div></div>;
-    case '5': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between"><S/><SF/></div><div className="absolute inset-0 flex items-center justify-center"><S/></div><div className="flex flex-col justify-between"><S/><SF/></div></div>;
-    case '6': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between"><S/><S/><SF/></div><div className="flex flex-col justify-between"><S/><S/><SF/></div></div>;
-    case '7': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between"><S/><S/><SF/></div><div className="absolute inset-0 flex flex-col items-center justify-start pt-[30%]"><S/></div><div className="flex flex-col justify-between"><S/><S/><SF/></div></div>;
-    case '8': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between"><S/><S/><SF/></div><div className="absolute inset-0 flex flex-col items-center justify-between py-[30%]"><S/><SF/></div><div className="flex flex-col justify-between"><S/><S/><SF/></div></div>;
-    case '9': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between"><S/><S/><SF/><SF/></div><div className="absolute inset-0 flex items-center justify-center"><S/></div><div className="flex flex-col justify-between"><S/><S/><SF/><SF/></div></div>;
-    case '10': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between"><S/><S/><SF/><SF/></div><div className="absolute inset-0 flex flex-col items-center justify-between py-[22%]"><S/><SF/></div><div className="flex flex-col justify-between"><S/><S/><SF/><SF/></div></div>;
+    case '2': return <div className="absolute inset-0 flex flex-col items-center justify-between">{renderPip()}{renderPipFlipped()}</div>;
+    case '3': return <div className="absolute inset-0 flex flex-col items-center justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}</div>;
+    case '4': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between">{renderPip()}{renderPipFlipped()}</div><div className="flex flex-col justify-between">{renderPip()}{renderPipFlipped()}</div></div>;
+    case '5': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between">{renderPip()}{renderPipFlipped()}</div><div className="absolute inset-0 flex items-center justify-center">{renderPip()}</div><div className="flex flex-col justify-between">{renderPip()}{renderPipFlipped()}</div></div>;
+    case '6': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}</div><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}</div></div>;
+    case '7': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}</div><div className="absolute inset-0 flex flex-col items-center justify-start pt-[30%]">{renderPip()}</div><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}</div></div>;
+    case '8': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}</div><div className="absolute inset-0 flex flex-col items-center justify-between py-[30%]">{renderPip()}{renderPipFlipped()}</div><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}</div></div>;
+    case '9': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}{renderPipFlipped()}</div><div className="absolute inset-0 flex items-center justify-center">{renderPip()}</div><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}{renderPipFlipped()}</div></div>;
+    case '10': return <div className="absolute inset-0 flex justify-between"><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}{renderPipFlipped()}</div><div className="absolute inset-0 flex flex-col items-center justify-between py-[22%]">{renderPip()}{renderPipFlipped()}</div><div className="flex flex-col justify-between">{renderPip()}{renderPip()}{renderPipFlipped()}{renderPipFlipped()}</div></div>;
     default: return <div className="absolute inset-0 flex items-center justify-center text-[24px] sm:text-[36px]">{symbol}</div>;
   }
 };
@@ -74,22 +74,22 @@ export default function Card({ suit, rank, hidden = false }: { suit: string, ran
       }}
     >
       {/* Top Left Label */}
-      <div className="absolute top-[3px] left-[4px] sm:top-1 sm:left-[6px] flex flex-col items-center leading-none">
+      <div className="absolute top-0.75 left-1 sm:top-1 sm:left-1.5 flex flex-col items-center leading-none">
         <span className="text-[11px] sm:text-[16px] font-normal tracking-tight">{rank}</span>
         <span className="text-[8px] sm:text-[11px] leading-none mt-px">{getSuitSymbol(suit)}</span>
       </div>
 
       {/* Center Play Area */}
-      <div className="absolute top-[14px] bottom-[14px] left-[10px] right-[10px] sm:top-[20px] sm:bottom-[20px] sm:left-[14px] sm:right-[14px] flex items-center justify-center pointer-events-none">
+      <div className="absolute top-3.5 bottom-3.5 left-2.5 right-2.5 sm:top-5 sm:bottom-5 sm:left-3.5 sm:right-3.5 flex items-center justify-center pointer-events-none">
         {isFaceCard ? (
-          <Image src={getFaceImage(rank)} alt={rank} fill sizes="(max-width: 640px) 40px, 64px" className="object-cover opacity-95 select-none rounded-[4px]" />
+          <Image src={getFaceImage(rank)} alt={rank} fill sizes="(max-width: 640px) 40px, 64px" className="object-cover opacity-95 select-none rounded-sm" />
         ) : (
           <Pips rank={rank} symbol={getSuitSymbol(suit)} />
         )}
       </div>
 
       {/* Bottom Right Label */}
-      <div className="absolute bottom-[3px] right-[4px] sm:bottom-1 sm:right-[6px] flex flex-col items-center leading-none rotate-180">
+      <div className="absolute bottom-0.75 right-1 sm:bottom-1 sm:right-1.5 flex flex-col items-center leading-none rotate-180">
         <span className="text-[11px] sm:text-[16px] font-normal tracking-tight">{rank}</span>
         <span className="text-[8px] sm:text-[11px] leading-none mt-px">{getSuitSymbol(suit)}</span>
       </div>

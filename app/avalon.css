@@ -1,0 +1,72 @@
+/* --- Avalon Digital Game: Tactical Mysticism Theme --- */
+.avalon-theme {
+  --background: #061423;
+  --surface: #061423;
+  --surface-container-lowest: #020f1e;
+  --surface-container-low: #0f1c2c;
+  --surface-container: #132030;
+  --surface-container-high: #1e2b3b;
+  --surface-container-highest: #283646;
+
+  --primary: #bac8dc;
+  --primary-container: #0d1b2a;
+  --on-primary: #243141;
+  --on-primary-container: #768497;
+  
+  --secondary: #c6c7c3;
+  --secondary-container: #4a4c49;
+  
+  --tertiary: #ffb4a8;
+  --tertiary-container: #3e0000;
+  --on-tertiary-container: #e25240;
+
+  --on-surface: #d6e4f9;
+  --on-surface-variant: #c4c6cc;
+  --outline-variant: #44474c;
+
+  color: var(--on-surface);
+  background-color: var(--background);
+  background-image: radial-gradient(circle at center, var(--surface) 0%, var(--surface-container-lowest) 100%);
+  font-family: var(--font-body), "Manrope", sans-serif;
+}
+
+/* Glassmorphism elements */
+.avalon-glass {
+  background-color: rgba(19, 32, 48, 0.4); /* surface-container */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(68, 71, 76, 0.15); /* outline-variant */
+}
+
+/* Glowing active states */
+.avalon-glow-blue {
+  box-shadow: 0 0 10px var(--primary);
+}
+.avalon-glow-red {
+  box-shadow: 0 0 10px var(--tertiary);
+}
+
+/* Landscape Strict Enforcement */
+.avalon-landscape-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+@media screen and (max-aspect-ratio: 1/1) {
+  .avalon-landscape-wrapper {
+    /* If the screen is taller than it is wide (Portrait), rotate it artificially */
+    transform: rotate(90deg);
+    transform-origin: bottom left;
+    
+    position: absolute;
+    top: -100vw;
+    left: 0;
+    
+    width: 100vh;
+    height: 100vw;
+  }
+}
