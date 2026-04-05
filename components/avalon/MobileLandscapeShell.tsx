@@ -43,8 +43,23 @@ export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
         await target.requestFullscreen();
       }
 
-      if (window.screen?.orientation?.lock) {
-        await window.screen.orientation.lock("landscape");
+      const orientationApi = window.screen?.orientation as
+        | (ScreenOrientation & {
+            lock?: (
+              orientation:
+                | "any"
+                | "natural"
+                | "landscape"
+                | "portrait"
+                | "portrait-primary"
+                | "portrait-secondary"
+                | "landscape-primary"
+                | "landscape-secondary"
+            ) => Promise<void>;
+          })
+        | undefined;
+      if (orientationApi?.lock) {
+        await orientationApi.lock("landscape");
       }
     } catch {
       // Ignore unsupported fullscreen/orientation lock APIs on iOS browsers.
