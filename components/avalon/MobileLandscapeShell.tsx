@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AvalonBoard from "./AvalonBoard";
 
@@ -12,16 +12,41 @@ export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
   const [isMobile, setIsMobile] = useState(false);
   const [canUseFullscreen, setCanUseFullscreen] = useState(false);
 
+  type FullscreenCapableElement = HTMLElement & {
+    webkitRequestFullscreen?: () => Promise<void> | void;
+  };
+
+  type FullscreenCapableDocument = Document & {
+    webkitExitFullscreen?: () => Promise<void> | void;
+    webkitFullscreenElement?: Element | null;
+  };
+
+  const isDocumentFullscreen = useCallback(() => {
+    const fullscreenDocument = document as FullscreenCapableDocument;
+    return Boolean(document.fullscreenElement || fullscreenDocument.webkitFullscreenElement);
+  }, []);
+
+  const supportsFullscreen = useCallback(() => {
+    const fullscreenElement = document.documentElement as FullscreenCapableElement;
+    return (
+      typeof fullscreenElement.requestFullscreen === "function" ||
+      typeof fullscreenElement.webkitRequestFullscreen === "function"
+    );
+  }, []);
+
   useEffect(() => {
     const updateViewportFlags = () => {
       const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-      const narrowViewport = window.matchMedia("(max-width: 1100px)").matches;
+      const noHover = window.matchMedia("(hover: none)").matches;
+      const smallViewport = Math.min(window.innerWidth, window.innerHeight) <= 900;
+      const touchCapable = navigator.maxTouchPoints > 0 || "ontouchstart" in window;
+      const isiPhone = /iPhone/i.test(navigator.userAgent);
       const landscape = window.matchMedia("(orientation: landscape)").matches;
 
-      setIsMobile(coarsePointer && narrowViewport);
+      setIsMobile((smallViewport && (coarsePointer || noHover || touchCapable)) || isiPhone);
       setIsLandscape(landscape);
-      setIsFullscreen(Boolean(document.fullscreenElement));
-      setCanUseFullscreen(Boolean(document.documentElement?.requestFullscreen));
+      setIsFullscreen(isDocumentFullscreen());
+      setCanUseFullscreen(supportsFullscreen());
     };
 
     updateViewportFlags();
@@ -34,13 +59,20 @@ export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
       window.removeEventListener("orientationchange", updateViewportFlags);
       document.removeEventListener("fullscreenchange", updateViewportFlags);
     };
-  }, []);
+  }, [isDocumentFullscreen, supportsFullscreen]);
 
   const enterImmersive = async () => {
     try {
-      const target = rootRef.current ?? document.documentElement;
-      if (!document.fullscreenElement) {
-        await target.requestFullscreen();
+      const target = (rootRef.current ?? document.documentElement) as FullscreenCapableElement;
+      if (!isDocumentFullscreen()) {
+        if (typeof target.requestFullscreen === "function") {
+          await target.requestFullscreen();
+        } else if (typeof target.webkitRequestFullscreen === "function") {
+          await target.webkitRequestFullscreen();
+        } else {
+          window.alert("Trình duyệt này không hỗ trợ chế độ toàn màn hình.");
+          return;
+        }
       }
 
       const orientationApi = window.screen?.orientation as
@@ -68,8 +100,13 @@ export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
 
   const exitImmersive = async () => {
     try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
+      const fullscreenDocument = document as FullscreenCapableDocument;
+      if (isDocumentFullscreen()) {
+        if (typeof document.exitFullscreen === "function") {
+          await document.exitFullscreen();
+        } else if (typeof fullscreenDocument.webkitExitFullscreen === "function") {
+          await fullscreenDocument.webkitExitFullscreen();
+        }
       }
     } catch {
       // Ignore browser-specific errors when exiting fullscreen.
@@ -103,10 +140,10 @@ export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
           </button>
         </div>
 
-        {isMobile && canUseFullscreen ? (
+        {isMobile ? (
           !isFullscreen ? (
             <button type="button" className="avalon-immersive-btn" onClick={enterImmersive}>
-              Toàn màn hình
+              {canUseFullscreen ? "Toàn màn hình" : "Thử toàn màn hình"}
             </button>
           ) : (
             <button type="button" className="avalon-immersive-btn" onClick={exitImmersive}>
@@ -125,11 +162,9 @@ export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
             <p className="avalon-orientation-note">
               Chế độ mobile này được thiết kế riêng cho màn hình ngang để tránh vướng víu và duplicate scroll.
             </p>
-            {canUseFullscreen && (
-              <button type="button" className="avalon-orientation-action" onClick={enterImmersive}>
-                Bật toàn màn hình
-              </button>
-            )}
+            <button type="button" className="avalon-orientation-action" onClick={enterImmersive}>
+              {canUseFullscreen ? "Bật toàn màn hình" : "Thử toàn màn hình"}
+            </button>
           </div>
         </div>
 
