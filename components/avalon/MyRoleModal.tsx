@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
-import { Fingerprint, CheckCircle2, Shield, Eye, AlertTriangle, Swords, X } from 'lucide-react';
+import { Fingerprint, Eye, AlertTriangle, Swords, X } from 'lucide-react';
 import { getRoleImageSrcForViewer, getVisibleRoleLabelForViewer } from './roleImage';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -16,7 +16,6 @@ export default function MyRoleModal({ isOpen, onClose, gameState, me }: { isOpen
   if (!isOpen) return null;
 
   // Find visible players based on obfuscation rules from the engine
-  const visibleGood = gameState.players.filter((p: AvalonPlayer) => p.team === 'Good' && p.userId !== me.userId);
   const visibleEvil = gameState.players.filter((p: AvalonPlayer) => p.team === 'Evil' && p.userId !== me.userId);
   // Percival sees Merlin and Morgana, but they are all returned as 'Merlin' to obfuscate.
   const visibleMerlinLikes = gameState.players.filter((p: AvalonPlayer) => p.role === 'Merlin' && p.userId !== me.userId); 
@@ -44,13 +43,17 @@ export default function MyRoleModal({ isOpen, onClose, gameState, me }: { isOpen
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+        className="avalon-role-reminder-shell fixed left-0 right-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+        style={{
+          top: 'var(--avalon-shell-top-offset, 0px)',
+          height: 'calc(100dvh - var(--avalon-shell-top-offset, 0px))',
+        }}
       >
-        <div className="w-full max-w-lg relative flex flex-col items-center z-10">
+        <div className="avalon-role-reminder-frame w-full max-w-lg relative flex flex-col items-center z-10">
           
           <button 
              onClick={onClose}
-             className="absolute -top-12 right-0 p-2 text-(--on-surface-variant) hover:text-white bg-white/5 rounded-full backdrop-blur-md transition-colors border border-white/10 shadow-lg z-50 cursor-pointer"
+             className="avalon-role-reminder-close absolute top-2 right-2 p-2 text-(--on-surface-variant) hover:text-white bg-white/5 rounded-full backdrop-blur-md transition-colors border border-white/10 shadow-lg z-50 cursor-pointer"
           >
              <X className="w-6 h-6" />
           </button>
@@ -72,7 +75,7 @@ export default function MyRoleModal({ isOpen, onClose, gameState, me }: { isOpen
 
             {/* The Card Layer */}
             <div 
-              className={`bg-(--surface-container-low) backdrop-blur-xl rounded-xl p-6 lg:p-8 border flex flex-col items-center text-center transition-all duration-300 w-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] ${isRevealing ? '' : 'blur-md opacity-40 scale-95'}`}
+              className={`avalon-role-reminder-card bg-(--surface-container-low) backdrop-blur-xl rounded-xl p-6 lg:p-8 border flex flex-col items-center text-center transition-all duration-300 w-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] ${isRevealing ? '' : 'blur-md opacity-40 scale-95'}`}
               style={{ borderColor: `color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 20%, transparent)` }}
             >
               {me.role && (
@@ -122,7 +125,7 @@ export default function MyRoleModal({ isOpen, onClose, gameState, me }: { isOpen
                   <div className="w-full h-px bg-linear-to-r from-transparent via-(--outline-variant)/30 to-transparent my-2"></div>
 
                   {/* Information Section */}
-                  <div className="w-full text-left space-y-4 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="avalon-role-reminder-info w-full text-left space-y-4 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
                     
                     {/* Merlin's Vision */}
                     {me.role === 'Merlin' && (
@@ -234,7 +237,7 @@ export default function MyRoleModal({ isOpen, onClose, gameState, me }: { isOpen
                     {(me.role === 'Minion_Good' || me.role === 'Minion_Evil' || me.role === 'Oberon') && (
                       <div className="bg-(--surface-container-high) rounded-lg p-3 border border-(--outline-variant)/30 text-center mt-2">
                         <p className="text-[10px] leading-relaxed text-(--on-surface-variant) italic">
-                          "Trong mắt của bạn chỉ có màn đêm. Hãy lắng nghe, hãy quan sát hội đồng để tìm ra sự thật."
+                          &quot;Trong mắt của bạn chỉ có màn đêm. Hãy lắng nghe, hãy quan sát hội đồng để tìm ra sự thật.&quot;
                         </p>
                       </div>
                     )}
@@ -247,7 +250,7 @@ export default function MyRoleModal({ isOpen, onClose, gameState, me }: { isOpen
             {/* The Overlaid "Hold to Reveal" Mask */}
             {!isRevealing && (
               <div 
-                className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl rounded-xl z-20 flex flex-col items-center justify-center p-6 text-center cursor-pointer select-none touch-none border border-(--outline-variant)/50 shadow-2xl"
+                className="avalon-role-reminder-mask absolute inset-0 bg-slate-950/80 backdrop-blur-xl rounded-xl z-20 flex flex-col items-center justify-center p-6 text-center cursor-pointer select-none touch-none border border-(--outline-variant)/50 shadow-2xl"
                 onPointerDown={() => setIsRevealing(true)}
               >
                 <div className="w-16 h-16 rounded-full border-2 border-(--outline-variant)/30 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(0,0,0,0.5)]">

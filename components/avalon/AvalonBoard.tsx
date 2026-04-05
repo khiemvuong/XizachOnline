@@ -13,7 +13,7 @@ import VoteOutcomeOverlay from './VoteOutcomeOverlay';
 import RulesModal from './RulesModal';
 import MyRoleModal from './MyRoleModal';
 import type { LucideIcon } from 'lucide-react';
-import { BookOpen, Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, BookText } from 'lucide-react';
+import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 
 export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -22,7 +22,44 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [hasJoined, setHasJoined] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showMyRole, setShowMyRole] = useState(false);
+  const [isLobbyMusicEnabled, setIsLobbyMusicEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('avalon_lobby_music_enabled') !== '0';
+  });
   const initialized = useRef(false);
+  const lobbyAudioRef = useRef<HTMLAudioElement | null>(null);
+  const winAudioRef = useRef<HTMLAudioElement | null>(null);
+  const loseAudioRef = useRef<HTMLAudioElement | null>(null);
+  const playedGameOverWinnerRef = useRef<'Good' | 'Evil' | null>(null);
+
+  const getOrCreateAudio = (
+    ref: { current: HTMLAudioElement | null },
+    src: string,
+    options?: { loop?: boolean; volume?: number; preload?: 'none' | 'metadata' | 'auto' }
+  ) => {
+    if (!ref.current) {
+      const audio = new Audio(src);
+      audio.loop = options?.loop ?? false;
+      audio.volume = options?.volume ?? 0.5;
+      audio.preload = options?.preload ?? 'metadata';
+      ref.current = audio;
+    }
+    return ref.current;
+  };
+
+  const stopAudio = (audio: HTMLAudioElement | null, reset = false) => {
+    if (!audio) return;
+    audio.pause();
+    if (reset) {
+      audio.currentTime = 0;
+    }
+  };
+
+  const safePlay = (audio: HTMLAudioElement) => {
+    void audio.play().catch(() => undefined);
+  };
+  const gamePhase = gameState?.state;
+  const gameWinner = gameState?.winner;
 
   useEffect(() => {
     // if (!localStorage.getItem('avalon_userId')) {
@@ -32,6 +69,10 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       sessionStorage.setItem('avalon_userId', Math.random().toString(36).substr(2, 9));
     }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('avalon_lobby_music_enabled', isLobbyMusicEnabled ? '1' : '0');
+  }, [isLobbyMusicEnabled]);
 
   useEffect(() => {
     if (!hasJoined || initialized.current) return;
@@ -61,11 +102,71 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     };
   }, [hasJoined, roomId, playerName]);
 
+  useEffect(() => {
+    const handleOpenRules = () => setShowRules(true);
+    window.addEventListener('avalon-open-rules', handleOpenRules);
+    return () => window.removeEventListener('avalon-open-rules', handleOpenRules);
+  }, []);
+
+  useEffect(() => {
+    if (!gamePhase) return;
+
+    const stopEndTracks = () => {
+      stopAudio(winAudioRef.current, true);
+      stopAudio(loseAudioRef.current, true);
+    };
+
+    if (gamePhase === 'LOBBY') {
+      playedGameOverWinnerRef.current = null;
+      stopEndTracks();
+
+      if (isLobbyMusicEnabled) {
+        const lobbyTrack = getOrCreateAudio(lobbyAudioRef, '/audio/lobby.mp3', {
+          loop: true,
+          volume: 0.35,
+          preload: 'auto',
+        });
+        safePlay(lobbyTrack);
+      } else {
+        stopAudio(lobbyAudioRef.current, true);
+      }
+
+      return;
+    }
+
+    stopAudio(lobbyAudioRef.current, true);
+
+    if (gamePhase !== 'GAME_OVER') {
+      playedGameOverWinnerRef.current = null;
+      stopEndTracks();
+      return;
+    }
+
+    if (gameWinner !== 'Good' && gameWinner !== 'Evil') {
+      stopEndTracks();
+      return;
+    }
+
+    if (playedGameOverWinnerRef.current === gameWinner) {
+      return;
+    }
+
+    stopEndTracks();
+    const endTrack =
+      gameWinner === 'Good'
+        ? getOrCreateAudio(winAudioRef, '/audio/win.mp3', { volume: 0.55, preload: 'auto' })
+        : getOrCreateAudio(loseAudioRef, '/audio/lose.mp3', { volume: 0.55, preload: 'auto' });
+
+    endTrack.currentTime = 0;
+    safePlay(endTrack);
+    playedGameOverWinnerRef.current = gameWinner;
+  }, [gamePhase, gameWinner, isLobbyMusicEnabled]);
+
   if (!hasJoined) {
     return (
-      <div className="font-body text-primary-avalon h-screen overflow-hidden flex flex-col relative z-0">
+      <div className="avalon-entry-screen font-body text-primary-avalon h-full min-h-0 overflow-y-auto overflow-x-hidden flex flex-col relative z-0">
         {/* Background Atmospheric Elements */}
-        <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCe79Gc9SGc6EKO9KgDlXh9feqsIYrJalRcurvGANaXucPIsKyB-ndT87S0Qw3yyiQC5jpVkN3TTMN8f3WQwYB7eFJEZQ0rgPtogy0igcGgrZbtRNH2uiu133f5tHszGaW4GHlq2-LQ7N8kvEejj2_-AFbk80B7fK8G3wqm5L0XpNvYgaP8pJV3C1pkFR550fSiPqyRT28Bvwk_mh0xJC6Nv6xHQj1HxREGxwLnq0Kcd004LWjJiy1vL5euJ2BCEloyZs-n6ihZig')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+        <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCe79Gc9SGc6EKO9KgDlXh9feqsIYrJalRcurvGANaXucPIsKyB-ndT87S0Qw3yyiQC5jpVkN3TTMN8f3WQwYB7eFJEZQ0rgPtogy0igcGgrZbtRNH2uiu133f5tHszGaW4GHlq2-LQ7N8kvEejj2_-AFbk80B7fK8G3wqm5L0XpNvYgaP8pJV3C1pkFR550fSiPqyRT28Bvwk_mh0xJC6Nv6xHQj1HxREGxwLnq0Kcd004LWjJiy1vL5euJ2BCEloyZs-n6ihZig')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'scroll' }}>
           <div className="absolute inset-0 bg-surface-dim-avalon/70 backdrop-blur-[2px]"></div>
         </div>
         <div className="absolute inset-0 pointer-events-none -z-10">
@@ -73,73 +174,60 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
           <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-(--tertiary) opacity-10 blur-[120px] rounded-full"></div>
         </div>
         
-        {/* Top Navigation Anchor */}
-        <header className="bg-slate-950/80 backdrop-blur-md fixed top-0 w-full z-10 flex justify-between items-center px-6 py-3 shadow-[0_0_20px_rgba(13,27,42,0.5)]">
-          <div className="flex items-center gap-3">
-            <BookOpen className="w-6 h-6 text-primary-avalon" />
-            <h1 className="text-lg font-serif italic text-primary-avalon tracking-widest uppercase">The Illuminated Archive</h1>
-          </div>
-          <button 
-            onClick={() => setShowRules(true)}
-            className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
-            title="Luật Chơi"
-          >
-            <BookText className="w-6 h-6" />
-          </button>
-        </header>
-
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
 
-        <div className="flex-1 mt-16 px-4 md:px-8 py-8 flex items-center justify-center relative z-0">
-           {/* Section */}
-           <div className="w-full max-w-md space-y-8 avalon-glass p-8 rounded-2xl border border-(--outline-variant) shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-              <div className="text-center space-y-2">
-                <h2 className="text-(--primary) font-serif text-3xl tracking-wider uppercase">Căn Phòng Ánh Sáng</h2>
-                <p className="text-(--on-surface-variant) text-sm italic">Hãy chọn danh xưng để hội ngộ các Kỵ sĩ.</p>
-              </div>
-              
-              <div className="space-y-4">
-                <label className="block text-(--secondary) text-sm uppercase tracking-tighter text-center">Tên của bạn</label>
-                <div className="relative group">
-                  <input
-                    className="w-full bg-[#0f172a]/80 border border-(--outline-variant) focus:ring-1 focus:ring-(--primary) rounded-lg py-4 px-5 text-white placeholder:text-slate-500 font-sans text-center font-bold tracking-widest text-lg outline-none transition-colors"
-                    placeholder="Nhập tên..."
-                    value={playerName}
-                    onChange={e => setPlayerName(e.target.value)}
-                    maxLength={12}
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && playerName.trim()) setHasJoined(true);
-                    }}
-                  />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                    <Edit2 className="w-5 h-5 text-(--primary)/50" />
+          <div className="avalon-entry-stage flex-1 mt-2 px-3 md:px-8 pt-2 pb-4 md:pb-8 min-h-full flex items-start md:items-center justify-center relative z-0">
+            <div className="avalon-entry-card w-full max-w-4xl avalon-glass p-4 sm:p-6 rounded-2xl border border-(--outline-variant) shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+              <div className="avalon-entry-grid grid grid-cols-1 md:grid-cols-[1.05fr_1fr] gap-4 md:gap-6 items-stretch">
+                <div className="avalon-entry-copy rounded-xl border border-(--outline-variant)/25 bg-(--surface-container-low)/50 p-4 sm:p-5 flex flex-col justify-between">
+                  <div className="text-center md:text-left space-y-2">
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-(--secondary)">The Illuminated Archive</p>
+                    <h2 className="text-(--primary) font-serif text-2xl sm:text-3xl tracking-wider uppercase">Căn Phòng Ánh Sáng</h2>
+                    <p className="text-(--on-surface-variant) text-sm italic">Hãy chọn danh xưng để hội ngộ các Kỵ sĩ.</p>
+                  </div>
+
+                  <div className="mt-4 p-3 rounded-lg bg-(--primary)/10 border-l-2 border-(--primary)/40 relative">
+                    <p className="text-(--on-surface-variant) text-xs italic leading-relaxed text-center md:text-left">
+                      &quot;Một cuộc chiến trường kỳ cần sự tin tưởng. Nhưng cẩn thận, không phải ái nấy đều là Kỵ Sĩ trung tuyến...&quot;
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-4 flex justify-center">
-                 <button 
-                   onClick={() => playerName.trim() && setHasJoined(true)}
-                   disabled={!playerName.trim()}
-                   className={`px-12 py-4 rounded-xl font-headline font-extrabold text-sm transform transition-all tracking-widest uppercase flex items-center justify-center gap-3 w-full
-                     ${playerName.trim() 
-                       ? 'bg-primary-avalon hover:bg-white text-surface-dim-avalon shadow-[0_10px_30px_rgba(186,200,220,0.2)] active:scale-95 cursor-pointer' 
-                       : 'bg-[#1e2b3b] text-[#768497] cursor-not-allowed border border-[#44474c]/50'
-                     }`}
-                 >
+                <div className="avalon-entry-form rounded-xl border border-(--outline-variant)/25 bg-[#0f172a]/45 p-4 sm:p-5 flex flex-col justify-center space-y-4">
+                  <label className="block text-(--secondary) text-xs sm:text-sm uppercase tracking-tighter text-center">Tên của bạn</label>
+                  <div className="relative group">
+                    <input
+                      className="w-full bg-[#0f172a]/80 border border-(--outline-variant) focus:ring-1 focus:ring-(--primary) rounded-lg py-3 sm:py-4 px-5 text-white placeholder:text-slate-500 font-sans text-center font-bold tracking-widest text-base sm:text-lg outline-none transition-colors"
+                      placeholder="Nhập tên..."
+                      value={playerName}
+                      onChange={e => setPlayerName(e.target.value)}
+                      maxLength={12}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && playerName.trim()) setHasJoined(true);
+                      }}
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+                      <Edit2 className="w-5 h-5 text-(--primary)/50" />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => playerName.trim() && setHasJoined(true)}
+                    disabled={!playerName.trim()}
+                    className={`px-12 py-3.5 rounded-xl font-headline font-extrabold text-sm transform transition-all tracking-widest uppercase flex items-center justify-center gap-3 w-full
+                      ${playerName.trim()
+                        ? 'bg-primary-avalon hover:bg-white text-surface-dim-avalon shadow-[0_10px_30px_rgba(186,200,220,0.2)] active:scale-95 cursor-pointer'
+                        : 'bg-[#1e2b3b] text-[#768497] cursor-not-allowed border border-[#44474c]/50'
+                      }`}
+                  >
                     Gia Nhập
                     <ChevronsRight className="w-6 h-6" />
-                 </button>
+                  </button>
+                </div>
               </div>
-              
-              <div className="mt-8 p-4 rounded-lg bg-(--primary)/10 border-l-2 border-(--primary)/40 relative">
-                 <p className="text-(--on-surface-variant) text-xs italic leading-relaxed text-center">
-                   "Một cuộc chiến trường kỳ cần sự tin tưởng. Nhưng cẩn thận, không phải ái nấy đều là Kỵ Sĩ trung tuyến..."
-                 </p>
-              </div>
-           </div>
-        </div>
+            </div>
+          </div>
       </div>
     );
   }
@@ -155,14 +243,27 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   // const userId = localStorage.getItem('avalon_userId')!;
   const userId = sessionStorage.getItem('avalon_userId')!;
   const me = gameState.players.find((p: AvalonPlayer) => p.userId === userId);
+  const isLobby = gameState.state === 'LOBBY';
+  const boardShellClass = isLobby
+    ? 'h-full min-h-0 overflow-y-auto overflow-x-hidden'
+    : 'h-full min-h-0 overflow-hidden';
 
   return (
-    <div className="avalon-theme min-h-176 flex flex-col p-4 w-full relative overflow-x-hidden z-0">
+    <div className={`avalon-theme ${boardShellClass} flex flex-col p-4 w-full relative z-0`}>
       {/* Avalon Background Layer */}
-      <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCe79Gc9SGc6EKO9KgDlXh9feqsIYrJalRcurvGANaXucPIsKyB-ndT87S0Qw3yyiQC5jpVkN3TTMN8f3WQwYB7eFJEZQ0rgPtogy0igcGgrZbtRNH2uiu133f5tHszGaW4GHlq2-LQ7N8kvEejj2_-AFbk80B7fK8G3wqm5L0XpNvYgaP8pJV3C1pkFR550fSiPqyRT28Bvwk_mh0xJC6Nv6xHQj1HxREGxwLnq0Kcd004LWjJiy1vL5euJ2BCEloyZs-n6ihZig')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+      <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCe79Gc9SGc6EKO9KgDlXh9feqsIYrJalRcurvGANaXucPIsKyB-ndT87S0Qw3yyiQC5jpVkN3TTMN8f3WQwYB7eFJEZQ0rgPtogy0igcGgrZbtRNH2uiu133f5tHszGaW4GHlq2-LQ7N8kvEejj2_-AFbk80B7fK8G3wqm5L0XpNvYgaP8pJV3C1pkFR550fSiPqyRT28Bvwk_mh0xJC6Nv6xHQj1HxREGxwLnq0Kcd004LWjJiy1vL5euJ2BCEloyZs-n6ihZig')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'scroll' }}>
         <div className="absolute inset-0 bg-surface-dim-avalon/70 backdrop-blur-[2px]"></div>
       </div>
       <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+        {gameState.state === 'LOBBY' && (
+          <button
+            onClick={() => setIsLobbyMusicEnabled((prev) => !prev)}
+            className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
+            title={isLobbyMusicEnabled ? 'Tắt nhạc sảnh' : 'Bật nhạc sảnh'}
+          >
+            {isLobbyMusicEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+          </button>
+        )}
         {gameState.state !== 'LOBBY' && me?.role && (
           <button 
             onClick={() => setShowMyRole(true)}
@@ -172,13 +273,6 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
             <VenetianMask className="w-6 h-6" />
           </button>
         )}
-        <button 
-          onClick={() => setShowRules(true)}
-          className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
-          title="Luật Chơi"
-        >
-          <BookText className="w-6 h-6" />
-        </button>
         {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && (
           <button 
             onClick={() => socket?.emit('voteEarlyEnd', true)}
@@ -401,7 +495,7 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
         {/* Lore Tip */}
         <div className="p-4 bg-linear-to-br from-(--primary)/5 to-transparent border-l-2 border-(--primary)/40 rounded-r-xl">
           <p className="italic text-xs text-(--primary)/70 leading-relaxed font-sans">
-            "Vận mệnh đan xen, tốt xấu lẫn lộn. Không ai biết trước ánh sáng hay bóng tối sẽ cai trị vùng đất Avalon này. Liệu niềm tin của bạn đã đặt đúng chỗ?"
+            &quot;Vận mệnh đan xen, tốt xấu lẫn lộn. Không ai biết trước ánh sáng hay bóng tối sẽ cai trị vùng đất Avalon này. Liệu niềm tin của bạn đã đặt đúng chỗ?&quot;
           </p>
         </div>
       </div>

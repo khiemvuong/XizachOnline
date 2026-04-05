@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
 import { Fingerprint, CheckCircle2, Eye, AlertTriangle, Swords } from 'lucide-react';
@@ -8,6 +8,10 @@ import { getRoleImageSrcForViewer, getVisibleRoleLabelForViewer } from './roleIm
 
 export default function RoleReveal({ gameState, me, onReady }: { gameState: AvalonRoom, me: AvalonPlayer, onReady: () => void }) {
   const [isRevealing, setIsRevealing] = useState(false);
+  const [leftScale, setLeftScale] = useState(1);
+  const [autoFitLeft, setAutoFitLeft] = useState(false);
+  const leftViewportRef = useRef<HTMLElement | null>(null);
+  const leftContentRef = useRef<HTMLDivElement | null>(null);
   const isEvil = me.team === 'Evil';
   const colorTheme = isEvil ? 'tertiary' : 'primary';
   const factionName = isEvil ? 'Thế Lực Hắc Ám' : 'Hiệp Sĩ Bàn Tròn';
@@ -36,8 +40,58 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
   const maskedRoleLabel = 'Danh tính đang được phong ấn';
   const maskedRoleDesc = 'Giữ ở khung bên phải để tạm mở danh tính của bạn.';
 
+  useEffect(() => {
+    const updateLeftScale = () => {
+      if (!leftViewportRef.current || !leftContentRef.current) return;
+
+      const compactLandscape = window.matchMedia('(pointer: coarse) and (orientation: landscape) and (max-width: 1100px)').matches;
+      setAutoFitLeft(compactLandscape);
+
+      if (!compactLandscape) {
+        setLeftScale(1);
+        return;
+      }
+
+      const viewportHeight = leftViewportRef.current.clientHeight;
+      const naturalHeight = leftContentRef.current.scrollHeight;
+
+      if (viewportHeight <= 0 || naturalHeight <= 0) {
+        setLeftScale(1);
+        return;
+      }
+
+      const fitScale = Math.min(1, viewportHeight / naturalHeight);
+      setLeftScale(Math.max(0.62, fitScale));
+    };
+
+    updateLeftScale();
+
+    const viewportObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateLeftScale) : null;
+    if (viewportObserver) {
+      if (leftViewportRef.current) viewportObserver.observe(leftViewportRef.current);
+      if (leftContentRef.current) viewportObserver.observe(leftContentRef.current);
+    }
+
+    window.addEventListener('resize', updateLeftScale);
+    window.addEventListener('orientationchange', updateLeftScale);
+
+    return () => {
+      if (viewportObserver) viewportObserver.disconnect();
+      window.removeEventListener('resize', updateLeftScale);
+      window.removeEventListener('orientationchange', updateLeftScale);
+    };
+  }, [gameState, me.role, me.isReady, isRevealing]);
+
+  const leftScaleStyle = autoFitLeft && leftScale < 0.999
+    ? {
+        transform: `scale(${leftScale})`,
+        transformOrigin: 'top left',
+        width: `${100 / leftScale}%`,
+      }
+    : undefined;
+
   return (
-    <div className="flex-1 w-full max-w-6xl mx-auto relative px-4 py-4 z-0 min-h-144 h-[calc(100dvh-6rem)] overflow-y-auto">
+    <div className="flex-1 w-full max-w-6xl mx-auto relative px-2 sm:px-4 py-3 z-0 h-full min-h-0 overflow-hidden">
       
       {/* Faction Ambient Spotlight (Background) */}
       <div 
@@ -45,19 +99,27 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
         style={{ backgroundColor: `var(--color-${colorTheme}-avalon, var(--${colorTheme}))`, opacity: 0.1 }}
       ></div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 h-full items-center">
-        <section className="space-y-5 lg:space-y-6 lg:pr-4">
-          <div className="text-left space-y-2">
+      <div className="avalon-role-reveal-grid grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-10 h-full items-stretch">
+        <section
+          ref={leftViewportRef}
+          className={`avalon-role-reveal-left min-h-0 lg:pr-4 pr-1 ${autoFitLeft ? 'overflow-hidden' : 'overflow-y-auto custom-avalon-scrollbar'}`}
+        >
+          <div
+            ref={leftContentRef}
+            className="avalon-role-reveal-left-content space-y-4 lg:space-y-6"
+            style={leftScaleStyle}
+          >
+          <div className="avalon-role-reveal-intro text-left space-y-2">
             <span className={`text-(--${colorTheme}) font-headline tracking-[0.3em] text-[10px] uppercase block`}>
               Giai Đoạn: Màn Đêm Buông Xuống
             </span>
-            <h2 className="text-3xl lg:text-5xl font-headline font-bold text-(--on-surface) tracking-tight">Danh Tính Bí Mật</h2>
+            <h2 className="avalon-role-reveal-title text-3xl lg:text-5xl font-headline font-bold text-(--on-surface) tracking-tight">Danh Tính Bí Mật</h2>
             <p className="text-(--on-surface-variant) font-body text-xs lg:text-sm italic opacity-85">
               &quot;Giữ lấy sự thật trong bóng tối của Camelot.&quot;
             </p>
           </div>
 
-          <div className="rounded-xl border border-(--outline-variant)/40 bg-(--surface-container-low)/70 p-4 lg:p-5 backdrop-blur-md">
+          <div className="avalon-role-reveal-summary rounded-xl border border-(--outline-variant)/40 bg-(--surface-container-low)/70 p-4 lg:p-5 backdrop-blur-md">
             <p className="text-[11px] uppercase tracking-[0.2em] text-(--on-surface-variant)">Vai trò của bạn</p>
             <p className={`mt-1 text-xl lg:text-2xl font-headline uppercase tracking-widest text-(--${colorTheme})`}>
               {isRevealing ? (me.role?.replace('_', ' ') ?? 'Unknown') : maskedRoleLabel}
@@ -70,7 +132,7 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
             </p>
           </div>
 
-          <div className="w-full">
+          <div className="avalon-role-reveal-ready w-full">
             {me.isReady ? (
               <div className="w-full bg-transparent border border-(--outline-variant) text-(--secondary) py-4 rounded-xl font-bold font-headline text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-(--primary)" />
@@ -86,11 +148,12 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
               </button>
             )}
           </div>
+          </div>
         </section>
 
         {/* Interactive Reveal Area */}
         <section
-          className="relative group w-full select-none touch-none"
+          className="relative group w-full select-none touch-none min-h-0"
           onPointerUp={() => setIsRevealing(false)} 
           onPointerLeave={() => setIsRevealing(false)}
           onPointerCancel={() => setIsRevealing(false)}
@@ -107,7 +170,7 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
               {/* Role Avatar/Image */}
               <div className="relative mt-2">
                 <div 
-                  className="w-40 h-40 lg:w-48 lg:h-48 rounded-2xl border-2 flex items-center justify-center relative overflow-hidden shadow-2xl"
+                  className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 rounded-2xl border-2 flex items-center justify-center relative overflow-hidden shadow-2xl"
                   style={{ 
                     borderColor: `color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 40%, transparent)`,
                     background: `linear-gradient(to bottom, color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 20%, transparent), var(--surface-container-high))`
@@ -270,7 +333,7 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
         {/* The Overlaid "Hold to Reveal" Mask */}
         {!isRevealing && (
           <div 
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl rounded-xl z-20 flex flex-col items-center justify-center p-8 text-center cursor-pointer select-none touch-none border border-(--outline-variant)/50 shadow-2xl"
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl rounded-xl z-20 flex flex-col items-center justify-center p-5 sm:p-8 text-center cursor-pointer select-none touch-none border border-(--outline-variant)/50 shadow-2xl"
             onPointerDown={() => setIsRevealing(true)}
           >
             <div className="w-20 h-20 rounded-full border-2 border-(--outline-variant)/30 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(0,0,0,0.5)]">

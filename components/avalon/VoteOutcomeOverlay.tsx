@@ -64,12 +64,12 @@ export default function VoteOutcomeOverlay({ gameState, me }: { gameState: Avalo
   const boardLabel = isQuestOutcome ? "Kết quả nhiệm vụ" : "Kết quả bỏ phiếu đội";
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-70 px-4 pt-4 md:pt-6">
+    <div className="avalon-vote-outcome-shell pointer-events-none absolute inset-0 z-70 px-4 pt-4 md:pt-6">
       <div className="mx-auto flex w-full max-w-2xl justify-center">
         <button
           type="button"
           onClick={() => setIsOpen((value) => !value)}
-          className={`pointer-events-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors ${statusStyle.pillClass}`}
+          className={`avalon-vote-outcome-toggle pointer-events-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors ${statusStyle.pillClass}`}
         >
           {outcome.result === "approve" || outcome.result === "success" ? (
             <CheckCircle2 className="h-4 w-4" />
@@ -84,7 +84,7 @@ export default function VoteOutcomeOverlay({ gameState, me }: { gameState: Avalo
       </div>
 
       {isOpen && (
-        <div className="mx-auto mt-3 w-full max-w-2xl rounded-2xl border border-outline-variant/40 bg-surface-container-low/92 px-5 py-4 shadow-[0_0_45px_rgba(0,0,0,0.45)] backdrop-blur-md md:px-6 pointer-events-auto">
+        <div className="avalon-vote-outcome-card mx-auto mt-3 w-full max-w-2xl rounded-2xl border border-outline-variant/40 bg-surface-container-low/92 px-5 py-4 shadow-[0_0_45px_rgba(0,0,0,0.45)] backdrop-blur-md md:px-6 pointer-events-auto">
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className={`text-[10px] uppercase tracking-[0.34em] font-label ${accentClass}`}>
               {isQuestOutcome ? "QUEST OUTCOME" : "COUNCIL OUTCOME"}
@@ -100,8 +100,8 @@ export default function VoteOutcomeOverlay({ gameState, me }: { gameState: Avalo
           <div className="flex items-center gap-3">
             <div className={`shrink-0 ${accentClass}`}>{statusStyle.icon}</div>
             <div className="min-w-0">
-              <h3 className={`font-headline text-2xl uppercase tracking-[0.12em] ${accentClass}`}>{title}</h3>
-              <p className="text-sm text-on-surface-variant">{subtitle}</p>
+              <h3 className={`avalon-vote-outcome-title font-headline text-2xl uppercase tracking-[0.12em] ${accentClass}`}>{title}</h3>
+              <p className="avalon-vote-outcome-subtitle text-sm text-on-surface-variant">{subtitle}</p>
             </div>
           </div>
 

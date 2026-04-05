@@ -139,18 +139,17 @@ export default function GameOver({ gameState, me, socket }: { gameState: AvalonR
          : '';
 
    return (
-      <div className={`absolute inset-0 z-100 overflow-y-auto overflow-x-hidden animate-in fade-in duration-700 ${isEvilVictory ? 'avalon-atmospheric-bg' : 'avalon-castle-bg'}`}>
-         <div className="relative min-h-full px-4 py-8 md:px-6 lg:px-8 bg-black/35 backdrop-blur-sm">
+      <div className={`avalon-gameover-shell fixed inset-0 z-100 overflow-y-auto overflow-x-hidden overscroll-contain animate-in fade-in duration-700 ${isEvilVictory ? 'avalon-atmospheric-bg' : 'avalon-castle-bg'}`}>
+         <div className="avalon-gameover-frame relative min-h-full px-4 py-8 md:px-6 lg:px-8 bg-black/35 backdrop-blur-sm">
                   {winnerBackdropTintClass && (
                      <div className={`pointer-events-none absolute inset-0 bg-linear-to-br ${winnerBackdropTintClass}`}></div>
                   )}
-            <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-8 md:gap-10">
-               <div className="w-full max-w-4xl text-center pt-8 md:pt-14">
-                  <div className={`pointer-events-none mx-auto mb-3 h-10 w-full max-w-3xl rounded-full bg-linear-to-r ${personalVisual[personalCase].auraClass}`}></div>
+            <div className="avalon-gameover-content relative mx-auto flex w-full max-w-6xl flex-col items-center gap-8 md:gap-10">
+               <div className="w-full max-w-4xl text-center">
                   <p className={`text-[10px] md:text-xs uppercase tracking-[0.4em] font-label ${isAbandoned ? 'text-on-surface-variant' : primaryToneClass}`}>
                      {headlineCopy.eyebrow}
                   </p>
-                  <h1 className={`mt-3 text-4xl sm:text-5xl md:text-7xl font-headline font-bold uppercase tracking-tight leading-[0.92] ${isAbandoned ? 'text-on-surface-variant' : `${primaryToneClass} ${titleGlow}`}`}>
+                  <h1 className={`avalon-gameover-title mt-3 text-4xl sm:text-5xl md:text-7xl font-headline font-bold uppercase tracking-tight leading-[0.92] ${isAbandoned ? 'text-on-surface-variant' : `${primaryToneClass} ${titleGlow}`}`}>
                      {headlineCopy.title}
                   </h1>
                   <p className="mt-4 max-w-3xl mx-auto text-base md:text-xl font-headline italic text-on-surface-variant/90 leading-relaxed">
@@ -175,7 +174,7 @@ export default function GameOver({ gameState, me, socket }: { gameState: AvalonR
                   )}
                </div>
 
-               <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+               <div className="avalon-gameover-grid w-full grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                   <EndingFactionCard
                      title={primaryLabel}
                      players={gameState.players.filter((player) => player.team === primaryTeam)}

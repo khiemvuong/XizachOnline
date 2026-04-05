@@ -36,22 +36,22 @@ export default function AssassinationUI({
       };
 
   return (
-    <div className="absolute inset-0 z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-500">
+    <div className="avalon-assassination-shell absolute inset-0 z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-500">
       <div className="relative min-h-full avalon-assassin-bg px-4 py-8 md:px-6 md:py-10 lg:px-8">
         <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-black/15 via-black/38 to-black/70"></div>
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_22%,rgba(2,15,30,0.88)_100%)]"></div>
 
-        <section className="relative z-20 mx-auto flex w-full max-w-6xl flex-col items-center gap-8">
+        <section className="avalon-assassination-content relative z-20 mx-auto flex w-full max-w-6xl flex-col items-center gap-8">
           <div className="text-center space-y-2">
             <div className="mb-2 flex items-center justify-center gap-4">
               <div className="h-px w-12 bg-tertiary"></div>
               <Sword className="h-10 w-10 rotate-135 text-tertiary fill-current opacity-25" />
               <div className="h-px w-12 bg-tertiary"></div>
             </div>
-            <h2 className="font-headline text-5xl md:text-7xl font-bold tracking-[0.18em] text-on-surface uppercase">
+            <h2 className="avalon-assassination-title font-headline text-5xl md:text-7xl font-bold tracking-[0.18em] text-on-surface uppercase">
               {titleCopy.title}
             </h2>
-            <p className="font-body text-tertiary text-base md:text-lg tracking-widest uppercase opacity-90">
+            <p className="avalon-assassination-subtitle font-body text-tertiary text-base md:text-lg tracking-widest uppercase opacity-90">
               {titleCopy.subtitle}
             </p>
           </div>
@@ -64,7 +64,7 @@ export default function AssassinationUI({
                     key={player.userId}
                     type="button"
                     onClick={() => setSelectedTarget(player)}
-                    className="w-56 md:w-64 aspect-3/4 rounded-xl border border-outline-variant/35 bg-surface-container-low/80 backdrop-blur-md overflow-hidden group transition-all duration-500 hover:border-tertiary/45 hover:shadow-[0_0_28px_rgba(255,180,168,0.24)] cursor-pointer text-left"
+                    className="avalon-assassination-target-card w-56 md:w-64 aspect-3/4 rounded-xl border border-outline-variant/35 bg-surface-container-low/80 backdrop-blur-md overflow-hidden group transition-all duration-500 hover:border-tertiary/45 hover:shadow-[0_0_28px_rgba(255,180,168,0.24)] cursor-pointer text-left"
                   >
                     <div className="relative h-2/3 overflow-hidden">
                       <Image
@@ -94,7 +94,7 @@ export default function AssassinationUI({
               </div>
             </div>
           ) : (
-            <div className="w-full max-w-3xl rounded-2xl border border-outline-variant/35 bg-surface-container-low/78 p-6 text-center backdrop-blur-md shadow-[0_0_40px_rgba(0,0,0,0.35)]">
+            <div className="avalon-assassination-wait-card w-full max-w-3xl rounded-2xl border border-outline-variant/35 bg-surface-container-low/78 p-6 text-center backdrop-blur-md shadow-[0_0_40px_rgba(0,0,0,0.35)]">
               <Skull className="mx-auto mb-3 h-10 w-10 text-tertiary opacity-80" />
               <p className="text-on-surface-variant leading-relaxed">
                 Assassin đang lựa chọn mục tiêu trong bóng tối. Hãy chờ phán quyết cuối cùng.

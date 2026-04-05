@@ -34,18 +34,24 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
   };
 
   return (
-    <div className="fixed inset-0 z-100 overflow-y-auto overflow-x-hidden avalon-atmospheric-bg px-4 py-8 md:px-6 md:py-10">
-      <div className="min-h-full flex items-center justify-center">
-        <div className="w-full max-w-6xl">
-          <div className="mx-auto w-full max-w-4xl text-center mb-8 md:mb-10">
+    <div
+      className="avalon-earlyend-shell fixed left-0 right-0 z-100 overflow-y-auto overflow-x-hidden avalon-atmospheric-bg px-4 py-8 md:px-6 md:py-10"
+      style={{
+        top: 'var(--avalon-shell-top-offset, 0px)',
+        height: 'calc(100dvh - var(--avalon-shell-top-offset, 0px))',
+      }}
+    >
+      <div className="avalon-earlyend-center min-h-full flex items-center justify-center">
+        <div className="avalon-earlyend-frame w-full max-w-6xl">
+          <div className="avalon-earlyend-hero mx-auto w-full max-w-4xl text-center mb-8 md:mb-10">
             <p className="text-[10px] md:text-xs uppercase tracking-[0.4em] font-label text-tertiary-avalon mb-3">
               THE FINAL DECREE
             </p>
             <AlertTriangle className="mx-auto mb-4 h-12 w-12 animate-pulse text-tertiary-avalon drop-shadow-[0_0_18px_rgba(255,180,168,0.25)] md:h-14 md:w-14" />
-            <h2 className="font-headline text-4xl font-bold uppercase tracking-tight leading-[0.92] text-tertiary-avalon drop-shadow-[0_0_24px_rgba(255,180,168,0.28)] sm:text-5xl md:text-7xl">
+            <h2 className="avalon-earlyend-title font-headline text-4xl font-bold uppercase tracking-tight leading-[0.92] text-tertiary-avalon drop-shadow-[0_0_24px_rgba(255,180,168,0.28)] sm:text-5xl md:text-7xl">
               Ritual of Termination
             </h2>
-            <p className="mx-auto mt-4 max-w-3xl text-base leading-relaxed font-headline italic text-on-surface-variant/90 md:text-xl">
+            <p className="avalon-earlyend-subtitle mx-auto mt-4 max-w-3xl text-base leading-relaxed font-headline italic text-on-surface-variant/90 md:text-xl">
               The host has proposed to seal the match early. The archive can still be kept alive.
             </p>
           </div>
@@ -58,7 +64,7 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
               onVoteAgain={handleVoteAgain}
             />
           ) : (
-            <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 lg:gap-8 md:grid-cols-2">
+            <div className="avalon-earlyend-grid mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 lg:gap-8 md:grid-cols-2">
               <VoteChoiceCard
                 title={voteOptions.keep.title}
                 subtitle={voteOptions.keep.subtitle}
@@ -143,7 +149,7 @@ function VoteChoiceCard({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`group relative flex min-h-80 flex-col items-center justify-center overflow-hidden rounded-[28px] border p-2 text-center transition-all duration-500 active:scale-[0.98] ${panelClass} ${disabled ? "cursor-default opacity-90" : "hover:-translate-y-1 hover:shadow-[0_0_50px_rgba(0,0,0,0.38)]"}`}
+      className={`avalon-earlyend-choice-card group relative flex min-h-80 flex-col items-center justify-center overflow-hidden rounded-[28px] border p-2 text-center transition-all duration-500 active:scale-[0.98] ${panelClass} ${disabled ? "cursor-default opacity-90" : "hover:-translate-y-1 hover:shadow-[0_0_50px_rgba(0,0,0,0.38)]"}`}
     >
       <div className="absolute inset-0 bg-linear-to-br from-white/5 via-transparent to-transparent opacity-60 transition-opacity group-hover:opacity-90"></div>
       <div className="relative z-10 flex flex-col items-center px-6 py-10 md:py-12">
@@ -194,12 +200,12 @@ function VoteSuccessPanel({
   );
 
   return (
-    <div className="mx-auto w-full max-w-4xl avalon-ending-panel rounded-[28px] border border-outline-variant/35 p-6 text-center shadow-[0_0_50px_rgba(0,0,0,0.45)] md:p-8">
+    <div className="avalon-earlyend-success mx-auto w-full max-w-4xl avalon-ending-panel rounded-[28px] border border-outline-variant/35 p-6 text-center shadow-[0_0_50px_rgba(0,0,0,0.45)] md:p-8">
       <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-surface-container-lowest/70 shadow-[0_0_30px_rgba(0,0,0,0.35)] ring-1 ring-white/10">
         {icon}
       </div>
       <p className="text-[10px] uppercase tracking-[0.4em] text-on-surface-variant font-label mb-3">VOTE REGISTERED</p>
-      <h3 className={`font-headline text-3xl md:text-5xl uppercase tracking-[0.18em] mb-4 ${toneClass}`}>
+      <h3 className={`avalon-earlyend-success-title font-headline text-3xl md:text-5xl uppercase tracking-[0.18em] mb-4 ${toneClass}`}>
         Bạn đã vote thành công
       </h3>
       <p className="mx-auto max-w-2xl text-sm md:text-lg leading-relaxed text-on-surface-variant">

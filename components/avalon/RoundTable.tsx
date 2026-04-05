@@ -1,7 +1,7 @@
 "use client";
 
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import Image from 'next/image';
 import { HelpCircle } from 'lucide-react';
@@ -10,6 +10,10 @@ import { getRoleImageSrcForViewer } from './roleImage';
 
 export default function RoundTable({ gameState, me, socket }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null }) {
    const [isQuestHistoryOpen, setIsQuestHistoryOpen] = useState(false);
+   const stageRef = useRef<HTMLDivElement | null>(null);
+   const [sceneScale, setSceneScale] = useState(1);
+   const SCENE_BASE_WIDTH = 1120;
+   const SCENE_BASE_HEIGHT = 560;
    const activePlayers = gameState.players.filter((p: AvalonPlayer) => p.status === 'connected');
    const numPlayers = activePlayers.length;
    const questParticipantsHistory = gameState.questParticipantsHistory ?? [];
@@ -45,10 +49,45 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
 
    const layout = getMapping(numPlayers);
 
+   useEffect(() => {
+      const updateScale = () => {
+         if (!stageRef.current) return;
+
+         const rect = stageRef.current.getBoundingClientRect();
+         const availableWidth = Math.max(280, rect.width - 16);
+         const availableHeight = Math.max(200, rect.height - 16);
+
+         const widthScale = availableWidth / SCENE_BASE_WIDTH;
+         const heightScale = availableHeight / SCENE_BASE_HEIGHT;
+         const nextScale = Math.min(1, widthScale, heightScale);
+
+         setSceneScale(Math.max(0.26, nextScale));
+      };
+
+      updateScale();
+
+      const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateScale) : null;
+      if (observer && stageRef.current) {
+         observer.observe(stageRef.current);
+      }
+
+      window.addEventListener('resize', updateScale);
+      window.addEventListener('orientationchange', updateScale);
+
+      return () => {
+         if (observer) {
+            observer.disconnect();
+         }
+         window.removeEventListener('resize', updateScale);
+         window.removeEventListener('orientationchange', updateScale);
+      };
+   }, []);
+
    return (
       <div
-         className="flex-1 w-full relative flex flex-col items-center justify-center py-4 px-2 overflow-visible bg-transparent"
-         style={{ minHeight: '34rem', height: 'max(34rem, calc(100dvh - 9rem))' }}
+         ref={stageRef}
+         className="avalon-table-stage flex-1 w-full relative flex flex-col items-center justify-center py-2 md:py-4 px-1 sm:px-2 overflow-hidden bg-transparent"
+         style={{ minHeight: '30rem', height: 'calc(100dvh - 7rem)' }}
       >
          {showQuestParticipantsBoard && (
                <>
@@ -116,10 +155,19 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
          {/* -------------------------------------------------------------
              MAIN TABLE LAYOUT (Responsive Grid mapping)
              ------------------------------------------------------------- */}
-         <div className="relative w-full h-full flex flex-col justify-between items-center max-w-7xl mx-auto pt-16 pb-8 pointer-events-none">
+         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+         <div
+            className="avalon-table-scene relative flex flex-col justify-between items-center pointer-events-none"
+            style={{
+               width: `${SCENE_BASE_WIDTH}px`,
+               height: `${SCENE_BASE_HEIGHT}px`,
+               transform: `scale(${sceneScale})`,
+               transformOrigin: 'center center',
+            }}
+         >
             
             {/* Top Row */}
-            <div className="flex justify-around w-full px-4 md:px-20 h-24">
+            <div className="flex justify-around w-full px-20 h-24">
                {layout.top.map((idx) => {
                   const player = seatedPlayers[idx];
                   if (!player) return null;
@@ -128,9 +176,9 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
             </div>
 
             {/* Middle Section */}
-            <div className="flex items-center justify-between w-full flex-1 my-4 px-2 md:px-8">
+            <div className="flex items-center justify-between w-full flex-1 my-4 px-8">
                {/* Left Players */}
-               <div className="flex flex-col justify-evenly h-full gap-4 md:gap-8 w-24">
+               <div className="flex flex-col justify-evenly h-full gap-8 w-24">
                   {layout.left.map((idx) => {
                      const player = seatedPlayers[idx];
                      if (!player) return null;
@@ -139,12 +187,12 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
                </div>
 
                {/* Central Board */}
-               <div className="flex-1 flex justify-center items-center scale-90 md:scale-100 mx-4 pointer-events-auto">
+               <div className="flex-1 flex justify-center items-center mx-4 pointer-events-auto">
                   <CenterBoard gameState={gameState} me={me} socket={socket} />
                </div>
 
                {/* Right Players */}
-               <div className="flex flex-col justify-evenly h-full gap-4 md:gap-8 w-24 items-end">
+               <div className="flex flex-col justify-evenly h-full gap-8 w-24 items-end">
                   {layout.right.map((idx) => {
                      const player = seatedPlayers[idx];
                      if (!player) return null;
@@ -154,13 +202,14 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
             </div>
 
             {/* Bottom Row */}
-            <div className="flex justify-around w-full px-4 md:px-20 h-24">
+            <div className="flex justify-around w-full px-20 h-24">
                {layout.bottom.map((idx) => {
                   const player = seatedPlayers[idx];
                   if (!player) return null;
                   return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} />;
                })}
             </div>
+         </div>
          </div>
       </div>
    );
@@ -206,12 +255,12 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCa
       >
          {/* 'Me' Visibility badge */}
          {isMe && (
-            <div className="absolute -left-2 -top-2 z-30 bg-(--primary) text-[#0b1320] p-1 rounded-full shadow-[0_0_10px_rgba(131,195,163,0.5)] border border-white/20 scale-75 md:scale-100">
+            <div className="absolute -left-2 -top-2 z-30 bg-(--primary) text-[#0b1320] p-1 rounded-full shadow-[0_0_10px_rgba(131,195,163,0.5)] border border-white/20 scale-100">
                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             </div>
          )}
          
-         <div className={`w-14 h-14 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-lg bg-[#0f172a]/90 backdrop-blur-md border-2 p-1 transition-all ${borderColor} ${shadowColor} ${isMe ? 'scale-110 ring-4 ring-(--primary)/20' : ''}`}>
+         <div className={`w-20 h-20 lg:w-24 lg:h-24 rounded-lg bg-[#0f172a]/90 backdrop-blur-md border-2 p-1 transition-all ${borderColor} ${shadowColor} ${isMe ? 'scale-110 ring-4 ring-(--primary)/20' : ''}`}>
             {shouldShowRoleAvatar ? (
                <div className="relative w-full h-full rounded overflow-hidden bg-surface-container-low">
                   <Image
@@ -266,8 +315,8 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCa
          )}
 
          {isLeader && (
-            <div className="absolute -top-10 md:-top-12 left-1/2 -translate-x-1/2 text-[#d39b2e] z-30 scale-75 md:scale-100 drop-shadow-[0_0_12px_rgba(211,155,46,0.9)]">
-               <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
+            <div className="absolute top-1 right-1 text-[#2a1e0b] z-40 rounded-full bg-[#d39b2e] p-1 border border-white/30 shadow-[0_0_14px_rgba(211,155,46,0.7)]">
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
                </svg>
             </div>
@@ -275,25 +324,25 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCa
 
          {/* MISSION Tag */}
          {isProposed && (isLeft || !isRight) && ( // Default to left side tag unless it's explicitly the right column
-            <div className="absolute -left-10 md:-left-14 top-1/2 -translate-y-1/2 bg-green-500/20 border border-green-500/50 px-1.5 md:px-2.5 py-0.5 rounded-full text-[6px] md:text-[8px] font-black tracking-[0.2em] text-green-400 backdrop-blur-md z-30 shadow-[0_0_15px_rgba(34,197,94,0.5)] uppercase">
+            <div className="absolute -left-14 top-1/2 -translate-y-1/2 bg-green-500/20 border border-green-500/50 px-2.5 py-0.5 rounded-full text-[8px] font-black tracking-[0.2em] text-green-400 backdrop-blur-md z-30 shadow-[0_0_15px_rgba(34,197,94,0.5)] uppercase">
                Mission
             </div>
          )}
          {isProposed && isRight && (
-            <div className="absolute -right-10 md:-right-14 top-1/2 -translate-y-1/2 bg-green-500/20 border border-green-500/50 px-1.5 md:px-2.5 py-0.5 rounded-full text-[6px] md:text-[8px] font-black tracking-[0.2em] text-green-400 backdrop-blur-md z-30 shadow-[0_0_15px_rgba(34,197,94,0.5)] uppercase">
+            <div className="absolute -right-14 top-1/2 -translate-y-1/2 bg-green-500/20 border border-green-500/50 px-2.5 py-0.5 rounded-full text-[8px] font-black tracking-[0.2em] text-green-400 backdrop-blur-md z-30 shadow-[0_0_15px_rgba(34,197,94,0.5)] uppercase">
                Mission
             </div>
          )}
 
          {isMe && (
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-(--primary) text-[#0b1320] px-2 md:px-3 py-0.5 rounded-full text-[8px] md:text-[10px] font-extrabold tracking-widest shadow-[0_0_15px_rgba(131,195,163,0.5)] z-40 whitespace-nowrap">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-(--primary) text-[#0b1320] px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-widest shadow-[0_0_15px_rgba(131,195,163,0.5)] z-40 whitespace-nowrap">
                {"BẠN"}
             </div>
          )}
 
          {/* Name Label */}
-         <div className={`absolute -bottom-3 md:-bottom-4 left-1/2 -translate-x-1/2 px-2 md:px-3 py-1 rounded text-[7px] md:text-[9px] font-headline tracking-widest border border-white/10 whitespace-nowrap z-50 flex flex-col items-center leading-none ${isLeader ? 'bg-[#d39b2e] text-[#2a1e0b] shadow-[0_4px_12px_rgba(211,155,46,0.4)]' : 'bg-[#1e293b] text-slate-300'} ${isMe ? 'border-(--primary)/50 px-3 md:px-4 shadow-lg ring-1 ring-(--primary)/30' : ''}`}>
-            {isLeader && <span className="text-[4px] md:text-[5px] font-black tracking-[0.2em] opacity-80 mb-0.5 uppercase">LEADER</span>}
+         <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded text-[9px] font-headline tracking-widest border border-white/10 whitespace-nowrap z-50 flex flex-col items-center leading-none ${isLeader ? 'bg-[#d39b2e] text-[#2a1e0b] shadow-[0_4px_12px_rgba(211,155,46,0.4)]' : 'bg-[#1e293b] text-slate-300'} ${isMe ? 'border-(--primary)/50 px-4 shadow-lg ring-1 ring-(--primary)/30' : ''}`}>
+            {isLeader && <span className="text-[5px] font-black tracking-[0.2em] opacity-80 mb-0.5 uppercase">LEADER</span>}
             <span className="font-bold">{player.name}</span>
          </div>
       </div>

@@ -13,7 +13,7 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="avalon-rules-modal-shell fixed inset-0 z-120 flex items-center justify-center p-2 sm:p-4">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -26,33 +26,33 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="avalon-glass relative w-full max-w-3xl max-h-[85vh] overflow-hidden rounded-2xl border border-(--primary)/30 shadow-[0_10px_50px_rgba(0,0,0,0.8)] flex flex-col bg-[#0b1320]"
+            className="avalon-rules-modal-frame avalon-glass relative w-full max-w-4xl max-h-[88dvh] overflow-hidden rounded-2xl border border-(--primary)/30 shadow-[0_10px_50px_rgba(0,0,0,0.8)] flex flex-col bg-[#0b1320]"
           >
             {/* Header */}
-            <div className="relative p-6 border-b border-(--outline-variant)/50 shrink-0 overflow-hidden">
+            <div className="avalon-rules-modal-header relative p-4 md:p-6 border-b border-(--outline-variant)/50 shrink-0 overflow-hidden">
                <div className="absolute inset-0 bg-linear-to-r from-(--primary)/10 to-transparent pointer-events-none"></div>
                <button 
                  onClick={onClose}
-                 className="absolute top-6 right-6 text-(--primary)/60 hover:text-(--primary) hover:bg-(--primary)/10 p-2 rounded-full transition-colors z-10"
+                 className="absolute top-3 right-3 md:top-6 md:right-6 text-(--primary)/60 hover:text-(--primary) hover:bg-(--primary)/10 p-2 rounded-full transition-colors z-10"
                >
                  <X className="w-5 h-5" />
                </button>
-               <h2 className="text-2xl font-serif text-(--primary) tracking-widest uppercase flex items-center gap-3">
+               <h2 className="avalon-rules-modal-title text-xl md:text-2xl font-serif text-(--primary) tracking-widest uppercase flex items-center gap-2 md:gap-3 pr-10">
                  <ScrollText className="w-6 h-6" />
                  Lệnh Bài Luật Lệ
                </h2>
-               <p className="text-xs text-(--on-surface-variant) uppercase tracking-widest mt-2 font-headline">
+               <p className="avalon-rules-modal-subtitle text-[10px] md:text-xs text-(--on-surface-variant) uppercase tracking-[0.2em] mt-1.5 md:mt-2 font-headline">
                  Nắm rõ luật lệ để sinh tồn tại Vương Quốc Avalon
                </p>
             </div>
 
             {/* Scrollable Content */}
-            <div className="p-6 md:p-8 overflow-y-auto custom-avalon-scrollbar space-y-12 flex-1">
+            <div className="avalon-rules-modal-content p-4 md:p-8 overflow-y-auto custom-avalon-scrollbar space-y-8 md:space-y-10 flex-1">
               
               {/* Giới thiệu */}
-              <section className="space-y-4">
-                <div className="p-5 rounded-xl border border-(--primary)/30 bg-(--primary)/5 backdrop-blur-md">
-                   <p className="text-sm font-sans text-gray-300 leading-relaxed">
+              <section className="avalon-rules-section space-y-3 md:space-y-4">
+                <div className="avalon-rules-intro p-4 md:p-5 rounded-xl border border-(--primary)/30 bg-(--primary)/5 backdrop-blur-md">
+                   <p className="text-xs md:text-sm font-sans text-gray-300 leading-relaxed">
                      Ác quỷ đang tràn lan trong vương quốc. Vua Arthur vĩ đại tựa như một lời hứa về sự thịnh vượng, nhưng lẩn giấu trong số những chiến binh dũng cảm là tay sai máu lạnh của Mordred. 
                      <br/><br/>
                      Dù ít ỏi, <strong>Phe Ác</strong> có thể nhận ra nhau và ẩn mình với tất cả, ngoại trừ vị pháp sư già <strong>Merlin</strong>.
@@ -61,14 +61,14 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
               </section>
 
               {/* Giải Thích Nhân Vật */}
-              <section className="space-y-6">
-                <h3 className="font-headline text-(--secondary) tracking-widest uppercase text-xl flex items-center gap-2 border-b border-(--outline-variant)/30 pb-2">
+              <section className="avalon-rules-section space-y-5 md:space-y-6">
+                <h3 className="avalon-rules-heading font-headline text-(--secondary) tracking-widest uppercase text-base md:text-xl flex items-center gap-2 border-b border-(--outline-variant)/30 pb-2">
                   <Shield className="w-6 h-6" /> Ý Nghĩa Các Phe
                 </h3>
 
                 {/* Phe Thiện */}
                 <div className="space-y-3">
-                  <h4 className="font-bold text-(--primary) uppercase tracking-wider flex items-center gap-2 text-sm">
+                  <h4 className="font-bold text-(--primary) uppercase tracking-wider flex items-center gap-2 text-xs md:text-sm">
                      Phe Thiện (Trung thành với Arthur)
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -85,7 +85,7 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
 
                 {/* Phe Ác */}
                 <div className="space-y-3 mt-6">
-                  <h4 className="font-bold text-(--tertiary) uppercase tracking-wider flex items-center gap-2 text-sm">
+                  <h4 className="font-bold text-(--tertiary) uppercase tracking-wider flex items-center gap-2 text-xs md:text-sm">
                      Phe Ác (Tay sai của Mordred)
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -114,12 +114,12 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
               </section>
 
               {/* Cách Chơi */}
-              <section className="space-y-6">
-                <h3 className="font-headline text-(--secondary) tracking-widest uppercase text-xl flex items-center gap-2 border-b border-(--outline-variant)/30 pb-2">
+              <section className="avalon-rules-section space-y-5 md:space-y-6">
+                <h3 className="avalon-rules-heading font-headline text-(--secondary) tracking-widest uppercase text-base md:text-xl flex items-center gap-2 border-b border-(--outline-variant)/30 pb-2">
                   <Swords className="w-6 h-6" /> Trình Tự Ván Đấu
                 </h3>
 
-                <div className="space-y-6 relative before:absolute before:inset-y-0 before:left-[17px] before:w-[2px] before:bg-(--outline-variant)/30">
+                <div className="avalon-rules-steps space-y-4 md:space-y-6 relative before:absolute before:inset-y-0 before:left-4.25 before:w-0.5 before:bg-(--outline-variant)/30">
                   <StepItem 
                     num="1" title="Lập Đội (Đội Trưởng Đề Xuất)" icon={Users}
                     desc="Mỗi hiệp có 1 Đội Trưởng. Người này sẽ chọn ra đủ số lượng thành viên yêu cầu để đi Nhiệm vụ. Đội trưởng có thể tự chọn bản thân mình vào đội."
@@ -141,12 +141,12 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
 
 
               {/* Section: Role Distribution */}
-              <section className="space-y-4">
-                <h3 className="font-headline text-(--secondary) tracking-widest uppercase text-xl flex items-center gap-2 border-b border-(--outline-variant)/30 pb-2">
+              <section className="avalon-rules-section space-y-3 md:space-y-4">
+                <h3 className="avalon-rules-heading font-headline text-(--secondary) tracking-widest uppercase text-base md:text-xl flex items-center gap-2 border-b border-(--outline-variant)/30 pb-2">
                   <VenetianMask className="w-5 h-5" />
                   Bảng Phân Bổ Lực Lượng
                 </h3>
-                <div className="rounded-xl border border-(--outline-variant)/30 overflow-hidden bg-[#0f172a]/40 backdrop-blur-md">
+                <div className="avalon-rules-table rounded-xl border border-(--outline-variant)/30 overflow-hidden bg-[#0f172a]/40 backdrop-blur-md">
                   <table className="w-full text-center border-collapse">
                     <thead>
                       <tr className="border-b border-(--outline-variant)/30 text-(--on-surface-variant) font-headline uppercase text-[10px] sm:text-xs tracking-widest bg-black/20">
@@ -176,17 +176,17 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
               </section>
 
               {/* Section: Quest Participants */}
-              <section className="space-y-4">
-                <h3 className="font-headline text-(--secondary) tracking-widest uppercase text-xl flex items-center gap-2 border-b border-(--outline-variant)/30 pb-2">
+              <section className="avalon-rules-section space-y-3 md:space-y-4">
+                <h3 className="avalon-rules-heading font-headline text-(--secondary) tracking-widest uppercase text-base md:text-xl flex items-center gap-2 border-b border-(--outline-variant)/30 pb-2">
                   <Target className="w-5 h-5" />
                   Bảng Yêu Cầu Nhiệm Vụ
                 </h3>
-                <div className="rounded-xl border border-(--outline-variant)/30 overflow-hidden bg-[#0f172a]/40 backdrop-blur-md">
+                <div className="avalon-rules-table rounded-xl border border-(--outline-variant)/30 overflow-hidden bg-[#0f172a]/40 backdrop-blur-md">
                   <div className="overflow-x-auto">
                     <table className="w-full text-center border-collapse">
                       <thead>
                         <tr className="border-b border-(--outline-variant)/30 text-(--on-surface-variant) font-headline uppercase text-[10px] sm:text-xs tracking-widest bg-black/20">
-                          <th className="py-3 px-2 font-bold whitespace-nowrap min-w-[80px]">Hiệp Sĩ</th>
+                          <th className="py-3 px-2 font-bold whitespace-nowrap min-w-20">Hiệp Sĩ</th>
                           <th className="py-3 px-2 font-bold">Q1</th>
                           <th className="py-3 px-2 font-bold">Q2</th>
                           <th className="py-3 px-2 font-bold">Q3</th>
@@ -226,10 +226,10 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
             </div>
             
             {/* Footer */}
-            <div className="p-6 border-t border-(--outline-variant)/30 shrink-0 bg-black/20 text-center">
+            <div className="avalon-rules-modal-footer p-4 md:p-6 border-t border-(--outline-variant)/30 shrink-0 bg-black/20 text-center">
               <button 
                 onClick={onClose}
-                className="px-8 py-3 bg-(--primary) text-[#0b1320] font-bold font-headline uppercase tracking-widest rounded-xl hover:bg-white transition-colors shadow-[0_0_15px_rgba(131,195,163,0.3)]"
+                className="avalon-rules-close-btn px-8 py-3 bg-primary-avalon text-surface-dim-avalon font-bold font-headline uppercase tracking-widest rounded-xl hover:brightness-110 transition-colors shadow-[0_0_15px_rgba(131,195,163,0.3)]"
               >
                 Đã Rõ Luật
               </button>
@@ -246,12 +246,12 @@ function RoleDetailCard({ icon: Icon, title, desc, isEvil = false }: { icon: any
   const colorClass = isEvil ? "text-(--tertiary)" : "text-(--primary)";
   const bgClass = isEvil ? "bg-(--tertiary)/10 border-(--tertiary)/30" : "bg-(--primary)/10 border-(--primary)/30";
   return (
-    <div className={`p-4 rounded-xl border ${bgClass} flex flex-col gap-2 hover:bg-white/5 transition-colors`}>
+    <div className={`avalon-rules-role-card p-3 md:p-4 rounded-xl border ${bgClass} flex flex-col gap-1.5 md:gap-2 hover:bg-white/5 transition-colors`}>
       <div className={`flex items-center gap-2 font-headline uppercase tracking-widest ${colorClass}`}>
         <Icon className="w-5 h-5" />
-        <span className="font-bold text-sm">{title}</span>
+        <span className="font-bold text-xs md:text-sm">{title}</span>
       </div>
-      <p className="text-gray-300 text-xs font-sans leading-relaxed">
+      <p className="text-gray-300 text-[11px] md:text-xs font-sans leading-relaxed">
         {desc}
       </p>
     </div>
@@ -260,15 +260,15 @@ function RoleDetailCard({ icon: Icon, title, desc, isEvil = false }: { icon: any
 
 function StepItem({ num, title, icon: Icon, desc }: { num: string, title: string, icon: any, desc: string }) {
   return (
-    <div className="relative pl-12 flex flex-col gap-1">
+    <div className="avalon-rules-step-item relative pl-12 flex flex-col gap-1">
        {/* Circle marker */}
        <div className="absolute left-0 top-0 w-9 h-9 rounded-full bg-(--primary)/20 border-2 border-(--primary) flex items-center justify-center font-bold text-(--primary) font-headline">
          {num}
        </div>
-       <div className="flex items-center gap-2 text-(--on-surface) font-headline uppercase tracking-widest text-sm pt-2 pb-1">
+       <div className="flex items-center gap-2 text-(--on-surface) font-headline uppercase tracking-widest text-xs md:text-sm pt-2 pb-1">
          <Icon className="w-4 h-4 text-(--primary)" /> {title}
        </div>
-       <p className="text-gray-400 text-sm font-sans leading-relaxed">
+       <p className="text-gray-400 text-xs md:text-sm font-sans leading-relaxed">
          {desc}
        </p>
     </div>
