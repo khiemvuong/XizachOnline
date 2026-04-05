@@ -59,6 +59,20 @@ export default function Home() {
               🎯 Vào Phòng
             </button>
           </form>
+
+          <div className="border-t border-slate-600/50 pt-6 mt-2">
+            <button 
+              onClick={() => router.push('/avalon')}
+              className="w-full p-4 font-bold rounded-xl transition-transform hover:scale-[1.02] active:scale-95 text-base shadow-md border"
+              style={{ 
+                backgroundColor: 'rgba(99, 102, 241, 0.05)', 
+                borderColor: 'rgba(99, 102, 241, 0.3)',
+                color: '#a5b4fc',
+              }}
+            >
+              🌌 Vùng Đất Avalon (Trải Nghiệm Mới)
+            </button>
+          </div>
         </div>
       </div>
     </div>

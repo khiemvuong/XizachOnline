@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
-import { Fingerprint, CheckCircle2, Shield, Eye, AlertTriangle, Swords } from 'lucide-react';
+import { Fingerprint, CheckCircle2, Eye, AlertTriangle, Swords } from 'lucide-react';
 import { getRoleImageSrcForViewer, getVisibleRoleLabelForViewer } from './roleImage';
 
 export default function RoleReveal({ gameState, me, onReady }: { gameState: AvalonRoom, me: AvalonPlayer, onReady: () => void }) {
@@ -13,7 +13,6 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
   const factionName = isEvil ? 'Thế Lực Hắc Ám' : 'Hiệp Sĩ Bàn Tròn';
   
   // Find visible players based on obfuscation rules from the engine
-  const visibleGood = gameState.players.filter((p: AvalonPlayer) => p.team === 'Good' && p.userId !== me.userId);
   const visibleEvil = gameState.players.filter((p: AvalonPlayer) => p.team === 'Evil' && p.userId !== me.userId);
   // Percival sees Merlin and Morgana, but they are all returned as 'Merlin' to obfuscate.
   const visibleMerlinLikes = gameState.players.filter((p: AvalonPlayer) => p.role === 'Merlin' && p.userId !== me.userId); 
@@ -34,9 +33,11 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
 
   const roleDetails = getRoleDetails(me.role);
   const roleImageSrc = getRoleImageSrcForViewer(me, me);
+  const maskedRoleLabel = 'Danh tính đang được phong ấn';
+  const maskedRoleDesc = 'Giữ ở khung bên phải để tạm mở danh tính của bạn.';
 
   return (
-    <div className="flex-1 flex flex-col items-center max-w-lg mx-auto w-full relative pt-12 pb-24 px-6 z-0">
+    <div className="flex-1 w-full max-w-6xl mx-auto relative px-4 py-4 z-0 min-h-144 h-[calc(100dvh-6rem)] overflow-y-auto">
       
       {/* Faction Ambient Spotlight (Background) */}
       <div 
@@ -44,25 +45,57 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
         style={{ backgroundColor: `var(--color-${colorTheme}-avalon, var(--${colorTheme}))`, opacity: 0.1 }}
       ></div>
 
-      {/* Phase Header */}
-      <div className="text-center space-y-2 mb-8">
-        <span className={`text-(--${colorTheme}) font-headline tracking-[0.3em] text-[10px] uppercase block`}>
-          Giai Đoạn: Màn Đêm Buông Xuống
-        </span>
-        <h2 className="text-3xl lg:text-4xl font-headline font-bold text-(--on-surface) tracking-tight">Danh Tính Bí Mật</h2>
-        <p className="text-(--on-surface-variant) font-body text-xs lg:text-sm italic opacity-80">
-          "Giữ lẫy sự thật trong bóng tối của Camelot."
-        </p>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 h-full items-center">
+        <section className="space-y-5 lg:space-y-6 lg:pr-4">
+          <div className="text-left space-y-2">
+            <span className={`text-(--${colorTheme}) font-headline tracking-[0.3em] text-[10px] uppercase block`}>
+              Giai Đoạn: Màn Đêm Buông Xuống
+            </span>
+            <h2 className="text-3xl lg:text-5xl font-headline font-bold text-(--on-surface) tracking-tight">Danh Tính Bí Mật</h2>
+            <p className="text-(--on-surface-variant) font-body text-xs lg:text-sm italic opacity-85">
+              &quot;Giữ lấy sự thật trong bóng tối của Camelot.&quot;
+            </p>
+          </div>
 
-      {/* Interactive Reveal Area */}
-      <div 
-        className="relative group w-full mb-8 select-none touch-none"
-        onPointerUp={() => setIsRevealing(false)} 
-        onPointerLeave={() => setIsRevealing(false)}
-        onPointerCancel={() => setIsRevealing(false)}
-        onContextMenu={(e) => e.preventDefault()}
-      >
+          <div className="rounded-xl border border-(--outline-variant)/40 bg-(--surface-container-low)/70 p-4 lg:p-5 backdrop-blur-md">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-(--on-surface-variant)">Vai trò của bạn</p>
+            <p className={`mt-1 text-xl lg:text-2xl font-headline uppercase tracking-widest text-(--${colorTheme})`}>
+              {isRevealing ? (me.role?.replace('_', ' ') ?? 'Unknown') : maskedRoleLabel}
+            </p>
+            <p className="mt-2 text-sm text-(--on-surface-variant)">
+              {isRevealing ? roleDetails.desc : maskedRoleDesc}
+            </p>
+            <p className="mt-3 text-[11px] uppercase tracking-[0.15em] text-(--secondary)">
+              Chạm và giữ bên phải để xác minh danh tính.
+            </p>
+          </div>
+
+          <div className="w-full">
+            {me.isReady ? (
+              <div className="w-full bg-transparent border border-(--outline-variant) text-(--secondary) py-4 rounded-xl font-bold font-headline text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-(--primary)" />
+                Chờ các kỵ sĩ khác...
+              </div>
+            ) : (
+              <button 
+                className="w-full bg-primary-avalon text-surface-dim-avalon py-4 rounded-xl font-headline font-bold text-sm tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] shadow-[0_4px_20px_rgba(186,200,220,0.3)] disabled:opacity-50"
+                onClick={onReady}
+                disabled={isRevealing}
+              >
+                {isRevealing ? 'Buông Tay Bổn Tọa...' : 'Nắm Rõ Bí Mật'}
+              </button>
+            )}
+          </div>
+        </section>
+
+        {/* Interactive Reveal Area */}
+        <section
+          className="relative group w-full select-none touch-none"
+          onPointerUp={() => setIsRevealing(false)} 
+          onPointerLeave={() => setIsRevealing(false)}
+          onPointerCancel={() => setIsRevealing(false)}
+          onContextMenu={(e) => e.preventDefault()}
+        >
 
         {/* The Card Layer */}
         <div 
@@ -224,7 +257,7 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
                 {(me.role === 'Minion_Good' || me.role === 'Minion_Evil' || me.role === 'Oberon') && (
                   <div className="bg-(--surface-container-high) rounded-lg p-4 border border-(--outline-variant)/30 text-center mt-4">
                     <p className="text-xs leading-relaxed text-(--on-surface-variant) italic">
-                      "Trong đôi mắt của bạn chỉ có màn đêm. Hãy lắng nghe, hãy quan sát hội đồng để tìm ra sự thật."
+                      &quot;Trong đôi mắt của bạn chỉ có màn đêm. Hãy lắng nghe, hãy quan sát hội đồng để tìm ra sự thật.&quot;
                     </p>
                   </div>
                 )}
@@ -254,24 +287,7 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
             </p>
           </div>
         )}
-      </div>
-
-      {/* Done Button */}
-      <div className="w-full shrink-0 relative z-30">
-        {me.isReady ? (
-          <div className="w-full bg-transparent border border-(--outline-variant) text-(--secondary) py-4 rounded-xl font-bold font-headline text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-(--primary)" />
-            Chờ các kỵ sĩ khác...
-          </div>
-        ) : (
-          <button 
-            className="w-full bg-primary-avalon text-surface-dim-avalon py-4 rounded-xl font-headline font-bold text-sm tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] shadow-[0_4px_20px_rgba(186,200,220,0.3)] disabled:opacity-50"
-            onClick={onReady}
-            disabled={isRevealing}
-          >
-             {isRevealing ? 'Buông Tay Bổn Tọa...' : 'Nắm Rõ Bí Mật'}
-          </button>
-        )}
+        </section>
       </div>
 
     </div>

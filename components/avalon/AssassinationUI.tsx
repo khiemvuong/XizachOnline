@@ -70,7 +70,8 @@ export default function AssassinationUI({
                       <Image
                         src="/avalon_roles/unknown.jpeg"
                         alt={`Target ${player.name}`}
-                        className="h-full w-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                        fill
+                        className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
                       />
                       <div className="absolute inset-0 bg-linear-to-t from-surface-container-low to-transparent"></div>
                       <div className="absolute left-3 bottom-3 rounded-md bg-black/55 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">

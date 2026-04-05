@@ -18,6 +18,9 @@ export default function VotingCards({
   const canVoteQuest = isQuest && gameState.proposedTeam.includes(me.userId);
   const isGoodTeamMember = me.team === "Good";
   const failCardLocked = canVoteQuest && isGoodTeamMember;
+  const proposedTeamPlayers = gameState.proposedTeam
+    .map((userId) => gameState.players.find((player) => player.userId === userId))
+    .filter((player): player is AvalonPlayer => Boolean(player));
   const showCards = (isVoting && !me.hasVoted) || (canVoteQuest && !me.hasVoted);
 
   if (!showCards) {
@@ -46,6 +49,28 @@ export default function VotingCards({
             {isVoting ? "Vote Team" : "Quest Decision"}
           </p>
         </div>
+
+        {isVoting && (
+          <div className="mb-6 mx-auto max-w-3xl rounded-xl border border-primary/25 bg-surface-container-low/70 px-4 py-3 text-center">
+            <p className="text-[10px] uppercase tracking-[0.24em] text-primary-avalon font-bold">
+              Đội được đề cử đi nhiệm vụ
+            </p>
+            {proposedTeamPlayers.length > 0 ? (
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                {proposedTeamPlayers.map((player) => (
+                  <span
+                    key={player.userId}
+                    className="rounded-full border border-primary/35 bg-primary/12 px-3 py-1 text-xs font-semibold text-on-surface"
+                  >
+                    {player.name}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-on-surface-variant">Chưa có người được đề cử.</p>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col md:flex-row gap-6 lg:gap-12 items-center justify-center">
           {isVoting ? (

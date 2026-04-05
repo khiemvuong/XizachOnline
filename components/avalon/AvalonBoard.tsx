@@ -10,14 +10,18 @@ import AssassinationUI from './AssassinationUI';
 import GameOver from './GameOver';
 import EarlyEndOverlay from './EarlyEndOverlay';
 import VoteOutcomeOverlay from './VoteOutcomeOverlay';
+import RulesModal from './RulesModal';
+import MyRoleModal from './MyRoleModal';
 import type { LucideIcon } from 'lucide-react';
-import { BookOpen, Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle } from 'lucide-react';
+import { BookOpen, Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, BookText } from 'lucide-react';
 
 export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<AvalonRoom | null>(null);
   const [playerName, setPlayerName] = useState('');
   const [hasJoined, setHasJoined] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+  const [showMyRole, setShowMyRole] = useState(false);
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -37,7 +41,8 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     const userId = sessionStorage.getItem('avalon_userId')!;
     
     // Connect specifically to the /avalon namespace
-    const socketio = io('/avalon', {
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "";
+    const socketio = io(`${socketUrl}/avalon`, {
       reconnectionDelayMax: 10000,
     });
 
@@ -58,8 +63,11 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
   if (!hasJoined) {
     return (
-      <div className="font-body text-primary-avalon h-screen overflow-hidden flex flex-col bg-surface-dim-avalon relative z-0">
+      <div className="font-body text-primary-avalon h-screen overflow-hidden flex flex-col relative z-0">
         {/* Background Atmospheric Elements */}
+        <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCe79Gc9SGc6EKO9KgDlXh9feqsIYrJalRcurvGANaXucPIsKyB-ndT87S0Qw3yyiQC5jpVkN3TTMN8f3WQwYB7eFJEZQ0rgPtogy0igcGgrZbtRNH2uiu133f5tHszGaW4GHlq2-LQ7N8kvEejj2_-AFbk80B7fK8G3wqm5L0XpNvYgaP8pJV3C1pkFR550fSiPqyRT28Bvwk_mh0xJC6Nv6xHQj1HxREGxwLnq0Kcd004LWjJiy1vL5euJ2BCEloyZs-n6ihZig')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+          <div className="absolute inset-0 bg-surface-dim-avalon/70 backdrop-blur-[2px]"></div>
+        </div>
         <div className="absolute inset-0 pointer-events-none -z-10">
           <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-(--primary) opacity-10 blur-[120px] rounded-full"></div>
           <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-(--tertiary) opacity-10 blur-[120px] rounded-full"></div>
@@ -71,7 +79,16 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
             <BookOpen className="w-6 h-6 text-primary-avalon" />
             <h1 className="text-lg font-serif italic text-primary-avalon tracking-widest uppercase">The Illuminated Archive</h1>
           </div>
+          <button 
+            onClick={() => setShowRules(true)}
+            className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
+            title="Luật Chơi"
+          >
+            <BookText className="w-6 h-6" />
+          </button>
         </header>
+
+        <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
 
         <div className="flex-1 mt-16 px-4 md:px-8 py-8 flex items-center justify-center relative z-0">
            {/* Section */}
@@ -140,17 +157,38 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const me = gameState.players.find((p: AvalonPlayer) => p.userId === userId);
 
   return (
-    <div className="avalon-theme min-h-screen flex flex-col p-4 w-full h-full relative overflow-y-auto overflow-x-hidden">
-      {/* Top right early end button */}
-      {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && (
+    <div className="avalon-theme min-h-176 flex flex-col p-4 w-full relative overflow-x-hidden z-0">
+      {/* Avalon Background Layer */}
+      <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCe79Gc9SGc6EKO9KgDlXh9feqsIYrJalRcurvGANaXucPIsKyB-ndT87S0Qw3yyiQC5jpVkN3TTMN8f3WQwYB7eFJEZQ0rgPtogy0igcGgrZbtRNH2uiu133f5tHszGaW4GHlq2-LQ7N8kvEejj2_-AFbk80B7fK8G3wqm5L0XpNvYgaP8pJV3C1pkFR550fSiPqyRT28Bvwk_mh0xJC6Nv6xHQj1HxREGxwLnq0Kcd004LWjJiy1vL5euJ2BCEloyZs-n6ihZig')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+        <div className="absolute inset-0 bg-surface-dim-avalon/70 backdrop-blur-[2px]"></div>
+      </div>
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+        {gameState.state !== 'LOBBY' && me?.role && (
+          <button 
+            onClick={() => setShowMyRole(true)}
+            className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
+            title="Bài Của Bạn"
+          >
+            <VenetianMask className="w-6 h-6" />
+          </button>
+        )}
         <button 
-          onClick={() => socket?.emit('voteEarlyEnd', true)}
-          className="absolute top-4 right-4 z-50 p-2 bg-black/40 backdrop-blur-md border border-(--tertiary)/30 rounded-full hover:bg-(--tertiary)/10 text-(--tertiary) hover:text-white transition-colors shadow-lg"
-          title="Xin Huỷ Trận Đấu"
+          onClick={() => setShowRules(true)}
+          className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
+          title="Luật Chơi"
         >
-          <AlertTriangle className="w-6 h-6" />
+          <BookText className="w-6 h-6" />
         </button>
-      )}
+        {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && (
+          <button 
+            onClick={() => socket?.emit('voteEarlyEnd', true)}
+            className="p-2 bg-black/40 backdrop-blur-md border border-(--tertiary)/30 rounded-full hover:bg-(--tertiary)/10 text-(--tertiary) hover:text-white transition-colors shadow-lg cursor-pointer"
+            title="Xin Huỷ Trận Đấu"
+          >
+            <AlertTriangle className="w-6 h-6" />
+          </button>
+        )}
+      </div>
 
       {/* Early End Overlay */}
       {gameState.earlyEndVotes && gameState.earlyEndVotes.length > 0 && gameState.state !== 'GAME_OVER' && (
@@ -181,6 +219,9 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       )}
 
       {me && <VoteOutcomeOverlay gameState={gameState} me={me} />}
+
+      <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
+      {me && <MyRoleModal isOpen={showMyRole} onClose={() => setShowMyRole(false)} gameState={gameState} me={me} />}
     </div>
   );
 }

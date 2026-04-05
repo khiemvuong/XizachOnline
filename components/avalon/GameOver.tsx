@@ -4,15 +4,104 @@ import { AvalonRoom, AvalonPlayer } from '@/server/game/AvalonTypes';
 import { Socket } from 'socket.io-client';
 import Image from 'next/image';
 import { type ReactNode } from 'react';
-import { Award, RefreshCw, ShieldCheck, ShieldAlert, Skull } from 'lucide-react';
+import { Crown, RefreshCw, ShieldCheck, ShieldAlert, ShieldX, Skull, Swords } from 'lucide-react';
 import { getRoleImageSrcForViewer } from './roleImage';
 
 export default function GameOver({ gameState, me, socket }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null }) {
   const isHost = me.isHost;
+  const myTeam = me.team;
   const goodWon = gameState.winner === 'Good';
    const isAbandoned = gameState.winner === 'Abandoned';
    const isGoodVictory = goodWon && !isAbandoned;
    const isEvilVictory = !goodWon && !isAbandoned;
+   const didMyTeamWin = !isAbandoned && !!myTeam && myTeam === gameState.winner;
+   const personalCase = isAbandoned
+      ? 'abandoned'
+      : myTeam === 'Good' && didMyTeamWin
+         ? 'good-win'
+         : myTeam === 'Good' && !didMyTeamWin
+            ? 'good-lose'
+            : myTeam === 'Evil' && didMyTeamWin
+               ? 'evil-win'
+               : 'evil-lose';
+
+   const personalVisual = {
+      abandoned: {
+         icon: <Crown className="h-5 w-5" />,
+         badgeClass: 'text-on-surface-variant border-outline-variant/50 bg-surface-container/60',
+         auraClass: 'from-slate-300/6 via-slate-400/6 to-transparent',
+         panelGlowClass: 'shadow-[0_0_24px_rgba(160,170,185,0.18)]',
+      },
+      'good-win': {
+         icon: <ShieldCheck className="h-5 w-5" />,
+         badgeClass: 'text-primary-avalon border-primary/45 bg-primary/15',
+         auraClass: 'from-sky-300/12 via-blue-300/10 to-transparent',
+         panelGlowClass: 'shadow-[0_0_30px_rgba(186,200,220,0.28)]',
+      },
+      'good-lose': {
+         icon: <ShieldX className="h-5 w-5" />,
+         badgeClass: 'text-tertiary-avalon border-tertiary/45 bg-tertiary/15',
+         auraClass: 'from-rose-300/12 via-orange-300/10 to-transparent',
+         panelGlowClass: 'shadow-[0_0_30px_rgba(255,180,168,0.24)]',
+      },
+      'evil-win': {
+         icon: <Swords className="h-5 w-5" />,
+         badgeClass: 'text-primary-avalon border-primary/45 bg-primary/15',
+         auraClass: 'from-cyan-300/12 via-sky-300/10 to-transparent',
+         panelGlowClass: 'shadow-[0_0_30px_rgba(186,200,220,0.28)]',
+      },
+      'evil-lose': {
+         icon: <Skull className="h-5 w-5" />,
+         badgeClass: 'text-primary-avalon border-primary/45 bg-primary/15',
+         auraClass: 'from-cyan-300/12 via-sky-300/10 to-transparent',
+         panelGlowClass: 'shadow-[0_0_30px_rgba(186,200,220,0.28)]',
+      },
+   } as const;
+
+   const personalOutcomeCopy = isAbandoned
+      ? {
+           label: 'NO SIDE PREVAILED',
+           title: 'Ván đấu kết thúc sớm',
+           subtitle: 'Không phe nào giành chiến thắng trong trận này.',
+           toneClass: 'text-on-surface-variant',
+           panelClass: 'border-outline-variant/45 bg-surface-container-low/55',
+           panelStyle: { backgroundColor: 'rgba(100, 116, 139, 0.18)', borderColor: 'rgba(148, 163, 184, 0.45)' },
+        }
+      : myTeam === 'Good' && didMyTeamWin
+         ? {
+              label: 'YOUR SIDE WON',
+              title: 'Bạn là Phe Thiện và đã chiến thắng',
+              subtitle: 'Camelot đứng vững. Kế hoạch của phe ác đã bị phá vỡ.',
+              toneClass: 'text-primary-avalon',
+              panelClass: 'border-sky-300/55 bg-sky-500/18',
+              panelStyle: { backgroundColor: 'rgba(56, 189, 248, 0.2)', borderColor: 'rgba(125, 211, 252, 0.62)' },
+           }
+         : myTeam === 'Good' && !didMyTeamWin
+            ? {
+                 label: 'YOUR SIDE LOST',
+                 title: 'Bạn là Phe Thiện và đã thất bại',
+                 subtitle: 'Phe ác đã lật ngược cục diện ở hồi kết.',
+                 toneClass: 'text-tertiary-avalon',
+                 panelClass: 'border-rose-300/55 bg-rose-500/16',
+                 panelStyle: { backgroundColor: 'rgba(251, 113, 133, 0.2)', borderColor: 'rgba(253, 164, 175, 0.62)' },
+              }
+            : myTeam === 'Evil' && didMyTeamWin
+               ? {
+                    label: 'YOUR SIDE WON',
+                    title: 'Bạn là Phe Ác và đã chiến thắng',
+                    subtitle: 'Bóng tối bao trùm bàn tròn. Kế hoạch đã hoàn tất.',
+                    toneClass: 'text-primary-avalon',
+                    panelClass: 'border-sky-300/55 bg-sky-500/18',
+                    panelStyle: { backgroundColor: 'rgba(56, 189, 248, 0.2)', borderColor: 'rgba(125, 211, 252, 0.62)' },
+                 }
+               : {
+                    label: 'YOUR SIDE LOST',
+                    title: 'Bạn là Phe Ác và đã thất bại',
+                    subtitle: 'Phe thiện đã bảo vệ thành công vương quốc.',
+                    toneClass: 'text-primary-avalon',
+                    panelClass: 'border-sky-300/55 bg-sky-500/16',
+                    panelStyle: { backgroundColor: 'rgba(251, 113, 133, 0.2)', borderColor: 'rgba(253, 164, 175, 0.62)' },
+                 };
 
    const headlineCopy = isAbandoned
       ? {
@@ -43,12 +132,21 @@ export default function GameOver({ gameState, me, socket }: { gameState: AvalonR
       : isEvilVictory
          ? 'drop-shadow-[0_0_24px_rgba(255,180,168,0.30)]'
          : 'drop-shadow-[0_0_18px_rgba(198,199,195,0.20)]';
+   const winnerBackdropTintClass = isAbandoned
+      ? 'from-slate-500/10 via-slate-500/5 to-transparent'
+      : isEvilVictory
+         ? 'from-rose-500/24 via-red-500/14 to-transparent'
+         : '';
 
    return (
       <div className={`absolute inset-0 z-100 overflow-y-auto overflow-x-hidden animate-in fade-in duration-700 ${isEvilVictory ? 'avalon-atmospheric-bg' : 'avalon-castle-bg'}`}>
-         <div className="min-h-full px-4 py-8 md:px-6 lg:px-8 bg-black/35 backdrop-blur-sm">
-            <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-8 md:gap-10">
+         <div className="relative min-h-full px-4 py-8 md:px-6 lg:px-8 bg-black/35 backdrop-blur-sm">
+                  {winnerBackdropTintClass && (
+                     <div className={`pointer-events-none absolute inset-0 bg-linear-to-br ${winnerBackdropTintClass}`}></div>
+                  )}
+            <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-8 md:gap-10">
                <div className="w-full max-w-4xl text-center pt-8 md:pt-14">
+                  <div className={`pointer-events-none mx-auto mb-3 h-10 w-full max-w-3xl rounded-full bg-linear-to-r ${personalVisual[personalCase].auraClass}`}></div>
                   <p className={`text-[10px] md:text-xs uppercase tracking-[0.4em] font-label ${isAbandoned ? 'text-on-surface-variant' : primaryToneClass}`}>
                      {headlineCopy.eyebrow}
                   </p>
@@ -58,9 +156,21 @@ export default function GameOver({ gameState, me, socket }: { gameState: AvalonR
                   <p className="mt-4 max-w-3xl mx-auto text-base md:text-xl font-headline italic text-on-surface-variant/90 leading-relaxed">
                      {headlineCopy.subtitle}
                   </p>
+                  <div className={`mt-5 inline-flex max-w-3xl flex-col items-center rounded-xl border px-4 py-3 ${personalOutcomeCopy.panelClass} ${personalVisual[personalCase].panelGlowClass}`} style={personalOutcomeCopy.panelStyle}>
+                     <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] ${personalVisual[personalCase].badgeClass}`}>
+                        {personalVisual[personalCase].icon}
+                        {personalOutcomeCopy.label}
+                     </div>
+                     <p className={`mt-1 text-sm md:text-base font-semibold ${personalOutcomeCopy.toneClass}`}>
+                        {personalOutcomeCopy.title}
+                     </p>
+                     <p className="mt-1 text-xs md:text-sm text-on-surface-variant/90">
+                        {personalOutcomeCopy.subtitle}
+                     </p>
+                  </div>
                   {gameState.assassinationTarget && (
-                     <p className="mt-4 text-sm md:text-base text-on-surface-variant/90 font-body">
-                        Ai đó đã bị ám sát trong đêm.
+                     <p className="mt-4 text-sm md:text-base text-tertiary-avalon font-body">
+                        Đã có người bị ám sát trong đêm. Danh sách bên dưới đã đánh dấu mục tiêu.
                      </p>
                   )}
                </div>
@@ -181,9 +291,9 @@ function EndingFactionCard({
                      </div>
 
                      <div className="flex shrink-0 items-center gap-2">
-                        {isTarget && <Award className="h-4 w-4 text-tertiary-avalon" />}
-                        <span className={`text-[10px] uppercase tracking-[0.25em] ${muted ? 'text-on-surface-variant' : accentClass}`}>
-                           {player.status === 'disconnected' ? 'Lost' : 'Alive'}
+                        {isTarget && <Skull className="h-4 w-4 text-tertiary-avalon" />}
+                        <span className={`text-[10px] uppercase tracking-[0.25em] ${isTarget ? 'text-tertiary-avalon' : muted ? 'text-on-surface-variant' : accentClass}`}>
+                           {isTarget ? 'Assassinated' : player.status === 'disconnected' ? 'Lost' : 'Alive'}
                         </span>
                      </div>
                   </div>

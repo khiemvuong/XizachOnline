@@ -4,13 +4,14 @@ import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
 import { useState } from 'react';
 import { Socket } from 'socket.io-client';
 import Image from 'next/image';
+import { HelpCircle } from 'lucide-react';
 import CenterBoard from './CenterBoard';
 import { getRoleImageSrcForViewer } from './roleImage';
 
 export default function RoundTable({ gameState, me, socket }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null }) {
    const [isQuestHistoryOpen, setIsQuestHistoryOpen] = useState(false);
-  const activePlayers = gameState.players.filter((p: AvalonPlayer) => p.status === 'connected');
-  const numPlayers = activePlayers.length;
+   const activePlayers = gameState.players.filter((p: AvalonPlayer) => p.status === 'connected');
+   const numPlayers = activePlayers.length;
    const questParticipantsHistory = gameState.questParticipantsHistory ?? [];
    const showQuestParticipantsBoard = Boolean(gameState.settings?.showQuestParticipantsBoard);
    const playerNameById = new Map(gameState.players.map((player) => [player.userId, player.name]));
@@ -18,31 +19,50 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
       questParticipantsHistory.map((record) => [record.questNumber, record]),
    );
 
-  const myIndex = activePlayers.findIndex((p: AvalonPlayer) => p.userId === me.userId);
+   const myIndex = activePlayers.findIndex((p: AvalonPlayer) => p.userId === me.userId);
   
-  const seatedPlayers = [];
-  for (let i = 0; i < numPlayers; i++) {
-     const idx = (myIndex + i) % numPlayers;
-     seatedPlayers.push(activePlayers[idx]);
-  }
+   const seatedPlayers: AvalonPlayer[] = [];
+   for (let i = 0; i < numPlayers; i++) {
+        // We push activePlayers in order so that seatedPlayers[0] is always 'Me'
+        const idx = (myIndex + i) % numPlayers;
+        seatedPlayers.push(activePlayers[idx]);
+   }
 
-  return (
-   <div className="flex-1 w-full min-h-100 h-full relative flex items-center justify-center py-4 px-2">
-       <CenterBoard gameState={gameState} me={me} socket={socket} />
+   // -------------------------------------------------------------
+   // LAYOUT LOGIC FOR BOX-BASED TABLE (App.tsx template clone)
+   // -------------------------------------------------------------
+   const getMapping = (n: number) => {
+      switch (n) {
+         case 5: return { bottom: [1, 0, 4], left: [], top: [2, 3], right: [] };
+         case 6: return { bottom: [1, 0, 5], left: [2], top: [3], right: [4] };
+         case 7: return { bottom: [1, 0, 6], left: [2], top: [3, 4], right: [5] };
+         case 8: return { bottom: [1, 0, 7], left: [3, 2], top: [4, 5], right: [6] };
+         case 9: return { bottom: [1, 0, 8], left: [3, 2], top: [4, 5, 6], right: [7] };
+         case 10: return { bottom: [1, 0, 9], left: [3, 2], top: [4, 5, 6], right: [7, 8] };
+         default: return { bottom: [0], left: [], top: [], right: [] };
+      }
+   };
 
-          {showQuestParticipantsBoard && (
+   const layout = getMapping(numPlayers);
+
+   return (
+      <div
+         className="flex-1 w-full relative flex flex-col items-center justify-center py-4 px-2 overflow-visible bg-transparent"
+         style={{ minHeight: '34rem', height: 'max(34rem, calc(100dvh - 9rem))' }}
+      >
+         {showQuestParticipantsBoard && (
                <>
                   <button
                      type="button"
                      onClick={() => setIsQuestHistoryOpen(true)}
-                     className="absolute left-2 top-2 z-30 pointer-events-auto rounded-lg border border-(--tertiary)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--tertiary) shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-colors hover:bg-surface-container"
+                     className="absolute left-2 top-2 z-40 pointer-events-auto rounded-lg border border-(--tertiary)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--tertiary) shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-colors hover:bg-surface-container"
                   >
                      Lịch sử nhiệm vụ
                   </button>
 
                   {isQuestHistoryOpen && (
                      <div
-                        className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-3 pointer-events-auto"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-3 pointer-events-auto backdrop-blur-sm"
                         onClick={() => setIsQuestHistoryOpen(false)}
                      >
                         <div
@@ -62,7 +82,7 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
                               </button>
                            </div>
 
-                           <div className="mt-3 max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+                           <div className="mt-3 max-h-[55vh] space-y-2 overflow-y-auto pr-1 custom-avalon-scrollbar">
                               {gameState.questHistory.map((quest, index) => {
                                  const questNumber = index + 1;
                                  const record = questRecordByNumber.get(questNumber);
@@ -91,127 +111,191 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
                      </div>
                   )}
                </>
-          )}
+         )}
 
-       {/* Players Circle constraint to fit in viewport strictly minus breathing room */}
-       {/* Players Circle constraint to fit in viewport strictly minus breathing room */}
-       <div className="absolute inset-0 max-w-7xl mx-auto w-full h-full pointer-events-none">
-          {seatedPlayers.map((player, index) => {
-             const rightCount = Math.ceil(numPlayers / 2);
-             const leftCount = numPlayers - rightCount;
-             
-             const isRight = index < rightCount;
-             const maxAngle = Math.PI * 0.35; // 63 degrees
-             
-             let x = 0;
-             let y = 0;
-             const rx = 40; // 40% of container width from center
-             const ry = 42; // 42% of container height from center
-             
-             if (isRight) {
-                 const i = index;
-                 let angle = 0;
-                 if (rightCount > 1) {
-                     angle = -maxAngle + (i / (rightCount - 1)) * (2 * maxAngle);
-                 }
-                 x = Math.cos(angle) * rx;
-                 y = Math.sin(angle) * ry;
-             } else {
-                 const i = index - rightCount;
-                 let angle = Math.PI;
-                 if (leftCount > 1) {
-                     angle = (Math.PI - maxAngle) + (i / (leftCount - 1)) * (2 * maxAngle);
-                 }
-                 x = Math.cos(angle) * rx;
-                 y = Math.sin(angle) * ry;
-             }
-             
-             const isMe = player.userId === me.userId;
-             const isLeader = gameState.leaderIndex !== undefined && gameState.players[gameState.leaderIndex]?.userId === player.userId;
-             const isProposed = gameState.proposedTeam.includes(player.userId);
-             
-             const meIsLeader = gameState.players[gameState.leaderIndex]?.userId === me.userId;
-             const isTeamBuilding = gameState.state === 'TEAM_BUILDING';
-             const isClickable = isTeamBuilding && meIsLeader;
-                   const shouldShowRoleAvatar =
-                      player.userId === me.userId ||
-                      Boolean(player.role) ||
-                      (me.role === 'Merlin' && player.team === 'Evil');
+         {/* -------------------------------------------------------------
+             MAIN TABLE LAYOUT (Responsive Grid mapping)
+             ------------------------------------------------------------- */}
+         <div className="relative w-full h-full flex flex-col justify-between items-center max-w-7xl mx-auto pt-16 pb-8 pointer-events-none">
+            
+            {/* Top Row */}
+            <div className="flex justify-around w-full px-4 md:px-20 h-24">
+               {layout.top.map((idx) => {
+                  const player = seatedPlayers[idx];
+                  if (!player) return null;
+                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} />;
+               })}
+            </div>
 
-             return (
-                <div 
-                   key={player.userId}
-                   className={`absolute w-28 md:w-32 flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500 pointer-events-auto ${isClickable ? 'cursor-pointer hover:scale-105' : ''}`}
-                   style={{
-                      left: `calc(50% + ${x}%)`,
-                      top: `calc(50% + ${y}%)`,
-                      zIndex: isProposed ? 25 : 20
-                   }}
-                   onClick={() => {
-                      if (isClickable) {
-                         socket?.emit('toggleTeamSelection', player.userId);
-                      }
-                   }}
-                >
-                   {/* Avatar/Badge Container */}
-                   <div className="relative">
-                      {/* Special Vision Tags */}
-                      {player.userId !== me.userId && player.team === 'Evil' && (
-                         <div className="absolute -top-3 -right-2 bg-[#e46962] text-surface-dim-avalon text-[9px] font-bold px-1.5 py-0.5 rounded-sm z-30 shadow-md">
-                           {me.role === 'Merlin' ? 'Ác' : (player.role ? player.role.replace('_', ' ').toUpperCase() : 'Đồng bọn')}
-                         </div>
-                      )}
-                      
-                      {player.userId !== me.userId && player.role === 'Merlin' && me.role === 'Percival' && (
-                         <div className="absolute -top-3 -right-2 bg-primary-avalon text-surface-dim-avalon text-[9px] font-bold px-1.5 py-0.5 rounded-sm z-30 shadow-md">
-                           Merlin (?)
-                         </div>
-                      )}
+            {/* Middle Section */}
+            <div className="flex items-center justify-between w-full flex-1 my-4 px-2 md:px-8">
+               {/* Left Players */}
+               <div className="flex flex-col justify-evenly h-full gap-4 md:gap-8 w-24">
+                  {layout.left.map((idx) => {
+                     const player = seatedPlayers[idx];
+                     if (!player) return null;
+                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isLeft />;
+                  })}
+               </div>
 
-                      {/* Your Own Role Tag To Not Forget */}
-                      {isMe && (
-                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-max bg-[#83c3a3] text-surface-dim-avalon text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-sm z-30 shadow-md">
-                           {me.role?.replace('_', ' ')}
-                         </div>
-                      )}
+               {/* Central Board */}
+               <div className="flex-1 flex justify-center items-center scale-90 md:scale-100 mx-4 pointer-events-auto">
+                  <CenterBoard gameState={gameState} me={me} socket={socket} />
+               </div>
 
-                      <div 
-                         className={`w-14 h-14 md:w-16 md:h-16 rounded-full border-2 flex items-center justify-center bg-surface-dim-avalon transition-all relative ${isLeader ? 'avalon-glow-secondary z-10' : 'z-10'}`}
-                         style={{ 
-                            borderColor: isLeader ? 'var(--accent-secondary)' : (isMe ? 'var(--primary)' : 'var(--outline-variant)'),
-                            boxShadow: isProposed ? '0 0 20px var(--primary)' : (isLeader ? '0 0 15px var(--accent-secondary)' : 'none')
-                         }}
-                      >
-                                     {shouldShowRoleAvatar ? (
-                                        <div className="relative h-full w-full overflow-hidden rounded-full">
-                                           <Image
-                                              src={getRoleImageSrcForViewer(player, me)}
-                                              alt={`Role avatar ${player.name}`}
-                                              fill
-                                              sizes="64px"
-                                              className="object-cover"
-                                           />
-                                        </div>
-                                     ) : (
-                                        <span className="text-xl md:text-2xl">{player.name.charAt(0).toUpperCase()}</span>
-                                     )}
-                      </div>
-                   </div>
-                   
-                   {/* Name and Tags */}
-                   <div className={`mt-1 md:mt-2 text-center p-1 rounded-sm backdrop-blur-md ${isProposed ? 'bg-(--primary)/20 border border-(--primary)' : ''}`}>
-                      <span className="block font-sans text-xs md:text-sm font-bold truncate px-1 max-w-24 md:max-w-full" style={{ color: isProposed ? '#bac8dc' : 'var(--on-surface)' }}>
-                         {player.name}
-                      </span>
-                      <div className="flex gap-1 justify-center mt-1 flex-wrap">
-                         {isLeader && <span className="text-[9px] md:text-[10px] uppercase font-bold text-[#d39b2e] bg-[#2a1e0b] px-1 rounded-sm border border-[#d39b2e]">Thủ Lĩnh</span>}
-                         {isMe && <span className="text-[9px] md:text-[10px] uppercase font-bold text-primary-avalon bg-[#1a2531] px-1 rounded-sm border border-primary-avalon">Bạn</span>}
-                      </div>
-                   </div>
-                </div>
-             );
-          })}
-       </div>
-    </div>
-  );
+               {/* Right Players */}
+               <div className="flex flex-col justify-evenly h-full gap-4 md:gap-8 w-24 items-end">
+                  {layout.right.map((idx) => {
+                     const player = seatedPlayers[idx];
+                     if (!player) return null;
+                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRight />;
+                  })}
+               </div>
+            </div>
+
+            {/* Bottom Row */}
+            <div className="flex justify-around w-full px-4 md:px-20 h-24">
+               {layout.bottom.map((idx) => {
+                  const player = seatedPlayers[idx];
+                  if (!player) return null;
+                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} />;
+               })}
+            </div>
+         </div>
+      </div>
+   );
+}
+
+type PlayerCardProps = {
+   player: AvalonPlayer;
+   me: AvalonPlayer;
+   gameState: AvalonRoom;
+   socket: Socket | null;
+   isLeft?: boolean;
+   isRight?: boolean;
+};
+
+function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCardProps) {
+   const isMe = player.userId === me.userId;
+   const isLeader = gameState.players[gameState.leaderIndex]?.userId === player.userId;
+   const isProposed = gameState.proposedTeam?.includes(player.userId) ?? false;
+   const meIsLeader = gameState.players[gameState.leaderIndex]?.userId === me.userId;
+   const isTeamBuilding = gameState.state === 'TEAM_BUILDING';
+   const isClickable = isTeamBuilding && meIsLeader;
+
+   const shouldShowRoleAvatar =
+      player.userId === me.userId ||
+      Boolean(player.role) ||
+      (me.role === 'Merlin' && player.team === 'Evil');
+
+   let borderColor = "border-outline-variant/30";
+   if (isProposed && isLeader) borderColor = "border-[#d39b2e]";
+   else if (isProposed) borderColor = "border-(--primary)";
+   else if (isLeader) borderColor = "border-[#d39b2e]";
+   
+   let shadowColor = "";
+   if (isProposed) shadowColor = "shadow-[0_0_20px_rgba(131,195,163,0.3)]";
+   else if (isLeader) shadowColor = "shadow-[0_0_15px_rgba(211,155,46,0.3)]";
+
+   return (
+      <div 
+         className={`relative group pointer-events-auto flex items-center justify-center transition-all duration-300 z-20 ${isClickable ? 'cursor-pointer hover:scale-105 hover:z-30' : ''}`}
+         onClick={() => {
+            if (isClickable) socket?.emit('toggleTeamSelection', player.userId);
+         }}
+      >
+         {/* 'Me' Visibility badge */}
+         {isMe && (
+            <div className="absolute -left-2 -top-2 z-30 bg-(--primary) text-[#0b1320] p-1 rounded-full shadow-[0_0_10px_rgba(131,195,163,0.5)] border border-white/20 scale-75 md:scale-100">
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            </div>
+         )}
+         
+         <div className={`w-14 h-14 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-lg bg-[#0f172a]/90 backdrop-blur-md border-2 p-1 transition-all ${borderColor} ${shadowColor} ${isMe ? 'scale-110 ring-4 ring-(--primary)/20' : ''}`}>
+            {shouldShowRoleAvatar ? (
+               <div className="relative w-full h-full rounded overflow-hidden bg-surface-container-low">
+                  <Image
+                     src={getRoleImageSrcForViewer(player, me)}
+                     alt={`Avatar`}
+                     fill
+                     sizes="96px"
+                     className="object-cover"
+                     unoptimized
+                  />
+               </div>
+            ) : (
+               <div className="relative w-full h-full rounded overflow-hidden bg-slate-950 border border-slate-800/80 shadow-inner">
+                  <Image
+                     src="https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=400&q=80"
+                     alt="Unknown Identity"
+                     fill
+                     className="object-cover opacity-50 mix-blend-luminosity grayscale"
+                     unoptimized
+                  />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-linear-to-b from-transparent to-black/60 backdrop-blur-[1px]">
+                     <span className="text-xl sm:text-2xl lg:text-3xl font-serif text-slate-400 font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                        ?
+                     </span>
+                  </div>
+               </div>
+            )}
+         </div>
+
+         {/* Good/Evil/Unknown Overlays */}
+         {!shouldShowRoleAvatar && (
+            <div className="absolute -top-3 right-0 flex flex-col items-end gap-1 z-30">
+               <div className="bg-slate-800/95 text-slate-300 text-[6px] md:text-[7px] px-1 md:px-1.5 py-0.5 rounded font-bold uppercase tracking-widest shadow-[0_2px_10px_rgba(0,0,0,0.5)] border border-slate-600/50 whitespace-nowrap flex items-center gap-1">
+                  <HelpCircle className="w-2 h-2" /> Lai Lịch Bí Ẩn
+               </div>
+            </div>
+         )}
+         {player.userId !== me.userId && player.team === 'Evil' && (
+            <div className="absolute -top-3 right-0 flex flex-col items-end gap-1 z-30">
+               <div className="bg-(--tertiary) text-white text-[6px] md:text-[7px] px-1 md:px-1.5 py-0.5 rounded font-bold uppercase tracking-widest shadow-md border border-white/20 whitespace-nowrap">
+                  {me.role === 'Merlin' ? 'Ác' : (player.role ? player.role.replace('_', ' ').toUpperCase() : 'Minion')}
+               </div>
+            </div>
+         )}
+
+         {player.userId !== me.userId && player.role === 'Merlin' && me.role === 'Percival' && (
+            <div className="absolute -top-3 left-0 z-30">
+               <div className="bg-(--primary) text-[#0b1320] text-[6px] md:text-[7px] px-1 md:px-1.5 py-0.5 rounded font-bold uppercase tracking-widest shadow-md border border-white/20 whitespace-nowrap">
+                  Merlin (?)
+               </div>
+            </div>
+         )}
+
+         {isLeader && (
+            <div className="absolute -top-10 md:-top-12 left-1/2 -translate-x-1/2 text-[#d39b2e] z-30 scale-75 md:scale-100 drop-shadow-[0_0_12px_rgba(211,155,46,0.9)]">
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
+                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+               </svg>
+            </div>
+         )}
+
+         {/* MISSION Tag */}
+         {isProposed && (isLeft || !isRight) && ( // Default to left side tag unless it's explicitly the right column
+            <div className="absolute -left-10 md:-left-14 top-1/2 -translate-y-1/2 bg-green-500/20 border border-green-500/50 px-1.5 md:px-2.5 py-0.5 rounded-full text-[6px] md:text-[8px] font-black tracking-[0.2em] text-green-400 backdrop-blur-md z-30 shadow-[0_0_15px_rgba(34,197,94,0.5)] uppercase">
+               Mission
+            </div>
+         )}
+         {isProposed && isRight && (
+            <div className="absolute -right-10 md:-right-14 top-1/2 -translate-y-1/2 bg-green-500/20 border border-green-500/50 px-1.5 md:px-2.5 py-0.5 rounded-full text-[6px] md:text-[8px] font-black tracking-[0.2em] text-green-400 backdrop-blur-md z-30 shadow-[0_0_15px_rgba(34,197,94,0.5)] uppercase">
+               Mission
+            </div>
+         )}
+
+         {isMe && (
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-(--primary) text-[#0b1320] px-2 md:px-3 py-0.5 rounded-full text-[8px] md:text-[10px] font-extrabold tracking-widest shadow-[0_0_15px_rgba(131,195,163,0.5)] z-40 whitespace-nowrap">
+               {"BẠN"}
+            </div>
+         )}
+
+         {/* Name Label */}
+         <div className={`absolute -bottom-3 md:-bottom-4 left-1/2 -translate-x-1/2 px-2 md:px-3 py-1 rounded text-[7px] md:text-[9px] font-headline tracking-widest border border-white/10 whitespace-nowrap z-50 flex flex-col items-center leading-none ${isLeader ? 'bg-[#d39b2e] text-[#2a1e0b] shadow-[0_4px_12px_rgba(211,155,46,0.4)]' : 'bg-[#1e293b] text-slate-300'} ${isMe ? 'border-(--primary)/50 px-3 md:px-4 shadow-lg ring-1 ring-(--primary)/30' : ''}`}>
+            {isLeader && <span className="text-[4px] md:text-[5px] font-black tracking-[0.2em] opacity-80 mb-0.5 uppercase">LEADER</span>}
+            <span className="font-bold">{player.name}</span>
+         </div>
+      </div>
+   );
 }
