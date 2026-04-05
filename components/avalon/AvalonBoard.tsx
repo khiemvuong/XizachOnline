@@ -15,6 +15,14 @@ import MyRoleModal from './MyRoleModal';
 import type { LucideIcon } from 'lucide-react';
 import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 
+type AudioTrackName = 'lobby' | 'win' | 'lose';
+
+const AVALON_AUDIO_SOURCES: Record<AudioTrackName, string> = {
+  lobby: '/audio/lobby.opt.ogg',
+  win: '/audio/win.opt.ogg',
+  lose: '/audio/lose.opt.ogg',
+};
+
 export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<AvalonRoom | null>(null);
@@ -58,6 +66,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const safePlay = (audio: HTMLAudioElement) => {
     void audio.play().catch(() => undefined);
   };
+
   const gamePhase = gameState?.state;
   const gameWinner = gameState?.winner;
 
@@ -121,7 +130,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       stopEndTracks();
 
       if (isLobbyMusicEnabled) {
-        const lobbyTrack = getOrCreateAudio(lobbyAudioRef, '/audio/lobby.mp3', {
+        const lobbyTrack = getOrCreateAudio(lobbyAudioRef, AVALON_AUDIO_SOURCES.lobby, {
           loop: true,
           volume: 0.35,
           preload: 'auto',
@@ -154,8 +163,8 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     stopEndTracks();
     const endTrack =
       gameWinner === 'Good'
-        ? getOrCreateAudio(winAudioRef, '/audio/win.mp3', { volume: 0.55, preload: 'auto' })
-        : getOrCreateAudio(loseAudioRef, '/audio/lose.mp3', { volume: 0.55, preload: 'auto' });
+        ? getOrCreateAudio(winAudioRef, AVALON_AUDIO_SOURCES.win, { volume: 0.55, preload: 'auto' })
+        : getOrCreateAudio(loseAudioRef, AVALON_AUDIO_SOURCES.lose, { volume: 0.55, preload: 'auto' });
 
     endTrack.currentTime = 0;
     safePlay(endTrack);
