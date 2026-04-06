@@ -13,6 +13,7 @@ import EarlyEndOverlay from './EarlyEndOverlay';
 import VoteOutcomeOverlay from './VoteOutcomeOverlay';
 import RulesModal from './RulesModal';
 import MyRoleModal from './MyRoleModal';
+import SpectatorView from './SpectatorView';
 import type { LucideIcon } from 'lucide-react';
 import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX, BookText, LogOut } from 'lucide-react';
 
@@ -254,10 +255,32 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   // const userId = localStorage.getItem('avalon_userId')!;
   const userId = sessionStorage.getItem('avalon_userId')!;
   const me = gameState.players.find((p: AvalonPlayer) => p.userId === userId);
+  const isHost = me?.isHost ?? false;
   const isLobby = gameState.state === 'LOBBY';
+  const isGameOver = gameState.state === 'GAME_OVER';
   const boardShellClass = isLobby
     ? 'h-full min-h-0 overflow-y-auto overflow-x-hidden'
     : 'h-full min-h-0 overflow-hidden';
+
+  const handleBackButton = () => {
+    if (!isHost) {
+      // Non-host: just leave the room
+      router.push('/avalon');
+      return;
+    }
+    if (isLobby || isGameOver) {
+      // Host at lobby/game-over: just navigate away (no game in progress)
+      router.push('/avalon');
+      return;
+    }
+    // Host mid-game: confirm before resetting everyone to lobby
+    const confirmed = window.confirm(
+      'Bạn là trưởng phòng. Quay về sẽ kết thúc ván chơi đang diễn ra và đưa tất cả mọi người về trang thiết lập phòng. Tiếp tục?'
+    );
+    if (confirmed) {
+      socket?.emit('returnToLobby');
+    }
+  };
 
   return (
     <div className={`avalon-theme ${boardShellClass} flex flex-col p-4 w-full relative z-0`}>
@@ -266,11 +289,11 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         <div className="absolute inset-0 bg-surface-dim-avalon/70 backdrop-blur-[2px]"></div>
       </div>
       <div className="absolute top-3 right-3 z-50 flex items-center gap-2">
-        {/* Back to lobby — always visible */}
+        {/* Back button: smart context-aware */}
         <button
-          onClick={() => router.push('/avalon')}
+          onClick={handleBackButton}
           className="p-2 bg-black/40 backdrop-blur-md border border-slate-600/40 rounded-full hover:bg-slate-700/60 text-slate-400 hover:text-white transition-colors shadow-lg cursor-pointer"
-          title="Quay về — Nhập mã phòng khác"
+          title={isHost && !isLobby && !isGameOver ? 'Kết thúc ván — Đưa tất cả về thiết lập phòng' : 'Thoát phòng — Nhập mã phòng khác'}
         >
           <LogOut className="w-5 h-5" />
         </button>
@@ -327,19 +350,50 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         <AvalonLobby gameState={gameState} me={me} socket={socket} roomId={roomId} />
       )}
       
-      {gameState.state === 'ROLE_REVEAL' && me && (
-        <RoleReveal gameState={gameState} me={me} onReady={() => socket?.emit('playerReady')} />
+      {gameState.state === 'ROLE_REVEAL' && me && me.role && !me.isSpectator && (
+        <RoleReveal gameState={gameState} me={me} onReady={() => socket?.emit('playerReady')} roomId={roomId} />
+      )}
+
+      {/* Spectator view: mid-game joiners or players without role */}
+      {me?.isSpectator && gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && (
+        <SpectatorView gameState={gameState} me={me} socket={socket} roomId={roomId} />
+      )}
+
+      {/* Fallback: no me at all (stale session) */}
+      {!me && gameState.state !== 'LOBBY' && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 z-10 text-center px-6">
+          <div className="w-16 h-16 rounded-full border border-(--primary)/30 flex items-center justify-center">
+            <span className="text-3xl animate-pulse">⚔️</span>
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-headline text-2xl text-(--primary) uppercase tracking-widest">Phiên Bản Lỗi</h2>
+            <p className="text-(--on-surface-variant) text-sm italic max-w-sm">
+              Không tìm thấy dữ liệu người chơi của bạn. Hãy thử tải lại trang.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/avalon')}
+            className="px-6 py-2.5 rounded-xl bg-(--primary)/10 border border-(--primary)/30 text-(--primary) font-headline text-sm uppercase tracking-widest hover:bg-(--primary)/20 transition-colors cursor-pointer"
+          >
+            Nhập Mã Phòng Khác
+          </button>
+        </div>
       )}
       
-      {gameState.state !== 'LOBBY' && gameState.state !== 'ROLE_REVEAL' && gameState.state !== 'GAME_OVER' && gameState.state !== 'ASSASSINATION' && me && (
+      {gameState.state !== 'LOBBY' && gameState.state !== 'ROLE_REVEAL' && gameState.state !== 'GAME_OVER' && gameState.state !== 'ASSASSINATION' && me && !me.isSpectator && (
         <>
-          <RoundTable gameState={gameState} me={me} socket={socket} />
+          <RoundTable gameState={gameState} me={me} socket={socket} roomId={roomId} />
           <VotingCards gameState={gameState} me={me} socket={socket} />
         </>
       )}
 
-      {gameState.state === 'ASSASSINATION' && me && (
+      {gameState.state === 'ASSASSINATION' && me && !me.isSpectator && (
          <AssassinationUI gameState={gameState} me={me} socket={socket} />
+      )}
+
+      {/* Spectators during assassination/game-over see SpectatorView or GameOver */}
+      {gameState.state === 'ASSASSINATION' && me?.isSpectator && (
+        <SpectatorView gameState={gameState} me={me} socket={socket} roomId={roomId} />
       )}
 
       {gameState.state === 'GAME_OVER' && me && (

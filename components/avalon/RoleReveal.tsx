@@ -6,7 +6,7 @@ import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
 import { Fingerprint, CheckCircle2, Eye, AlertTriangle, Swords } from 'lucide-react';
 import { getRoleImageSrcForViewer, getVisibleRoleLabelForViewer } from './roleImage';
 
-export default function RoleReveal({ gameState, me, onReady }: { gameState: AvalonRoom, me: AvalonPlayer, onReady: () => void }) {
+export default function RoleReveal({ gameState, me, onReady, roomId }: { gameState: AvalonRoom, me: AvalonPlayer, onReady: () => void, roomId: string }) {
   const [isRevealing, setIsRevealing] = useState(false);
   const [leftScale, setLeftScale] = useState(1);
   const [autoFitLeft, setAutoFitLeft] = useState(false);
@@ -115,9 +115,12 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
             style={leftScaleStyle}
           >
           <div className="avalon-role-reveal-intro text-left space-y-2">
-            <span className={`text-(--${colorTheme}) font-headline tracking-[0.3em] text-[10px] uppercase block`}>
-              Giai Đoạn: Màn Đêm Buông Xuống
-            </span>
+            <div className="flex items-center justify-between">
+              <span className={`text-(--${colorTheme}) font-headline tracking-[0.3em] text-[10px] uppercase block`}>
+                Giai Đoạn: Màn Đêm Buông Xuống
+              </span>
+              <span className="text-[10px] font-headline text-(--secondary)/50 tracking-wider">#{roomId.substring(0,6)}</span>
+            </div>
             <h2 className="avalon-role-reveal-title text-3xl lg:text-5xl font-headline font-bold text-(--on-surface) tracking-tight">Danh Tính Bí Mật</h2>
             <p className="text-(--on-surface-variant) font-body text-xs lg:text-sm italic opacity-85">
               &quot;Giữ lấy sự thật trong bóng tối của Camelot.&quot;
@@ -175,6 +178,22 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
             ...rightScaleStyle
           }}
         >
+          {/* Fallback when role is not assigned */}
+          {!me.role && (
+            <div className="flex flex-col items-center gap-5 py-6 w-full">
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-2xl border-2 border-slate-700/60 overflow-hidden bg-slate-900/80 shadow-2xl flex items-center justify-center">
+                <span className="text-5xl select-none">?</span>
+                <div className="absolute inset-0 shadow-[inset_0_0_24px_rgba(0,0,0,0.7)] pointer-events-none rounded-2xl" />
+              </div>
+              <div className="space-y-1 text-center px-4">
+                <h3 className="text-lg font-headline uppercase tracking-widest text-slate-400">Danh Tính Bí Ẩn</h3>
+                <p className="text-xs text-slate-500 italic leading-relaxed">
+                  Bạn chưa được giao vai trò trong ván này.
+                </p>
+              </div>
+            </div>
+          )}
+
           {me.role && (
             <div className="space-y-6 w-full flex flex-col items-center">
               {/* Role Avatar/Image */}

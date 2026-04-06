@@ -32,6 +32,7 @@ export interface AvalonPlayer {
   isHost: boolean;
   status: 'connected' | 'disconnected';
   isReady?: boolean;
+  isSpectator?: boolean;
   // UI states
   hasVoted?: boolean;
   currentVote?: 'approve' | 'reject';

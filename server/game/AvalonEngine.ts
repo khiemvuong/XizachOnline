@@ -118,6 +118,12 @@ export class AvalonEngine {
             }
          });
 
+         socket.on("returnToLobby", () => {
+            if (socket.data.roomId && socket.data.userId) {
+               this.restartAvalonGame(socket.data.roomId, socket.data.userId);
+            }
+         });
+
          socket.on("voteEarlyEnd", (accept: boolean) => {
             if (socket.data.roomId && socket.data.userId) {
                this.voteEarlyEnd(socket.data.roomId, socket.data.userId, accept);
@@ -187,19 +193,21 @@ export class AvalonEngine {
 
       const existingPlayer = room.players.find((p) => p.userId === pData.userId);
       if (existingPlayer) {
-         // Reconnect logic
+         // Reconnect logic — keep existing role/team/spectator status
          existingPlayer.id = pData.id;
          existingPlayer.name = pData.name;
          existingPlayer.status = "connected";
       } else {
          // Brand new player
          const isHost = room.players.length === 0;
+         const isMidGame = room.state !== "LOBBY";
          room.players.push({
             id: pData.id,
             userId: pData.userId,
             name: pData.name,
-            isHost,
+            isHost: isHost && !isMidGame, // don't give host to mid-game joiners
             status: "connected",
+            ...(isMidGame ? { isSpectator: true } : {}),
          });
       }
 
@@ -211,23 +219,25 @@ export class AvalonEngine {
       const room = this.rooms.get(roomId);
       if (!room) return;
 
-      // Disconnect logic to prevent crashes
       const pIndex = room.players.findIndex((p) => p.id === socketId);
       if (pIndex !== -1) {
          const player = room.players[pIndex];
          player.status = "disconnected";
 
-         // If we are in the lobby and a player disconnects, we can safely remove them.
-         // If the game has started, we keep them in the array to prevent index shifting and engine crashes.
-         if (room.state === "LOBBY") {
+         // Spectators can be safely removed anytime — they don't affect game indices
+         // In LOBBY, all players can be safely removed
+         const canRemove = room.state === "LOBBY" || player.isSpectator;
+         if (canRemove) {
             room.players.splice(pIndex, 1);
             if (room.players.length === 0) {
                this.rooms.delete(roomId);
             } else if (player.isHost) {
-               // Shift host
-               room.players[0].isHost = true;
+               // Shift host to first remaining connected non-spectator, or first player
+               const newHost = room.players.find(p => p.status === "connected" && !p.isSpectator) ?? room.players[0];
+               newHost.isHost = true;
             }
          }
+         // Active players mid-game: keep in array as disconnected to preserve indices
 
          this.broadcastState(roomId);
       }
@@ -362,19 +372,19 @@ export class AvalonEngine {
       if (!room || room.state !== "ROLE_REVEAL") return;
 
       const player = room.players.find((p) => p.userId === userId);
-      if (player) {
-         player.isReady = true;
+      if (!player || player.isSpectator) return;
 
-         // Check if everyone connected is ready
-         const allReady = room.players
-            .filter((p) => p.status === "connected")
-            .every((p) => p.isReady);
-         if (allReady) {
-            room.state = "TEAM_BUILDING";
-         }
+      player.isReady = true;
 
-         this.broadcastState(roomId);
+      // Check if everyone connected (non-spectator) is ready
+      const allReady = room.players
+         .filter((p) => p.status === "connected" && !p.isSpectator)
+         .every((p) => p.isReady);
+      if (allReady) {
+         room.state = "TEAM_BUILDING";
       }
+
+      this.broadcastState(roomId);
    }
 
    public toggleTeamSelection(roomId: string, userId: string, targetId: string) {
@@ -419,13 +429,13 @@ export class AvalonEngine {
       if (!room || room.state !== "VOTING" || !room.votingResults) return;
 
       const player = room.players.find((p) => p.userId === userId);
-      if (!player) return;
+      if (!player || player.isSpectator) return;
 
       room.votingResults[userId] = vote;
       player.hasVoted = true;
 
-      // Check if everyone voted
-      const activePlayers = room.players.filter((p) => p.status === "connected");
+      // Check if everyone voted (non-spectator)
+      const activePlayers = room.players.filter((p) => p.status === "connected" && !p.isSpectator);
       const allVoted = activePlayers.every((p) => p.hasVoted);
 
       if (allVoted) {
@@ -490,7 +500,7 @@ export class AvalonEngine {
       if (!room.proposedTeam.includes(userId)) return;
 
       const player = room.players.find((p) => p.userId === userId);
-      if (!player) return;
+      if (!player || player.isSpectator) return;
 
       player.questVote = vote;
       player.hasVoted = true;
@@ -614,11 +624,13 @@ export class AvalonEngine {
 
       // Reset room state to lobby
       room.state = "LOBBY";
-      const connectedPlayers = room.players.filter(
-         (p) => p.status === "connected",
-      ).length;
+
+      // Purge disconnected players (they can rejoin fresh)
+      room.players = room.players.filter((p) => p.status === "connected");
+
+      const connectedCount = room.players.length;
       room.questHistory = this.getQuestHistoryByPlayerCount(
-         connectedPlayers >= 5 ? connectedPlayers : 5,
+         connectedCount >= 5 ? connectedCount : 5,
       );
       room.questParticipantsHistory = [];
       room.currentQuestIndex = 0;
@@ -631,12 +643,14 @@ export class AvalonEngine {
 
       this.clearVoteOutcomeTimer(roomId);
 
+      // Promote spectators to regular players, reset all game fields
       room.players.forEach((p) => {
          delete p.role;
          delete p.team;
          delete p.hasVoted;
          delete p.currentVote;
          delete p.questVote;
+         delete p.isSpectator;
          p.isReady = false;
       });
 

@@ -8,7 +8,7 @@ import { HelpCircle } from 'lucide-react';
 import CenterBoard from './CenterBoard';
 import { getRoleImageSrcForViewer } from './roleImage';
 
-export default function RoundTable({ gameState, me, socket }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null }) {
+export default function RoundTable({ gameState, me, socket, roomId }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null, roomId: string }) {
    const [isQuestHistoryOpen, setIsQuestHistoryOpen] = useState(false);
    const stageRef = useRef<HTMLDivElement | null>(null);
    const [sceneScale, setSceneScale] = useState(1);
@@ -89,15 +89,24 @@ export default function RoundTable({ gameState, me, socket }: { gameState: Avalo
          className="avalon-table-stage flex-1 w-full relative flex flex-col items-center justify-center py-2 md:py-4 px-1 sm:px-2 overflow-hidden bg-transparent"
          style={{ minHeight: '30rem', height: 'calc(100dvh - 7rem)' }}
       >
+         <div className="absolute left-2 top-2 z-40 pointer-events-auto flex items-center gap-2">
+            {showQuestParticipantsBoard && (
+               <button
+                  type="button"
+                  onClick={() => setIsQuestHistoryOpen(true)}
+                  className="rounded-lg border border-(--tertiary)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--tertiary) shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-colors hover:bg-surface-container"
+               >
+                  Lịch sử nhiệm vụ
+               </button>
+            )}
+            <div className="rounded-lg border border-(--outline-variant)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--secondary)/80 shadow-[0_8px_24px_rgba(0,0,0,0.35)] flex items-center">
+               #{roomId.substring(0, 6)}
+            </div>
+         </div>
+
          {showQuestParticipantsBoard && (
                <>
-                  <button
-                     type="button"
-                     onClick={() => setIsQuestHistoryOpen(true)}
-                     className="absolute left-2 top-2 z-40 pointer-events-auto rounded-lg border border-(--tertiary)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--tertiary) shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-colors hover:bg-surface-container"
-                  >
-                     Lịch sử nhiệm vụ
-                  </button>
+
 
                   {isQuestHistoryOpen && (
                      <div
