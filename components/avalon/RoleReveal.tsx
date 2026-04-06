@@ -52,10 +52,21 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
       const isCompact = compact();
       setAutoFitLeft(isCompact);
       if (!isCompact) { setLeftScale(1); return; }
+      
+      const el = leftContentRef.current;
+      const prevTransform = el.style.transform;
+      const prevWidth = el.style.width;
+      el.style.transform = '';
+      el.style.width = '100%';
+
       const vh = leftViewportRef.current.clientHeight;
-      const nh = leftContentRef.current.scrollHeight;
+      const nh = el.scrollHeight;
+
       if (vh <= 0 || nh <= 0) { setLeftScale(1); return; }
       setLeftScale(Math.max(0.62, Math.min(1, vh / nh)));
+
+      el.style.transform = prevTransform;
+      el.style.width = prevWidth;
     };
 
     const updateRightScale = () => {
@@ -63,10 +74,21 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
       const isCompact = compact();
       setAutoFitRight(isCompact);
       if (!isCompact) { setRightScale(1); return; }
+
+      const el = rightContentRef.current;
+      const prevTransform = el.style.transform;
+      const prevWidth = el.style.width;
+      el.style.transform = '';
+      el.style.width = '100%';
+
       const vh = rightViewportRef.current.clientHeight;
-      const nh = rightContentRef.current.scrollHeight;
+      const nh = el.scrollHeight;
+
       if (vh <= 0 || nh <= 0) { setRightScale(1); return; }
       setRightScale(Math.max(0.55, Math.min(1, vh / nh)));
+
+      el.style.transform = prevTransform;
+      el.style.width = prevWidth;
     };
 
     const update = () => { updateLeftScale(); updateRightScale(); };
@@ -74,7 +96,7 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
 
     const obs = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
     if (obs) {
-      [leftViewportRef, leftContentRef, rightViewportRef, rightContentRef].forEach(r => {
+      [leftViewportRef, rightViewportRef].forEach(r => {
         if (r.current) obs.observe(r.current);
       });
     }
