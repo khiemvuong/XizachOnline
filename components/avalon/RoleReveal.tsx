@@ -10,8 +10,12 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
   const [isRevealing, setIsRevealing] = useState(false);
   const [leftScale, setLeftScale] = useState(1);
   const [autoFitLeft, setAutoFitLeft] = useState(false);
+  const [rightScale, setRightScale] = useState(1);
+  const [autoFitRight, setAutoFitRight] = useState(false);
   const leftViewportRef = useRef<HTMLElement | null>(null);
   const leftContentRef = useRef<HTMLDivElement | null>(null);
+  const rightViewportRef = useRef<HTMLElement | null>(null);
+  const rightContentRef = useRef<HTMLDivElement | null>(null);
   const isEvil = me.team === 'Evil';
   const colorTheme = isEvil ? 'tertiary' : 'primary';
   const factionName = isEvil ? 'Thế Lực Hắc Ám' : 'Hiệp Sĩ Bàn Tròn';
@@ -41,53 +45,54 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
   const maskedRoleDesc = 'Giữ ở khung bên phải để tạm mở danh tính của bạn.';
 
   useEffect(() => {
+    const compact = () => window.matchMedia('(pointer: coarse) and (orientation: landscape) and (max-width: 1100px)').matches;
+
     const updateLeftScale = () => {
       if (!leftViewportRef.current || !leftContentRef.current) return;
-
-      const compactLandscape = window.matchMedia('(pointer: coarse) and (orientation: landscape) and (max-width: 1100px)').matches;
-      setAutoFitLeft(compactLandscape);
-
-      if (!compactLandscape) {
-        setLeftScale(1);
-        return;
-      }
-
-      const viewportHeight = leftViewportRef.current.clientHeight;
-      const naturalHeight = leftContentRef.current.scrollHeight;
-
-      if (viewportHeight <= 0 || naturalHeight <= 0) {
-        setLeftScale(1);
-        return;
-      }
-
-      const fitScale = Math.min(1, viewportHeight / naturalHeight);
-      setLeftScale(Math.max(0.62, fitScale));
+      const isCompact = compact();
+      setAutoFitLeft(isCompact);
+      if (!isCompact) { setLeftScale(1); return; }
+      const vh = leftViewportRef.current.clientHeight;
+      const nh = leftContentRef.current.scrollHeight;
+      if (vh <= 0 || nh <= 0) { setLeftScale(1); return; }
+      setLeftScale(Math.max(0.62, Math.min(1, vh / nh)));
     };
 
-    updateLeftScale();
+    const updateRightScale = () => {
+      if (!rightViewportRef.current || !rightContentRef.current) return;
+      const isCompact = compact();
+      setAutoFitRight(isCompact);
+      if (!isCompact) { setRightScale(1); return; }
+      const vh = rightViewportRef.current.clientHeight;
+      const nh = rightContentRef.current.scrollHeight;
+      if (vh <= 0 || nh <= 0) { setRightScale(1); return; }
+      setRightScale(Math.max(0.55, Math.min(1, vh / nh)));
+    };
 
-    const viewportObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateLeftScale) : null;
-    if (viewportObserver) {
-      if (leftViewportRef.current) viewportObserver.observe(leftViewportRef.current);
-      if (leftContentRef.current) viewportObserver.observe(leftContentRef.current);
+    const update = () => { updateLeftScale(); updateRightScale(); };
+    update();
+
+    const obs = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    if (obs) {
+      [leftViewportRef, leftContentRef, rightViewportRef, rightContentRef].forEach(r => {
+        if (r.current) obs.observe(r.current);
+      });
     }
-
-    window.addEventListener('resize', updateLeftScale);
-    window.addEventListener('orientationchange', updateLeftScale);
-
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
     return () => {
-      if (viewportObserver) viewportObserver.disconnect();
-      window.removeEventListener('resize', updateLeftScale);
-      window.removeEventListener('orientationchange', updateLeftScale);
+      obs?.disconnect();
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
     };
   }, [gameState, me.role, me.isReady, isRevealing]);
 
   const leftScaleStyle = autoFitLeft && leftScale < 0.999
-    ? {
-        transform: `scale(${leftScale})`,
-        transformOrigin: 'top left',
-        width: `${100 / leftScale}%`,
-      }
+    ? { transform: `scale(${leftScale})`, transformOrigin: 'top left', width: `${100 / leftScale}%` }
+    : undefined;
+
+  const rightScaleStyle = autoFitRight && rightScale < 0.999
+    ? { transform: `scale(${rightScale})`, transformOrigin: 'top left', width: `${100 / rightScale}%` }
     : undefined;
 
   return (
@@ -153,7 +158,8 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
 
         {/* Interactive Reveal Area */}
         <section
-          className="relative group w-full select-none touch-none min-h-0"
+          ref={rightViewportRef}
+          className="relative group w-full select-none touch-none min-h-0 overflow-hidden"
           onPointerUp={() => setIsRevealing(false)} 
           onPointerLeave={() => setIsRevealing(false)}
           onPointerCancel={() => setIsRevealing(false)}
@@ -162,8 +168,12 @@ export default function RoleReveal({ gameState, me, onReady }: { gameState: Aval
 
         {/* The Card Layer */}
         <div 
+          ref={rightContentRef}
           className={`bg-(--surface-container-low) backdrop-blur-xl rounded-xl p-6 lg:p-8 border flex flex-col items-center text-center transition-all duration-300 w-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] ${isRevealing ? '' : 'blur-md opacity-40 scale-95'}`}
-          style={{ borderColor: `color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 20%, transparent)` }}
+          style={{ 
+            borderColor: `color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 20%, transparent)`,
+            ...rightScaleStyle
+          }}
         >
           {me.role && (
             <div className="space-y-6 w-full flex flex-col items-center">

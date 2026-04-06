@@ -225,13 +225,13 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
               </section>
             </div>
             
-            {/* Footer */}
-            <div className="avalon-rules-modal-footer p-4 md:p-6 border-t border-(--outline-variant)/30 shrink-0 bg-black/20 text-center">
-              <button 
+            {/* Floating close button — overlays content, doesn't take layout space */}
+            <div className="pointer-events-none absolute bottom-4 right-4 z-20 flex justify-end">
+              <button
                 onClick={onClose}
-                className="avalon-rules-close-btn px-8 py-3 bg-primary-avalon text-surface-dim-avalon font-bold font-headline uppercase tracking-widest rounded-xl hover:brightness-110 transition-colors shadow-[0_0_15px_rgba(131,195,163,0.3)]"
+                className="pointer-events-auto px-4 py-1.5 bg-primary-avalon/90 text-surface-dim-avalon text-xs font-bold font-headline uppercase tracking-widest rounded-full hover:brightness-110 transition-all shadow-[0_0_12px_rgba(131,195,163,0.4)] backdrop-blur-sm border border-white/10"
               >
-                Đã Rõ Luật
+                Đã rõ ✓
               </button>
             </div>
           </motion.div>

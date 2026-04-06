@@ -2,6 +2,7 @@
 
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
 import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import RoleReveal from './RoleReveal';
 import RoundTable from './RoundTable';
@@ -13,7 +14,7 @@ import VoteOutcomeOverlay from './VoteOutcomeOverlay';
 import RulesModal from './RulesModal';
 import MyRoleModal from './MyRoleModal';
 import type { LucideIcon } from 'lucide-react';
-import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
+import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX, BookText, LogOut } from 'lucide-react';
 
 type AudioTrackName = 'lobby' | 'win' | 'lose';
 
@@ -30,6 +31,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [hasJoined, setHasJoined] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showMyRole, setShowMyRole] = useState(false);
+  const router = useRouter();
   const [isLobbyMusicEnabled, setIsLobbyMusicEnabled] = useState(() => {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem('avalon_lobby_music_enabled') !== '0';
@@ -263,32 +265,55 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCe79Gc9SGc6EKO9KgDlXh9feqsIYrJalRcurvGANaXucPIsKyB-ndT87S0Qw3yyiQC5jpVkN3TTMN8f3WQwYB7eFJEZQ0rgPtogy0igcGgrZbtRNH2uiu133f5tHszGaW4GHlq2-LQ7N8kvEejj2_-AFbk80B7fK8G3wqm5L0XpNvYgaP8pJV3C1pkFR550fSiPqyRT28Bvwk_mh0xJC6Nv6xHQj1HxREGxwLnq0Kcd004LWjJiy1vL5euJ2BCEloyZs-n6ihZig')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'scroll' }}>
         <div className="absolute inset-0 bg-surface-dim-avalon/70 backdrop-blur-[2px]"></div>
       </div>
-      <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+      <div className="absolute top-3 right-3 z-50 flex items-center gap-2">
+        {/* Back to lobby — always visible */}
+        <button
+          onClick={() => router.push('/avalon')}
+          className="p-2 bg-black/40 backdrop-blur-md border border-slate-600/40 rounded-full hover:bg-slate-700/60 text-slate-400 hover:text-white transition-colors shadow-lg cursor-pointer"
+          title="Quay về — Nhập mã phòng khác"
+        >
+          <LogOut className="w-5 h-5" />
+        </button>
+
+        {/* Rules — always visible */}
+        <button
+          onClick={() => setShowRules(true)}
+          className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
+          title="Luật Chơi"
+        >
+          <BookText className="w-5 h-5" />
+        </button>
+
+        {/* Sound toggle — lobby only */}
         {gameState.state === 'LOBBY' && (
           <button
             onClick={() => setIsLobbyMusicEnabled((prev) => !prev)}
             className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
             title={isLobbyMusicEnabled ? 'Tắt nhạc sảnh' : 'Bật nhạc sảnh'}
           >
-            {isLobbyMusicEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+            {isLobbyMusicEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
           </button>
         )}
+
+        {/* My Role — in-game only */}
         {gameState.state !== 'LOBBY' && me?.role && (
-          <button 
+          <button
             onClick={() => setShowMyRole(true)}
             className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
             title="Bài Của Bạn"
           >
-            <VenetianMask className="w-6 h-6" />
+            <VenetianMask className="w-5 h-5" />
           </button>
         )}
+
+        {/* Early end — in-game only */}
         {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && (
-          <button 
+          <button
             onClick={() => socket?.emit('voteEarlyEnd', true)}
             className="p-2 bg-black/40 backdrop-blur-md border border-(--tertiary)/30 rounded-full hover:bg-(--tertiary)/10 text-(--tertiary) hover:text-white transition-colors shadow-lg cursor-pointer"
             title="Xin Huỷ Trận Đấu"
           >
-            <AlertTriangle className="w-6 h-6" />
+            <AlertTriangle className="w-5 h-5" />
           </button>
         )}
       </div>
