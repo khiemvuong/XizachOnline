@@ -14,23 +14,35 @@ export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
 
   type FullscreenCapableElement = HTMLElement & {
     webkitRequestFullscreen?: () => Promise<void> | void;
+    mozRequestFullScreen?: () => Promise<void> | void;
   };
 
   type FullscreenCapableDocument = Document & {
     webkitExitFullscreen?: () => Promise<void> | void;
+    mozCancelFullScreen?: () => Promise<void> | void;
     webkitFullscreenElement?: Element | null;
+    mozFullScreenElement?: Element | null;
   };
 
   const isDocumentFullscreen = useCallback(() => {
-    const fullscreenDocument = document as FullscreenCapableDocument;
-    return Boolean(document.fullscreenElement || fullscreenDocument.webkitFullscreenElement);
+    const doc = document as FullscreenCapableDocument;
+    return Boolean(
+      document.fullscreenElement ||
+      doc.webkitFullscreenElement ||
+      doc.mozFullScreenElement ||
+      // iOS standalone PWA mode = effectively fullscreen
+      (window.navigator as { standalone?: boolean }).standalone === true
+    );
   }, []);
 
   const supportsFullscreen = useCallback(() => {
-    const fullscreenElement = document.documentElement as FullscreenCapableElement;
+    // iOS PWA standalone = already "fullscreen"
+    if ((window.navigator as { standalone?: boolean }).standalone === true) return true;
+    const el = document.documentElement as FullscreenCapableElement;
     return (
-      typeof fullscreenElement.requestFullscreen === "function" ||
-      typeof fullscreenElement.webkitRequestFullscreen === "function"
+      typeof el.requestFullscreen === "function" ||
+      typeof el.webkitRequestFullscreen === "function" ||
+      typeof el.mozRequestFullScreen === "function"
     );
   }, []);
 
@@ -61,40 +73,47 @@ export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
     };
   }, [isDocumentFullscreen, supportsFullscreen]);
 
-  const enterImmersive = async () => {
-    try {
-      const target = (rootRef.current ?? document.documentElement) as FullscreenCapableElement;
-      if (!isDocumentFullscreen()) {
-        if (typeof target.requestFullscreen === "function") {
-          await target.requestFullscreen();
-        } else if (typeof target.webkitRequestFullscreen === "function") {
-          await target.webkitRequestFullscreen();
-        } else {
-          window.alert("Trình duyệt này không hỗ trợ chế độ toàn màn hình.");
-          return;
-        }
-      }
+  const enterImmersive = () => {
+    // If already in iOS PWA standalone mode, skip (already fullscreen)
+    if ((window.navigator as { standalone?: boolean }).standalone === true) return;
 
+    const target = (rootRef.current ?? document.documentElement) as FullscreenCapableElement;
+    
+    // MUST be called synchronously in the user gesture handler
+    // Using .then()/.catch() instead of async/await to preserve gesture chain
+    let fsPromise: Promise<void> | void | undefined;
+    if (!isDocumentFullscreen()) {
+      if (typeof target.requestFullscreen === "function") {
+        fsPromise = target.requestFullscreen();
+      } else if (typeof target.webkitRequestFullscreen === "function") {
+        fsPromise = target.webkitRequestFullscreen();
+      } else if (typeof (target as FullscreenCapableElement).mozRequestFullScreen === "function") {
+        fsPromise = (target as FullscreenCapableElement).mozRequestFullScreen?.();
+      }
+    }
+
+    const lockOrientation = () => {
       const orientationApi = window.screen?.orientation as
         | (ScreenOrientation & {
             lock?: (
               orientation:
-                | "any"
-                | "natural"
-                | "landscape"
-                | "portrait"
-                | "portrait-primary"
-                | "portrait-secondary"
-                | "landscape-primary"
-                | "landscape-secondary"
+                | "any" | "natural" | "landscape" | "portrait"
+                | "portrait-primary" | "portrait-secondary"
+                | "landscape-primary" | "landscape-secondary"
             ) => Promise<void>;
           })
         | undefined;
       if (orientationApi?.lock) {
-        await orientationApi.lock("landscape");
+        orientationApi.lock("landscape").catch(() => {});
       }
-    } catch {
-      // Ignore unsupported fullscreen/orientation lock APIs on iOS browsers.
+    };
+
+    if (fsPromise && typeof fsPromise.then === "function") {
+      fsPromise.then(lockOrientation).catch(() => {
+        // Mobile browser blocked fullscreen — that's expected on iOS Safari
+      });
+    } else {
+      lockOrientation();
     }
   };
 
