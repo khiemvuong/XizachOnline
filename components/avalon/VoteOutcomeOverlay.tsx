@@ -1,144 +1,149 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, Crown, ShieldAlert, XCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { CheckCircle2, ShieldAlert, XCircle, ChevronDown, ChevronUp, X } from "lucide-react";
 import { type AvalonPlayer, type AvalonRoom } from "@/server/game/AvalonTypes";
 
 export default function VoteOutcomeOverlay({ gameState, me }: { gameState: AvalonRoom; me?: AvalonPlayer }) {
   const outcome = gameState.voteOutcome;
+  const [expanded, setExpanded] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const prevOutcomeRef = useRef<string | null>(null);
 
-  const [isOpen, setIsOpen] = useState(true);
+  // When a NEW outcome arrives, reset dismissed state & auto-expand briefly
+  useEffect(() => {
+    if (!outcome) return;
+    const key = `${outcome.kind}-${outcome.result}-${outcome.approveCount ?? 0}-${outcome.rejectCount ?? 0}-${outcome.successCount ?? 0}-${outcome.failCount ?? 0}`;
+    if (key !== prevOutcomeRef.current) {
+      prevOutcomeRef.current = key;
+      setDismissed(false);  // Reset dismiss on new outcome
+      setExpanded(true);
+      const t = setTimeout(() => setExpanded(false), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [outcome]);
 
-  if (!outcome) return null;
+  if (!outcome || dismissed) return null;
 
   const isQuestOutcome = outcome.kind === "quest";
-  const statusStyleByResult = {
+
+  const styles = {
     approve: {
-      title: "Team Approved",
-      accentClass: "text-emerald-300",
-      barClass: "bg-emerald-400/60",
-      pillClass: "bg-emerald-500/18 border-emerald-400/40 text-emerald-200",
-      icon: <CheckCircle2 className="h-8 w-8" />,
+      pill: "bg-emerald-950/85 border-emerald-500/50 text-emerald-300",
+      icon: <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />,
+      label: "Thông Qua",
+      detail: `✓ ${outcome.approveCount ?? 0}  ✗ ${outcome.rejectCount ?? 0}`,
     },
     reject: {
-      title: "Team Rejected",
-      accentClass: "text-amber-300",
-      barClass: "bg-amber-400/60",
-      pillClass: "bg-amber-500/18 border-amber-400/40 text-amber-200",
-      icon: <XCircle className="h-8 w-8" />,
+      pill: "bg-amber-950/85 border-amber-500/50 text-amber-300",
+      icon: <XCircle className="h-3.5 w-3.5 shrink-0" />,
+      label: "Bác Bỏ",
+      detail: `✓ ${outcome.approveCount ?? 0}  ✗ ${outcome.rejectCount ?? 0}`,
     },
     success: {
-      title: "Quest Success",
-      accentClass: "text-cyan-300",
-      barClass: "bg-cyan-400/60",
-      pillClass: "bg-cyan-500/18 border-cyan-400/40 text-cyan-200",
-      icon: <CheckCircle2 className="h-8 w-8" />,
+      pill: "bg-cyan-950/85 border-cyan-500/50 text-cyan-300",
+      icon: <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />,
+      label: "Thành Công",
+      detail: `✓ ${outcome.successCount ?? 0}  ✗ ${outcome.failCount ?? 0}`,
     },
     fail: {
-      title: "Quest Failed",
-      accentClass: "text-rose-300",
-      barClass: "bg-rose-500/60",
-      pillClass: "bg-rose-500/18 border-rose-400/40 text-rose-200",
-      icon: <ShieldAlert className="h-8 w-8" />,
+      pill: "bg-rose-950/85 border-rose-500/50 text-rose-300",
+      icon: <ShieldAlert className="h-3.5 w-3.5 shrink-0" />,
+      label: "Thất Bại",
+      detail: `✓ ${outcome.successCount ?? 0}  ✗ ${outcome.failCount ?? 0}`,
     },
   } as const;
 
-  const statusStyle = statusStyleByResult[outcome.result];
-  const title = statusStyle.title;
-
-  const subtitle = isQuestOutcome
-    ? outcome.result === "success"
-      ? "Nhiệm vụ đã được hoàn thành. Hành trình tiếp tục."
-      : "Nhiệm vụ thất bại. Bóng tối vừa ghi thêm một dấu ấn."
-    : outcome.result === "approve"
-      ? "Đề cử được thông qua. Đội nhiệm vụ đã sẵn sàng."
-      : "Đề cử bị bác bỏ. Quyền thủ lĩnh sẽ chuyển sang người kế tiếp.";
-
-  const accentClass = statusStyle.accentClass;
-  const barClass = statusStyle.barClass;
-  const detailVisible =
-    typeof outcome.totalVotes === "number" ||
-    typeof outcome.approveCount === "number" ||
-    typeof outcome.failCount === "number";
-
-  const boardLabel = isQuestOutcome ? "Kết quả nhiệm vụ" : "Kết quả bỏ phiếu đội";
+  const s = styles[outcome.result];
 
   return (
-    <div className="avalon-vote-outcome-shell pointer-events-none absolute inset-0 z-70 px-4 pt-4 md:pt-6">
-      <div className="mx-auto flex w-full max-w-2xl justify-center">
+    <div className="avalon-vote-outcome-shell pointer-events-none absolute top-0 left-0 right-0 z-70 flex justify-center pt-2 px-3">
+      <div className="inline-flex items-center gap-1">
+        {/* Main pill */}
         <button
           type="button"
-          onClick={() => setIsOpen((value) => !value)}
-          className={`avalon-vote-outcome-toggle pointer-events-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors ${statusStyle.pillClass}`}
+          onClick={() => setExpanded(v => !v)}
+          className={`
+            avalon-vote-outcome-toggle pointer-events-auto
+            inline-flex items-center gap-1.5 rounded-full border
+            px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]
+            backdrop-blur-md shadow-lg transition-all duration-200
+            ${s.pill}
+          `}
         >
-          {outcome.result === "approve" || outcome.result === "success" ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : outcome.result === "fail" ? (
-            <ShieldAlert className="h-4 w-4" />
-          ) : (
-            <XCircle className="h-4 w-4" />
-          )}
-          {boardLabel}
-          <span className="text-[9px] opacity-80">{isOpen ? "Ẩn" : "Hiện"}</span>
+          {s.icon}
+          {s.label}
+          <span className="opacity-60 font-mono text-[9px] ml-0.5">{s.detail}</span>
+          {expanded
+            ? <ChevronUp className="h-3 w-3 opacity-50" />
+            : <ChevronDown className="h-3 w-3 opacity-50" />
+          }
+        </button>
+
+        {/* Dismiss button — hides until next round */}
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="pointer-events-auto rounded-full border border-white/15 bg-black/60 backdrop-blur-md p-1 hover:bg-white/15 transition-colors"
+          title="Ẩn cho tới lượt tiếp theo"
+        >
+          <X className="h-3 w-3 text-white/60" />
         </button>
       </div>
 
-      {isOpen && (
-        <div className="avalon-vote-outcome-card mx-auto mt-3 w-full max-w-2xl rounded-2xl border border-outline-variant/40 bg-surface-container-low/92 px-5 py-4 shadow-[0_0_45px_rgba(0,0,0,0.45)] backdrop-blur-md md:px-6 pointer-events-auto">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <p className={`text-[10px] uppercase tracking-[0.34em] font-label ${accentClass}`}>
-              {isQuestOutcome ? "QUEST OUTCOME" : "COUNCIL OUTCOME"}
-            </p>
-            {detailVisible && (
-              <div className="inline-flex items-center gap-2 rounded-full bg-surface-container-high/70 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">
-                <Crown className="h-3.5 w-3.5" />
-                {me?.userId === outcome.leaderUserId ? "Chi tiết cho Thủ Lĩnh" : "Kết quả công khai"}
-              </div>
+      {/* Expanded detail — small card */}
+      {expanded && (
+        <div className={`
+          avalon-vote-outcome-card pointer-events-auto
+          absolute top-8 rounded-xl border shadow-xl
+          backdrop-blur-md px-4 py-3 w-64
+          bg-surface-container-low/95 border-outline-variant/40
+        `}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`${s.pill.split(' ').find(c => c.startsWith('text-')) ?? ''}`}>
+              {s.icon}
+            </span>
+            <h3 className={`avalon-vote-outcome-title font-headline text-base uppercase tracking-wider ${s.pill.split(' ').find(c => c.startsWith('text-')) ?? 'text-on-surface'}`}>
+              {styles[outcome.result].label}
+            </h3>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5 text-[10px] uppercase tracking-[0.15em]">
+            {isQuestOutcome ? (
+              <>
+                <span className="rounded border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-cyan-200">
+                  Success: {outcome.successCount ?? 0}
+                </span>
+                <span className="rounded border border-rose-400/30 bg-rose-500/10 px-2 py-0.5 text-rose-200">
+                  Fail: {outcome.failCount ?? 0}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">
+                  Approve: {outcome.approveCount ?? 0}
+                </span>
+                <span className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">
+                  Reject: {outcome.rejectCount ?? 0}
+                </span>
+              </>
+            )}
+            {typeof outcome.totalVotes === "number" && (
+              <span className="rounded border border-outline-variant/40 bg-surface-container-high/40 px-2 py-0.5 text-on-surface-variant">
+                Total: {outcome.totalVotes}
+              </span>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className={`shrink-0 ${accentClass}`}>{statusStyle.icon}</div>
-            <div className="min-w-0">
-              <h3 className={`avalon-vote-outcome-title font-headline text-2xl uppercase tracking-[0.12em] ${accentClass}`}>{title}</h3>
-              <p className="avalon-vote-outcome-subtitle text-sm text-on-surface-variant">{subtitle}</p>
-            </div>
-          </div>
-
-          <div className={`mt-3 h-1 w-full rounded-full ${barClass}`}></div>
-
-          {detailVisible ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em]">
-              {isQuestOutcome ? (
-                <>
-                  <span className="rounded-md border border-cyan-400/35 bg-cyan-500/12 px-2 py-1 text-cyan-200">
-                    Success: {outcome.successCount ?? 0}
-                  </span>
-                  <span className="rounded-md border border-rose-400/35 bg-rose-500/12 px-2 py-1 text-rose-200">
-                    Fail: {outcome.failCount ?? 0}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="rounded-md border border-emerald-400/35 bg-emerald-500/12 px-2 py-1 text-emerald-200">
-                    Approve: {outcome.approveCount ?? 0}
-                  </span>
-                  <span className="rounded-md border border-amber-400/35 bg-amber-500/12 px-2 py-1 text-amber-200">
-                    Reject: {outcome.rejectCount ?? 0}
-                  </span>
-                </>
-              )}
-              {typeof outcome.totalVotes === "number" && (
-                <span className="rounded-md border border-outline-variant/45 bg-surface-container-high/40 px-2 py-1 text-on-surface-variant">
-                  Votes: {outcome.totalVotes}
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="mt-3 text-xs uppercase tracking-[0.22em] text-on-surface-variant">
-              Kết quả đã được chốt
-            </div>
-          )}
+          <p className="avalon-vote-outcome-subtitle mt-2 text-[10px] text-on-surface-variant/80 leading-relaxed">
+            {isQuestOutcome
+              ? outcome.result === "success"
+                ? "Nhiệm vụ hoàn thành. Hành trình tiếp tục."
+                : "Nhiệm vụ thất bại. Bóng tối ghi dấu ấn."
+              : outcome.result === "approve"
+                ? "Đội được thông qua. Sẵn sàng lên đường."
+                : "Đề cử bị bác. Quyền thủ lĩnh chuyển tiếp."}
+          </p>
         </div>
       )}
     </div>

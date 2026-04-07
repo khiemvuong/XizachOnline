@@ -143,7 +143,7 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
               </span>
               <span className="text-[10px] font-headline text-(--secondary)/50 tracking-wider">#{roomId.substring(0,6)}</span>
             </div>
-            <h2 className="avalon-role-reveal-title text-3xl lg:text-5xl font-headline font-bold text-(--on-surface) tracking-tight">Danh Tính Bí Mật</h2>
+            <h2 className={`avalon-role-reveal-title text-3xl lg:text-5xl font-headline font-bold text-(--on-surface) tracking-tight ${isEvil ? 'avalon-title-glow-tertiary' : 'avalon-title-glow-primary'}`}>Danh Tính Bí Mật</h2>
             <p className="text-(--on-surface-variant) font-body text-xs lg:text-sm italic opacity-85">
               &quot;Giữ lấy sự thật trong bóng tối của Camelot.&quot;
             </p>

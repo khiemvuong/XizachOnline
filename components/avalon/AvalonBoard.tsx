@@ -167,7 +167,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     const endTrack =
       gameWinner === 'Good'
         ? getOrCreateAudio(winAudioRef, AVALON_AUDIO_SOURCES.win, { volume: 0.55, preload: 'auto' })
-        : getOrCreateAudio(loseAudioRef, AVALON_AUDIO_SOURCES.lose, { volume: 0.55, preload: 'auto' });
+        : getOrCreateAudio(loseAudioRef, AVALON_AUDIO_SOURCES.lose, { volume: 0.75, preload: 'auto' });
 
     endTrack.currentTime = 0;
     safePlay(endTrack);
@@ -194,7 +194,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
                 <div className="avalon-entry-copy rounded-xl border border-(--outline-variant)/25 bg-(--surface-container-low)/50 p-4 sm:p-5 flex flex-col justify-between">
                   <div className="text-center md:text-left space-y-2">
                     <p className="text-[10px] uppercase tracking-[0.28em] text-(--secondary)">The Illuminated Archive</p>
-                    <h2 className="text-(--primary) font-serif text-2xl sm:text-3xl tracking-wider uppercase">Căn Phòng Ánh Sáng</h2>
+                    <h2 className="text-(--primary) font-extrabold font-serif text-2xl sm:text-3xl tracking-wider uppercase avalon-title-glow-primary">Căn Phòng Ánh Sáng</h2>
                     <p className="text-(--on-surface-variant) text-sm italic">Hãy chọn danh xưng để hội ngộ các Kỵ sĩ.</p>
                   </div>
 
@@ -397,10 +397,12 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       )}
 
       {gameState.state === 'GAME_OVER' && me && (
-         <GameOver gameState={gameState} me={me} socket={socket} />
+         <GameOver gameState={gameState} me={me} socket={socket} winAudioRef={winAudioRef} loseAudioRef={loseAudioRef} />
       )}
 
-      {me && <VoteOutcomeOverlay gameState={gameState} me={me} />}
+      {me && gameState.state !== 'ASSASSINATION' && gameState.state !== 'GAME_OVER' && (
+        <VoteOutcomeOverlay gameState={gameState} me={me} />
+      )}
 
       <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
       {me && <MyRoleModal isOpen={showMyRole} onClose={() => setShowMyRole(false)} gameState={gameState} me={me} />}
@@ -435,7 +437,7 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
           <div>
             <h2 className="text-(--secondary) font-headline text-sm tracking-[0.2em] uppercase mb-1">Mã Hội Yến</h2>
             <div className="flex items-center gap-3">
-              <span className="text-4xl font-headline font-bold text-(--primary) tracking-tighter uppercase">#{roomId.substring(0,6)}</span>
+              <span className="text-4xl font-headline font-bold text-(--primary) tracking-tighter uppercase avalon-title-glow-primary">#{roomId.substring(0,6)}</span>
               <button onClick={copyRoomId} className="p-2 hover:bg-white/10 rounded-full transition-colors text-(--primary)/60 cursor-pointer">
                 <Copy className="w-5 h-5" />
               </button>
@@ -453,7 +455,7 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
         {/* Player List */}
         <div className="space-y-3 flex-1 flex flex-col">
           <div className="flex justify-between items-center px-2">
-            <h3 className="font-headline text-lg text-(--primary) tracking-wide">Bàn Tròn Kỵ Sĩ</h3>
+            <h3 className="font-headline text-lg text-(--primary) tracking-wide avalon-title-glow-primary">Bàn Tròn Kỵ Sĩ</h3>
             <span className="text-[10px] text-(--primary)/40 uppercase tracking-widest flex items-center gap-1">
                <Hourglass className="w-3 h-3 animate-pulse" /> Đang chờ...
             </span>

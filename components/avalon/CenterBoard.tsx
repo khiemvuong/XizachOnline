@@ -36,7 +36,7 @@ export default function CenterBoard({
       </div>
       {/* Campaign Progress Header */}
       <div className="z-10 w-full flex flex-col items-center mb-2 md:mb-3">
-        <h2 className="text-(--on-surface) font-headline text-sm md:text-lg tracking-[0.3em] uppercase opacity-90 drop-shadow-lg">
+        <h2 className="text-(--on-surface) font-headline text-sm md:text-lg tracking-[0.3em] uppercase opacity-90 drop-shadow-lg avalon-title-glow-primary">
           Campaign Progress
         </h2>
       </div>

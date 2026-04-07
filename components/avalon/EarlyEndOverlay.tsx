@@ -48,7 +48,7 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
               THE FINAL DECREE
             </p>
             <AlertTriangle className="mx-auto mb-4 h-12 w-12 animate-pulse text-tertiary-avalon drop-shadow-[0_0_18px_rgba(255,180,168,0.25)] md:h-14 md:w-14" />
-            <h2 className="avalon-earlyend-title font-headline text-4xl font-bold uppercase tracking-tight leading-[0.92] text-tertiary-avalon drop-shadow-[0_0_24px_rgba(255,180,168,0.28)] sm:text-5xl md:text-7xl">
+            <h2 className="avalon-earlyend-title font-headline text-4xl font-bold uppercase tracking-tight leading-[0.92] text-tertiary-avalon drop-shadow-[0_0_24px_rgba(255,180,168,0.28)] sm:text-5xl md:text-7xl avalon-title-glow-tertiary">
               Ritual of Termination
             </h2>
             <p className="avalon-earlyend-subtitle mx-auto mt-4 max-w-3xl text-base leading-relaxed font-headline italic text-on-surface-variant/90 md:text-xl">

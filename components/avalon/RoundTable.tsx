@@ -287,6 +287,7 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCa
                      src="https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=400&q=80"
                      alt="Unknown Identity"
                      fill
+                     sizes="96px"
                      className="object-cover opacity-50 mix-blend-luminosity grayscale"
                      unoptimized
                   />

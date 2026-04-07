@@ -26,7 +26,7 @@ export default function AvalonHome() {
         className="avalon-home-card avalon-glass max-w-md w-full p-8 shadow-2xl text-center" 
         style={{ borderRadius: '4px' }}
       >
-        <h1 className="avalon-home-title text-4xl font-serif mb-2 text-primary-avalon tracking-widest uppercase">The Round Table</h1>
+        <h1 className="avalon-home-title font-extrabold text-4xl font-serif mb-2 text-primary-avalon tracking-widest uppercase avalon-title-glow-primary">The Round Table</h1>
         <p className="avalon-home-subtitle mb-8 text-[#768497] font-sans">Sự thật và dối trá. Bạn thuộc phe nào?</p>
         
         <div className="avalon-home-actions flex flex-col gap-6">
