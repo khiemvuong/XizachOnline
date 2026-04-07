@@ -216,7 +216,17 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
                       maxLength={12}
                       autoFocus
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && playerName.trim()) setHasJoined(true);
+                        if (e.key === 'Enter' && playerName.trim()) {
+                          // Unlock audio for mobile Safari
+                          [
+                            { ref: winAudioRef, src: AVALON_AUDIO_SOURCES.win },
+                            { ref: loseAudioRef, src: AVALON_AUDIO_SOURCES.lose }
+                          ].forEach(({ ref, src }) => {
+                            const a = getOrCreateAudio(ref, src, { preload: 'auto' });
+                            a.play().then(() => a.pause()).catch(() => {});
+                          });
+                          setHasJoined(true);
+                        }
                       }}
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
@@ -225,7 +235,19 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
                   </div>
 
                   <button
-                    onClick={() => playerName.trim() && setHasJoined(true)}
+                    onClick={() => {
+                      if (playerName.trim()) {
+                        // Unlock audio for mobile Safari
+                        [
+                          { ref: winAudioRef, src: AVALON_AUDIO_SOURCES.win },
+                          { ref: loseAudioRef, src: AVALON_AUDIO_SOURCES.lose }
+                        ].forEach(({ ref, src }) => {
+                          const a = getOrCreateAudio(ref, src, { preload: 'auto' });
+                          a.play().then(() => a.pause()).catch(() => {});
+                        });
+                        setHasJoined(true);
+                      }
+                    }}
                     disabled={!playerName.trim()}
                     className={`px-12 py-3.5 rounded-xl font-headline font-extrabold text-sm transform transition-all tracking-widest uppercase flex items-center justify-center gap-3 w-full
                       ${playerName.trim()

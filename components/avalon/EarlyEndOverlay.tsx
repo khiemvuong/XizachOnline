@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { AlertTriangle, RotateCw, Shield, Skull } from "lucide-react";
 import { type Socket } from "socket.io-client";
 import { type AvalonRoom } from "@/server/game/AvalonTypes";
 
 type VoteChoice = boolean;
+
+const SCENE_W = 1000;
+const SCENE_H = 600;
 
 type EarlyEndOverlayProps = {
   gameState: AvalonRoom;
@@ -19,6 +22,31 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
   const voteCount = gameState.earlyEndVotes?.length || 0;
   const [localChoice, setLocalChoice] = useState<VoteChoice | null>(null);
   const [showRetryChoices, setShowRetryChoices] = useState(false);
+
+  // ── Scale logic ────────────────────────────────────────────────────────────
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const compute = () => {
+      if (!viewportRef.current) return;
+      const r = viewportRef.current.getBoundingClientRect();
+      const aw = Math.max(280, r.width - 16);
+      const ah = Math.max(200, r.height - 16);
+      setScale(Math.max(0.3, Math.min(1, aw / SCENE_W, ah / SCENE_H)));
+    };
+
+    compute();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(compute) : null;
+    if (ro && viewportRef.current) ro.observe(viewportRef.current);
+    window.addEventListener("resize", compute);
+    window.addEventListener("orientationchange", compute);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("orientationchange", compute);
+    };
+  }, []);
 
   const showSuccess = localChoice !== null || (hasVoted && !showRetryChoices);
 
@@ -35,15 +63,24 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
 
   return (
     <div
-      className="avalon-earlyend-shell fixed left-0 right-0 z-100 overflow-y-auto overflow-x-hidden avalon-atmospheric-bg px-4 py-8 md:px-6 md:py-10"
+      ref={viewportRef}
+      className="avalon-earlyend-shell fixed left-0 right-0 z-100 overflow-hidden avalon-atmospheric-bg flex items-center justify-center p-2"
       style={{
         top: 'var(--avalon-shell-top-offset, 0px)',
         height: 'calc(100dvh - var(--avalon-shell-top-offset, 0px))',
       }}
     >
-      <div className="avalon-earlyend-center min-h-full flex items-center justify-center">
-        <div className="avalon-earlyend-frame w-full max-w-6xl">
-          <div className="avalon-earlyend-hero mx-auto w-full max-w-4xl text-center mb-8 md:mb-10">
+      <div 
+        className="avalon-earlyend-center flex flex-col justify-center items-center"
+        style={{
+           width: SCENE_W,
+           height: SCENE_H,
+           transform: `scale(${scale})`,
+           transformOrigin: "center center",
+        }}
+      >
+        <div className="avalon-earlyend-frame w-full h-full flex flex-col items-center justify-center">
+          <div className="avalon-earlyend-hero w-full text-center mb-6 shrink-0">
             <p className="text-[10px] md:text-xs uppercase tracking-[0.4em] font-label text-tertiary-avalon mb-3">
               THE FINAL DECREE
             </p>
@@ -64,7 +101,7 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
               onVoteAgain={handleVoteAgain}
             />
           ) : (
-            <div className="avalon-earlyend-grid mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 lg:gap-8 md:grid-cols-2">
+            <div className="avalon-earlyend-grid mx-auto grid w-full max-w-4xl flex-1 grid-cols-2 gap-8">
               <VoteChoiceCard
                 title={voteOptions.keep.title}
                 subtitle={voteOptions.keep.subtitle}
@@ -88,7 +125,7 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
             </div>
           )}
 
-          <div className="mx-auto mt-8 flex w-full max-w-4xl flex-col items-center gap-3 text-center md:mt-10">
+          <div className="mx-auto mt-6 flex w-full flex-col items-center gap-3 text-center shrink-0">
             <div className="flex gap-2">
               <div className="h-1.5 w-8 rounded-full bg-primary shadow-[0_0_10px_rgba(186,200,220,0.45)]"></div>
               <div className="h-1.5 w-8 rounded-full bg-tertiary shadow-[0_0_10px_rgba(255,180,168,0.45)]"></div>
@@ -149,7 +186,7 @@ function VoteChoiceCard({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`avalon-earlyend-choice-card group relative flex min-h-80 flex-col items-center justify-center overflow-hidden rounded-[28px] border p-2 text-center transition-all duration-500 active:scale-[0.98] ${panelClass} ${disabled ? "cursor-default opacity-90" : "hover:-translate-y-1 hover:shadow-[0_0_50px_rgba(0,0,0,0.38)]"}`}
+      className={`avalon-earlyend-choice-card group relative flex flex-col items-center justify-center h-full overflow-hidden rounded-[28px] border p-2 text-center transition-all duration-500 active:scale-[0.98] ${panelClass} ${disabled ? "cursor-default opacity-90" : "hover:-translate-y-1 hover:shadow-[0_0_50px_rgba(0,0,0,0.38)]"}`}
     >
       <div className="absolute inset-0 bg-linear-to-br from-white/5 via-transparent to-transparent opacity-60 transition-opacity group-hover:opacity-90"></div>
       <div className="relative z-10 flex flex-col items-center px-6 py-10 md:py-12">
