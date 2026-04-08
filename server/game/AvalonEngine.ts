@@ -129,6 +129,18 @@ export class AvalonEngine {
                this.voteEarlyEnd(socket.data.roomId, socket.data.userId, accept);
             }
          });
+
+         socket.on("reorderPlayers", (orderedUserIds: string[]) => {
+            if (socket.data.roomId && socket.data.userId) {
+               this.reorderPlayers(socket.data.roomId, socket.data.userId, orderedUserIds);
+            }
+         });
+
+         socket.on("transferHost", (targetUserId: string) => {
+            if (socket.data.roomId && socket.data.userId) {
+               this.transferHost(socket.data.roomId, socket.data.userId, targetUserId);
+            }
+         });
       });
    }
 
@@ -197,6 +209,15 @@ export class AvalonEngine {
          existingPlayer.id = pData.id;
          existingPlayer.name = pData.name;
          existingPlayer.status = "connected";
+
+         // In LOBBY: if this player lost host (e.g. disconnected earlier), push to bottom
+         if (room.state === "LOBBY" && !existingPlayer.isHost) {
+            const idx = room.players.indexOf(existingPlayer);
+            if (idx !== -1) {
+               room.players.splice(idx, 1);
+               room.players.push(existingPlayer);
+            }
+         }
       } else {
          // Brand new player
          const isHost = room.players.length === 0;
@@ -359,9 +380,9 @@ export class AvalonEngine {
          p.isReady = false; // Reset ready state
       });
 
-      // Choose starting leader randomly
-      const leaderIndex = Math.floor(Math.random() * activePlayers.length);
-      room.leaderIndex = room.players.indexOf(activePlayers[leaderIndex]);
+      // Leader = host (the host or whoever was transferred host is the first leader)
+      const hostIndex = room.players.findIndex(p => p.isHost);
+      room.leaderIndex = hostIndex >= 0 ? hostIndex : 0;
 
       room.state = "ROLE_REVEAL";
       this.broadcastState(roomId);
@@ -690,6 +711,42 @@ export class AvalonEngine {
             room.earlyEndVotes = [];
          }
       }
+
+      this.broadcastState(roomId);
+   }
+
+   public reorderPlayers(roomId: string, userId: string, orderedUserIds: string[]) {
+      const room = this.rooms.get(roomId);
+      if (!room || room.state !== "LOBBY") return;
+
+      const player = room.players.find((p) => p.userId === userId);
+      if (!player || !player.isHost) return;
+
+      // Validate: orderedUserIds must contain exactly all current player userIds
+      const currentIds = new Set(room.players.map(p => p.userId));
+      if (orderedUserIds.length !== currentIds.size) return;
+      if (!orderedUserIds.every(id => currentIds.has(id))) return;
+
+      // Reorder the players array
+      const playerMap = new Map(room.players.map(p => [p.userId, p]));
+      room.players = orderedUserIds.map(id => playerMap.get(id)!);
+
+      this.broadcastState(roomId);
+   }
+
+   public transferHost(roomId: string, userId: string, targetUserId: string) {
+      const room = this.rooms.get(roomId);
+      if (!room || room.state !== "LOBBY") return;
+
+      const currentHost = room.players.find((p) => p.userId === userId);
+      if (!currentHost || !currentHost.isHost) return;
+
+      const newHost = room.players.find((p) => p.userId === targetUserId);
+      if (!newHost || newHost.userId === currentHost.userId) return;
+      if (newHost.status !== "connected") return;
+
+      currentHost.isHost = false;
+      newHost.isHost = true;
 
       this.broadcastState(roomId);
    }

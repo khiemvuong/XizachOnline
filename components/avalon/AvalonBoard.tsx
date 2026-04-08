@@ -436,6 +436,11 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
   const isHost = me?.isHost;
   const connectedCount = gameState.players.filter(p => p.status === 'connected').length;
 
+  // ── Reorder state (mobile-friendly with up/down buttons) ──
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [reorderMode, setReorderMode] = useState(false);
+
   const handleToggleSetting = (key: keyof typeof gameState.settings) => {
     if (!isHost || !socket) return;
     socket.emit('updateSettings', {
@@ -446,6 +451,42 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
 
   const copyRoomId = () => {
     navigator.clipboard.writeText(roomId);
+  };
+
+  // ── Desktop drag handlers ──
+  const handleDragStart = (idx: number) => {
+    if (!isHost) return;
+    setDragIdx(idx);
+  };
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    setOverIdx(idx);
+  };
+  const handleDrop = (idx: number) => {
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setOverIdx(null); return; }
+    const ordered = [...gameState.players];
+    const [moved] = ordered.splice(dragIdx, 1);
+    ordered.splice(idx, 0, moved);
+    socket?.emit('reorderPlayers', ordered.map(p => p.userId));
+    setDragIdx(null);
+    setOverIdx(null);
+  };
+  const handleDragEnd = () => { setDragIdx(null); setOverIdx(null); };
+
+  // ── Mobile reorder: move up/down ──
+  const handleMovePlayer = (idx: number, direction: 'up' | 'down') => {
+    if (!isHost || !socket) return;
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= gameState.players.length) return;
+    const ordered = [...gameState.players];
+    [ordered[idx], ordered[targetIdx]] = [ordered[targetIdx], ordered[idx]];
+    socket.emit('reorderPlayers', ordered.map(p => p.userId));
+  };
+
+  // ── Transfer host ──
+  const handleTransferHost = (targetUserId: string) => {
+    if (!isHost || !socket || targetUserId === me?.userId) return;
+    socket.emit('transferHost', targetUserId);
   };
 
   return (
@@ -478,15 +519,68 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
         <div className="space-y-3 flex-1 flex flex-col">
           <div className="flex justify-between items-center px-2">
             <h3 className="font-headline text-lg text-(--primary) tracking-wide avalon-title-glow-primary">Bàn Tròn Kỵ Sĩ</h3>
-            <span className="text-[10px] text-(--primary)/40 uppercase tracking-widest flex items-center gap-1">
-               <Hourglass className="w-3 h-3 animate-pulse" /> Đang chờ...
-            </span>
+            {isHost ? (
+              <button
+                onClick={() => setReorderMode(m => !m)}
+                className={`text-[10px] uppercase tracking-widest flex items-center gap-1 px-3 py-1 rounded-full border transition-all cursor-pointer ${
+                  reorderMode
+                    ? 'border-(--tertiary)/50 bg-(--tertiary)/10 text-(--tertiary)'
+                    : 'border-(--primary)/20 /40 hover:border-(--primary)/40'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                {reorderMode ? 'Xong' : 'Sắp xếp'}
+              </button>
+            ) : (
+              <span className="text-[10px] text-(--primary)/40 uppercase tracking-widest flex items-center gap-1">
+                <Hourglass className="w-3 h-3 animate-pulse" /> Đang chờ...
+              </span>
+            )}
           </div>
           
           <div className="grid grid-cols-1 gap-2 overflow-y-auto pr-1">
-            {gameState.players.map((player) => (
-               <div key={player.userId} className="flex items-center justify-between p-4 bg-[#0f172a]/80 border border-(--outline-variant)/20 rounded-lg group hover:bg-[#1e293b] transition-all shadow-sm">
-                 <div className="flex items-center gap-4">
+            {gameState.players.map((player, idx) => (
+               <div
+                 key={player.userId}
+                 draggable={!!isHost && !reorderMode}
+                 onDragStart={() => handleDragStart(idx)}
+                 onDragOver={(e) => handleDragOver(e, idx)}
+                 onDrop={() => handleDrop(idx)}
+                 onDragEnd={handleDragEnd}
+                 className={`flex items-center justify-between p-4 bg-[#0f172a]/80 border rounded-lg group hover:bg-[#1e293b] transition-all shadow-sm ${
+                   isHost && !reorderMode ? 'cursor-grab active:cursor-grabbing' : ''
+                 } ${dragIdx === idx ? 'opacity-40 scale-95' : ''} ${overIdx === idx && dragIdx !== idx ? 'border-(--primary)/60 bg-(--primary)/5' : 'border-(--outline-variant)/20'}`}
+               >
+                 <div className="flex items-center gap-3">
+                   {/* Reorder buttons (mobile-friendly) */}
+                   {isHost && reorderMode && (
+                     <div className="flex flex-col gap-0.5 shrink-0">
+                       <button
+                         onClick={(e) => { e.stopPropagation(); handleMovePlayer(idx, 'up'); }}
+                         disabled={idx === 0}
+                         className="p-0.5 rounded text-(--primary)/40 hover:text-(--primary) hover:bg-(--primary)/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                       >
+                         <ChevronsRight className="w-4 h-4 -rotate-90" />
+                       </button>
+                       <button
+                         onClick={(e) => { e.stopPropagation(); handleMovePlayer(idx, 'down'); }}
+                         disabled={idx === gameState.players.length - 1}
+                         className="p-0.5 rounded text-(--primary)/40 hover:text-(--primary) hover:bg-(--primary)/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                       >
+                         <ChevronsRight className="w-4 h-4 rotate-90" />
+                       </button>
+                     </div>
+                   )}
+                   {/* Drag handle (desktop only, hidden in reorder mode) */}
+                   {isHost && !reorderMode && (
+                     <div className="text-(--on-surface-variant)/30 hover:text-(--on-surface-variant)/60 transition-colors shrink-0 hidden md:block">
+                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                     </div>
+                   )}
+                   {/* Seat number */}
+                   <div className={`w-6 text-center text-[11px] font-bold shrink-0 ${reorderMode ? 'text-(--primary)/60' : 'text-(--on-surface-variant)/30'}`}>
+                     {idx + 1}
+                   </div>
                    <div className={`w-2 h-8 rounded-full ${player.status === 'connected' ? (player.isHost ? 'bg-(--tertiary)' : 'bg-(--primary)') : 'bg-gray-600'}`}></div>
                    <div className="w-10 h-10 rounded-full bg-(--primary-container)/10 border border-(--primary)/30 flex items-center justify-center text-(--primary) font-bold">
                      {player.name.charAt(0).toUpperCase()}
@@ -500,7 +594,19 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
                      </p>
                    </div>
                  </div>
-                 {player.isHost ? <Shield className="w-6 h-6 text-(--tertiary)/50 fill-(--tertiary)/20" /> : <CheckCircle2 className="w-6 h-6 text-(--primary)/30" />}
+                 <div className="flex items-center gap-2">
+                   {/* Transfer host button — host can click on other players */}
+                   {isHost && !player.isHost && player.status === 'connected' && (
+                     <button
+                       onClick={(e) => { e.stopPropagation(); handleTransferHost(player.userId); }}
+                       className="p-1.5 rounded-full hover:bg-(--tertiary)/15 text-(--tertiary) transition-all cursor-pointer"
+                       title="Chuyển Host"
+                     >
+                       <Shield className="w-4 h-4" />
+                     </button>
+                   )}
+                   {player.isHost ? <Shield className="w-6 h-6 text-(--tertiary)/50 fill-(--tertiary)/20" /> : <CheckCircle2 className="w-6 h-6 text-(--primary)/30" />}
+                 </div>
                </div>
             ))}
             

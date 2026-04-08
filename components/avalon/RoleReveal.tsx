@@ -122,8 +122,8 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
       
       {/* Faction Ambient Spotlight (Background) */}
       <div 
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-125 h-125 rounded-full blur-[120px] -z-10 pointer-events-none transition-colors duration-1000"
-        style={{ backgroundColor: `var(--color-${colorTheme}-avalon, var(--${colorTheme}))`, opacity: 0.1 }}
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-125 h-125 rounded-full blur-[120px] -z-10 pointer-events-none transition-all duration-1000"
+        style={{ backgroundColor: `var(--color-${colorTheme}-avalon, var(--${colorTheme}))`, opacity: isRevealing ? 0.1 : 0 }}
       ></div>
 
       <div className="avalon-role-reveal-grid grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-10 h-full items-stretch">
@@ -138,12 +138,12 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
           >
           <div className="avalon-role-reveal-intro text-left space-y-2">
             <div className="flex items-center justify-between">
-              <span className={`text-(--${colorTheme}) font-headline tracking-[0.3em] text-[10px] uppercase block`}>
-                Giai Đoạn: Màn Đêm Buông Xuống
+              <span className={`${isRevealing ? `text-(--${colorTheme})` : 'text-(--on-surface-variant)/60'} font-headline tracking-[0.3em] text-[10px] uppercase block transition-colors duration-500`}>
+                Màn Đêm Buông Xuống
               </span>
               <span className="text-[10px] font-headline text-(--secondary)/50 tracking-wider">#{roomId.substring(0,6)}</span>
             </div>
-            <h2 className={`avalon-role-reveal-title text-3xl lg:text-5xl font-headline font-bold text-(--on-surface) tracking-tight ${isEvil ? 'avalon-title-glow-tertiary' : 'avalon-title-glow-primary'}`}>Danh Tính Bí Mật</h2>
+            <h2 className={`avalon-role-reveal-title text-3xl lg:text-5xl font-headline font-bold text-(--on-surface) tracking-tight transition-all duration-500 ${isRevealing ? (isEvil ? 'avalon-title-glow-tertiary text-(--tertiary)' : 'avalon-title-glow-primary') : 'avalon-title-glow-neutral'}`}>Danh Tính Bí Mật</h2>
             <p className="text-(--on-surface-variant) font-body text-xs lg:text-sm italic opacity-85">
               &quot;Giữ lấy sự thật trong bóng tối của Camelot.&quot;
             </p>
@@ -151,14 +151,11 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
 
           <div className="avalon-role-reveal-summary rounded-xl border border-(--outline-variant)/40 bg-(--surface-container-low)/70 p-4 lg:p-5 backdrop-blur-md">
             <p className="text-[11px] uppercase tracking-[0.2em] text-(--on-surface-variant)">Vai trò của bạn</p>
-            <p className={`mt-1 text-xl lg:text-2xl font-headline uppercase tracking-widest text-(--${colorTheme})`}>
+            <p className={`mt-1 text-xl lg:text-2xl font-headline uppercase tracking-widest transition-colors duration-500 ${isRevealing ? `text-(--${colorTheme})` : 'text-(--on-surface-variant)/60'}`}>
               {isRevealing ? (me.role?.replace('_', ' ') ?? 'Unknown') : maskedRoleLabel}
             </p>
             <p className="mt-2 text-sm text-(--on-surface-variant)">
               {isRevealing ? roleDetails.desc : maskedRoleDesc}
-            </p>
-            <p className="mt-3 text-[11px] uppercase tracking-[0.15em] text-(--secondary)">
-              Chạm và giữ bên phải để xác minh danh tính.
             </p>
           </div>
 
@@ -387,15 +384,11 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
             className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl rounded-xl z-20 flex flex-col items-center justify-center p-5 sm:p-8 text-center cursor-pointer select-none touch-none border border-(--outline-variant)/50 shadow-2xl"
             onPointerDown={() => setIsRevealing(true)}
           >
-            <div className="w-20 h-20 rounded-full border-2 border-(--outline-variant)/30 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-               <Fingerprint className="w-10 h-10 text-(--primary) animate-pulse" />
+            <div className="w-25 h-25 rounded-full border-2 border-(--outline-variant)/30 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+               <Fingerprint className="w-20 h-20" />
             </div>
             
-            <h3 className="text-xl font-headline mb-4 uppercase tracking-wider text-(--on-surface)">Chờ Xác Minh Danh Tính</h3>
-            
-            <div className="bg-primary-avalon text-surface-dim-avalon px-8 py-4 rounded-xl font-headline font-bold text-sm tracking-widest uppercase shadow-[0_4px_20px_rgba(186,200,220,0.2)]">
-              Chạm & Giữ Để Xem
-            </div>
+            <h3 className="text-xl font-headline mb-4 uppercase tracking-wider text-(--on-surface)">Giữ Để Xác Minh Danh Tính</h3>
             <p className="mt-8 text-[10px] text-(--on-surface-variant) uppercase tracking-widest opacity-50">
               Tuyệt Mật • Chỉ Dành Cho Mắt Bạn
             </p>
