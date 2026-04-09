@@ -7,10 +7,12 @@ export default function CenterBoard({
   gameState,
   me,
   socket,
+  isReadOnly = false,
 }: {
   gameState: AvalonRoom;
   me: AvalonPlayer;
   socket: Socket | null;
+  isReadOnly?: boolean;
 }) {
   const isLeader =
     gameState.players[gameState.leaderIndex]?.userId === me.userId;
@@ -19,6 +21,8 @@ export default function CenterBoard({
   const canSubmit =
     isTeamBuilding &&
     isLeader &&
+    !isReadOnly &&
+    !me.isSpectator &&
     gameState.proposedTeam.length === currentQ?.teamSize;
 
   return (
@@ -120,7 +124,7 @@ export default function CenterBoard({
           </div>
         )}
 
-        {isTeamBuilding && isLeader && (
+        {isTeamBuilding && isLeader && !isReadOnly && !me.isSpectator && (
           <button
             className="mt-3 px-6 py-2 text-[9px] md:text-[11px] uppercase tracking-[0.2em] font-black transition-all bg-primary-avalon text-surface-dim-avalon hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed rounded-lg shadow-xl"
             disabled={!canSubmit}

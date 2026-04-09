@@ -28,6 +28,28 @@ export class AvalonEngine {
       });
    }
 
+   private getNextLeaderIndex(room: AvalonRoom, currentIndex: number) {
+      if (room.players.length === 0) return 0;
+
+      for (let step = 1; step <= room.players.length; step++) {
+         const idx = (currentIndex + step) % room.players.length;
+         const candidate = room.players[idx];
+         if (candidate && candidate.status === "connected" && !candidate.isSpectator) {
+            return idx;
+         }
+      }
+
+      for (let step = 1; step <= room.players.length; step++) {
+         const idx = (currentIndex + step) % room.players.length;
+         const candidate = room.players[idx];
+         if (candidate && !candidate.isSpectator) {
+            return idx;
+         }
+      }
+
+      return currentIndex;
+   }
+
    constructor(server: Server) {
       this.io = server.of("/avalon");
       this.setupListeners();
@@ -36,6 +58,21 @@ export class AvalonEngine {
    private setupListeners() {
       this.io.on("connection", (socket: Socket) => {
          console.log("Avalon client connected:", socket.id);
+
+         socket.on("checkRoom", (roomId: string, callback: (exists: boolean) => void) => {
+            if (typeof callback === "function") {
+               callback(this.rooms.has(roomId));
+            }
+         });
+
+         socket.on("createRoom", (roomId: string, callback: (success: boolean) => void) => {
+            if (this.rooms.has(roomId)) {
+               if (typeof callback === "function") callback(false);
+            } else {
+               this.createRoom(roomId);
+               if (typeof callback === "function") callback(true);
+            }
+         });
 
          socket.on("joinRoom", ({ roomId, playerName, userId }) => {
             if (!userId) return;
@@ -142,6 +179,18 @@ export class AvalonEngine {
                this.transferHost(socket.data.roomId, socket.data.userId, targetUserId);
             }
          });
+
+         socket.on("changeName", (newName: string) => {
+            if (socket.data.roomId && socket.data.userId && typeof newName === 'string') {
+               this.changeName(socket.data.roomId, socket.data.userId, newName.trim().slice(0, 12));
+            }
+         });
+
+         socket.on("toggleRaiseHand", (isRaised?: boolean) => {
+            if (socket.data.roomId && socket.data.userId) {
+               this.toggleRaiseHand(socket.data.roomId, socket.data.userId, isRaised);
+            }
+         });
       });
    }
 
@@ -201,7 +250,11 @@ export class AvalonEngine {
       pData: { id: string; userId: string; name: string },
       socket: Socket,
    ) {
-      this.createRoom(roomId);
+      if (!this.rooms.has(roomId)) {
+         socket.emit("avalonError", "Phòng Hội Yến không tồn tại hoặc đã bị giải tán!");
+         return;
+      }
+      
       const room = this.rooms.get(roomId)!;
 
       const existingPlayer = room.players.find((p) => p.userId === pData.userId);
@@ -229,6 +282,7 @@ export class AvalonEngine {
             name: pData.name,
             isHost: isHost && !isMidGame, // don't give host to mid-game joiners
             status: "connected",
+            isHandRaised: false,
             ...(isMidGame ? { isSpectator: true } : {}),
          });
       }
@@ -325,6 +379,9 @@ export class AvalonEngine {
       room.voteTrack = 0;
       room.proposedTeam = [];
       room.votingResults = null;
+      room.players.forEach((p) => {
+         p.isHandRaised = false;
+      });
 
       // Determine counts based on standard Avalon rules
       const counts: Record<number, { good: number; evil: number }> = {
@@ -424,9 +481,12 @@ export class AvalonEngine {
       const room = this.rooms.get(roomId);
       if (!room || room.state !== "TEAM_BUILDING") return;
 
+      const actor = room.players.find((p) => p.userId === userId);
+      if (!actor || actor.isSpectator) return;
+
       // Only leader can select
       const leader = room.players[room.leaderIndex];
-      if (leader.userId !== userId) return;
+      if (!leader || leader.userId !== userId || leader.isSpectator) return;
 
       const maxTeamSize = room.questHistory[room.currentQuestIndex].teamSize;
 
@@ -445,8 +505,11 @@ export class AvalonEngine {
       const room = this.rooms.get(roomId);
       if (!room || room.state !== "TEAM_BUILDING") return;
 
+      const actor = room.players.find((p) => p.userId === userId);
+      if (!actor || actor.isSpectator) return;
+
       const leader = room.players[room.leaderIndex];
-      if (leader.userId !== userId) return;
+      if (!leader || leader.userId !== userId || leader.isSpectator) return;
 
       const maxTeamSize = room.questHistory[room.currentQuestIndex].teamSize;
       if (room.proposedTeam.length !== maxTeamSize) return;
@@ -516,7 +579,7 @@ export class AvalonEngine {
                // Automatically Evil wins if 5 tracks reached. Can extend later.
             } else {
                // Pass leader
-               room.leaderIndex = (room.leaderIndex + 1) % room.players.length;
+               room.leaderIndex = this.getNextLeaderIndex(room, room.leaderIndex);
                room.proposedTeam = [];
                room.state = "TEAM_BUILDING";
             }
@@ -597,7 +660,7 @@ export class AvalonEngine {
             delete p.questVote;
          });
          room.proposedTeam = [];
-         room.leaderIndex = (room.leaderIndex + 1) % room.players.length;
+         room.leaderIndex = this.getNextLeaderIndex(room, room.leaderIndex);
 
          room.currentQuestIndex++;
 
@@ -631,7 +694,7 @@ export class AvalonEngine {
       if (!room || room.state !== "ASSASSINATION") return;
 
       const assassin = room.players.find((p) => p.userId === userId);
-      if (!assassin || assassin.role !== "Assassin") return;
+      if (!assassin || assassin.isSpectator || assassin.role !== "Assassin") return;
 
       const target = room.players.find((p) => p.userId === targetId);
       if (!target) return;
@@ -684,6 +747,7 @@ export class AvalonEngine {
          delete p.currentVote;
          delete p.questVote;
          delete p.isSpectator;
+         delete p.isHandRaised;
          p.isReady = false;
       });
 
@@ -697,6 +761,9 @@ export class AvalonEngine {
       const room = this.rooms.get(roomId);
       if (!room || room.state === "LOBBY" || room.state === "GAME_OVER") return;
 
+      const player = room.players.find(p => p.userId === userId);
+      if (!player || player.isSpectator) return;
+
       if (!room.earlyEndVotes) {
          room.earlyEndVotes = [];
       }
@@ -709,13 +776,13 @@ export class AvalonEngine {
             room.earlyEndVotes.push(userId);
          }
 
-         // Check if all connected players have voted yes
-         const connectedPlayers = room.players.filter(
-            (p) => p.status === "connected",
+         // Check if all connected playing players have voted yes
+         const activePlayers = room.players.filter(
+            (p) => p.status === "connected" && !p.isSpectator,
          );
          if (
-            room.earlyEndVotes.length >= connectedPlayers.length &&
-            connectedPlayers.length > 0
+            room.earlyEndVotes.length >= activePlayers.length &&
+            activePlayers.length > 0
          ) {
             // Everyone agreed to end the game early
             room.state = "GAME_OVER";
@@ -760,6 +827,29 @@ export class AvalonEngine {
       currentHost.isHost = false;
       newHost.isHost = true;
 
+      this.broadcastState(roomId);
+   }
+
+   public changeName(roomId: string, userId: string, newName: string) {
+      if (!newName) return;
+      const room = this.rooms.get(roomId);
+      if (!room || room.state !== "LOBBY") return;
+
+      const player = room.players.find(p => p.userId === userId);
+      if (player) {
+         player.name = newName;
+         this.broadcastState(roomId);
+      }
+   }
+
+   public toggleRaiseHand(roomId: string, userId: string, isRaised?: boolean) {
+      const room = this.rooms.get(roomId);
+      if (!room || room.state === "LOBBY" || room.state === "GAME_OVER") return;
+
+      const player = room.players.find((p) => p.userId === userId && p.status === "connected");
+      if (!player) return;
+
+      player.isHandRaised = typeof isRaised === "boolean" ? isRaised : !Boolean(player.isHandRaised);
       this.broadcastState(roomId);
    }
 

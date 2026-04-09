@@ -23,7 +23,7 @@ app.prepare().then(() => {
   });
 
   const gameEngine = new GameEngine(io);
-  const avalonEngine = new AvalonEngine(io);
+  new AvalonEngine(io);
 
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);

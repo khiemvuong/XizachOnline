@@ -4,17 +4,21 @@ import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
 import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import Image from 'next/image';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Hand, ChevronUp, ChevronDown } from 'lucide-react';
 import CenterBoard from './CenterBoard';
 import { getRoleImageSrcForViewer } from './roleImage';
 
-export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden = false }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null, roomId: string, isRoleHidden?: boolean }) {
+export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden = false, isReadOnly = false }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null, roomId: string, isRoleHidden?: boolean, isReadOnly?: boolean }) {
    const [isQuestHistoryOpen, setIsQuestHistoryOpen] = useState(false);
+   const [isSpectatorPanelExpanded, setIsSpectatorPanelExpanded] = useState(true);
    const stageRef = useRef<HTMLDivElement | null>(null);
    const [sceneScale, setSceneScale] = useState(1);
    const SCENE_BASE_WIDTH = 1120;
    const SCENE_BASE_HEIGHT = 560;
-   const activePlayers = gameState.players.filter((p: AvalonPlayer) => p.status === 'connected');
+   // Keep disconnected players in the active pool so they don't lose their seats mid-game.
+   const activePlayers = gameState.players.filter((p: AvalonPlayer) => !p.isSpectator);
+   const spectators = gameState.players.filter((p: AvalonPlayer) => p.status === 'connected' && p.isSpectator);
+   const raisedSpectatorsCount = spectators.filter((p) => p.isHandRaised).length;
    const numPlayers = activePlayers.length;
    const questParticipantsHistory = gameState.questParticipantsHistory ?? [];
    const showQuestParticipantsBoard = Boolean(gameState.settings?.showQuestParticipantsBoard);
@@ -26,9 +30,10 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
    const myIndex = activePlayers.findIndex((p: AvalonPlayer) => p.userId === me.userId);
   
    const seatedPlayers: AvalonPlayer[] = [];
+   const baseIndex = myIndex >= 0 ? myIndex : 0;
    for (let i = 0; i < numPlayers; i++) {
-        // We push activePlayers in order so that seatedPlayers[0] is always 'Me'
-        const idx = (myIndex + i) % numPlayers;
+        // We push activePlayers in order so that seatedPlayers[0] is always 'Me' (if playing)
+        const idx = (baseIndex + i) % numPlayers;
         seatedPlayers.push(activePlayers[idx]);
    }
 
@@ -86,22 +91,79 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
    return (
       <div
          ref={stageRef}
-         className="avalon-table-stage flex-1 w-full relative flex flex-col items-center justify-center py-2 md:py-4 px-1 sm:px-2 overflow-hidden bg-transparent"
-         style={{ minHeight: '30rem', height: 'calc(100dvh - 7rem)' }}
+         className="avalon-table-stage flex-1 min-h-0 w-full relative flex flex-col items-center justify-center py-2 md:py-4 px-1 sm:px-2 overflow-hidden bg-transparent"
       >
-         <div className="absolute left-2 top-2 z-40 pointer-events-auto flex items-center gap-2">
-            {showQuestParticipantsBoard && (
-               <button
-                  type="button"
-                  onClick={() => setIsQuestHistoryOpen(true)}
-                  className="rounded-lg border border-(--tertiary)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--tertiary) shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-colors hover:bg-surface-container"
-               >
-                  Lịch sử nhiệm vụ
-               </button>
-            )}
-            <div className="rounded-lg border border-(--outline-variant)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--secondary)/80 shadow-[0_8px_24px_rgba(0,0,0,0.35)] flex items-center">
-               #{roomId.substring(0, 6)}
+         <div className="absolute left-2 top-2 z-40 pointer-events-none flex flex-col items-start gap-2">
+            <div className="flex items-center gap-2 pointer-events-auto">
+               {showQuestParticipantsBoard && (
+                  <button
+                     type="button"
+                     onClick={() => setIsQuestHistoryOpen(true)}
+                     className="rounded-lg border border-(--tertiary)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--tertiary) shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-colors hover:bg-surface-container cursor-pointer"
+                  >
+                     Lịch sử
+                  </button>
+               )}
+               <div className="rounded-lg border border-(--outline-variant)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--secondary)/80 shadow-[0_8px_24px_rgba(0,0,0,0.35)] flex items-center">
+                  #{roomId.substring(0, 6)}
+               </div>
             </div>
+            
+            {spectators.length > 0 && (
+               <div className="rounded-lg border border-outline-variant/45 bg-surface-container-low/85 px-2 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.35)] max-w-[80vw] sm:max-w-[40vw] pointer-events-auto">
+                  <div className="flex items-center gap-2">
+                     <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/70 pl-1 shrink-0 whitespace-nowrap">
+                        Khán giả ({spectators.length})
+                     </span>
+                     {raisedSpectatorsCount > 0 && (
+                        <span className="rounded-full border border-emerald-300/40 bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-200 whitespace-nowrap">
+                           {raisedSpectatorsCount} dơ tay
+                        </span>
+                     )}
+                     <button
+                        type="button"
+                        onClick={() => setIsSpectatorPanelExpanded((prev) => !prev)}
+                        title={isSpectatorPanelExpanded ? 'Thu gọn khung khán giả' : 'Mở rộng khung khán giả'}
+                        aria-label={isSpectatorPanelExpanded ? 'Thu gọn khung khán giả' : 'Mở rộng khung khán giả'}
+                        className="ml-auto inline-flex items-center justify-center rounded-md border border-white/10 bg-surface-container p-1 text-on-surface-variant/80 transition-colors hover:bg-surface-container-high cursor-pointer"
+                     >
+                        {isSpectatorPanelExpanded ? (
+                           <ChevronUp className="h-3.5 w-3.5 text-on-surface" />
+                        ) : (
+                           <ChevronDown className="h-3.5 w-3.5 text-on-surface" />
+                        )}
+                     </button>
+                  </div>
+
+                  {isSpectatorPanelExpanded && (
+                     <div className="mt-1.5 flex items-center gap-1.5 overflow-x-auto custom-avalon-scrollbar">
+                        {spectators.map(spec => (
+                           <div
+                              key={spec.userId}
+                              className="flex items-center gap-1.5 bg-surface-container p-1 pr-2 rounded-full border border-white/5 shrink-0"
+                              title={spec.isHandRaised ? 'Khán giả đang dơ tay' : 'Đang theo dõi ngoài màn hình'}
+                           >
+                              <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-800 shrink-0 relative opacity-60 grayscale mix-blend-luminosity">
+                                 <Image
+                                    src="/avalon_roles/cloneavatar.jpg"
+                                    alt={spec.name}
+                                    fill
+                                    sizes="20px"
+                                    className="object-cover"
+                                 />
+                              </div>
+                              <span className="text-[10px] font-medium text-slate-300 truncate max-w-15 leading-none">{spec.name}</span>
+                              {spec.isHandRaised && (
+                                 <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.65)]">
+                                    <Hand className="h-2.5 w-2.5" />
+                                 </span>
+                              )}
+                           </div>
+                        ))}
+                     </div>
+                  )}
+               </div>
+            )}
          </div>
 
          {showQuestParticipantsBoard && (
@@ -180,7 +242,7 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                {layout.top.map((idx) => {
                   const player = seatedPlayers[idx];
                   if (!player) return null;
-                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} />;
+                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} />;
                })}
             </div>
 
@@ -191,13 +253,13 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                   {layout.left.map((idx) => {
                      const player = seatedPlayers[idx];
                      if (!player) return null;
-                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isLeft isRoleHidden={isRoleHidden} />;
+                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isLeft isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} />;
                   })}
                </div>
 
                {/* Central Board */}
                <div className="flex-1 flex justify-center items-center mx-4 pointer-events-auto">
-                  <CenterBoard gameState={gameState} me={me} socket={socket} />
+                  <CenterBoard gameState={gameState} me={me} socket={socket} isReadOnly={isReadOnly} />
                </div>
 
                {/* Right Players */}
@@ -205,7 +267,7 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                   {layout.right.map((idx) => {
                      const player = seatedPlayers[idx];
                      if (!player) return null;
-                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRight isRoleHidden={isRoleHidden} />;
+                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRight isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} />;
                   })}
                </div>
             </div>
@@ -215,7 +277,7 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                {layout.bottom.map((idx) => {
                   const player = seatedPlayers[idx];
                   if (!player) return null;
-                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} />;
+                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} />;
                })}
             </div>
          </div>
@@ -232,15 +294,16 @@ type PlayerCardProps = {
    isLeft?: boolean;
    isRight?: boolean;
    isRoleHidden?: boolean;
+   isReadOnly?: boolean;
 };
 
-function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidden = false }: PlayerCardProps) {
+function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidden = false, isReadOnly = false }: PlayerCardProps) {
    const isMe = player.userId === me.userId;
    const isLeader = gameState.players[gameState.leaderIndex]?.userId === player.userId;
    const isProposed = gameState.proposedTeam?.includes(player.userId) ?? false;
    const meIsLeader = gameState.players[gameState.leaderIndex]?.userId === me.userId;
    const isTeamBuilding = gameState.state === 'TEAM_BUILDING';
-   const isClickable = isTeamBuilding && meIsLeader;
+   const isClickable = isTeamBuilding && meIsLeader && !isReadOnly && !me.isSpectator;
 
    const shouldShowRoleAvatar =
       player.userId === me.userId ||
@@ -261,6 +324,8 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
    if (isProposed) shadowColor = "shadow-[0_0_20px_rgba(131,195,163,0.3)]";
    else if (isLeader) shadowColor = "shadow-[0_0_15px_rgba(211,155,46,0.3)]";
 
+   const isDisconnected = player.status === 'disconnected';
+
    return (
       <div 
          className={`relative group pointer-events-auto flex items-center justify-center transition-all duration-300 z-20 ${isClickable ? 'cursor-pointer hover:scale-105 hover:z-30' : ''}`}
@@ -274,10 +339,16 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             </div>
          )}
+
+         {player.isHandRaised && !isDisconnected && (
+            <div className="absolute -right-6 -bottom-2 z-60 rounded-full bg-emerald-500 p-2 text-white ring-2 ring-emerald-200 shadow-[0_8px_18px_rgba(16,185,129,0.65)]">
+               <Hand className="w-4 h-4" />
+            </div>
+         )}
          
          <div className={`w-20 h-20 lg:w-24 lg:h-24 rounded-lg bg-[#0f172a]/90 backdrop-blur-md border-2 p-1 transition-all ${borderColor} ${shadowColor} ${isMe ? 'scale-110 ring-4 ring-(--primary)/20' : ''}`}>
             {effectiveShowRole ? (
-               <div className="relative w-full h-full rounded overflow-hidden bg-surface-container-low">
+               <div className={`relative w-full h-full rounded overflow-hidden bg-surface-container-low ${isDisconnected ? 'opacity-40 grayscale' : ''}`}>
                   <Image
                      src={getRoleImageSrcForViewer(player, me)}
                      alt={`Avatar`}
@@ -288,20 +359,27 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
                   />
                </div>
             ) : (
-               <div className="relative w-full h-full rounded overflow-hidden bg-slate-950 border border-slate-800/80 shadow-inner">
+               <div className={`relative w-full h-full rounded overflow-hidden bg-slate-950 border border-slate-800/80 shadow-inner ${isDisconnected ? 'opacity-40 grayscale' : ''}`}>
                   <Image
-                     src="https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=400&q=80"
+                     src="/avalon_roles/cloneavatar.jpg"
                      alt="Unknown Identity"
                      fill
                      sizes="96px"
                      className="object-cover opacity-50 mix-blend-luminosity grayscale"
-                     unoptimized
                   />
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-linear-to-b from-transparent to-black/60 backdrop-blur-[1px]">
                      <span className="text-xl sm:text-2xl lg:text-3xl font-serif text-slate-400 font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                         ?
                      </span>
                   </div>
+               </div>
+            )}
+            
+            {isDisconnected && (
+               <div className="absolute inset-0 flex items-center justify-center z-30 drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]">
+                   <div className="bg-red-500/20 border border-red-500/50 backdrop-blur-sm px-1.5 py-0.5 rounded-sm flex items-center justify-center -rotate-12 shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+                     <span className="text-[6.5px] uppercase font-black tracking-widest text-red-100">Đứt cáp</span>
+                   </div>
                </div>
             )}
          </div>
@@ -351,7 +429,7 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
          )}
 
          {isMe && (
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-(--primary) text-[#0b1320] px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-widest shadow-[0_0_15px_rgba(131,195,163,0.5)] z-40 whitespace-nowrap">
+            <div className="absolute -right-16 -translate-x-1/2 bg-(--primary) text-[#0b1320] px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-widest shadow-[0_0_15px_rgba(131,195,163,0.5)] z-40 whitespace-nowrap">
                {"BẠN"}
             </div>
          )}

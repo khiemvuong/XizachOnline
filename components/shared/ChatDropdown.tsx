@@ -1,5 +1,5 @@
 import { Eye, MessageCircle, Send, X } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 export interface ChatMessage {
     senderId: string;
@@ -105,18 +105,23 @@ export default function ChatDropdown({
         prevMessagesLength.current = currentLen;
     }, [messages, showChat]);
 
-    // Reset unreads when opened
-    useEffect(() => {
-        if (showChat) {
-            setUnreadCount(0);
-        }
-    }, [showChat]);
-
     useEffect(() => {
         if (showChat && chatListRef.current) {
             chatListRef.current.scrollTop = chatListRef.current.scrollHeight;
         }
     }, [messages, showChat]);
+
+    const handleToggleChat = () => {
+        if (!showChat) {
+            setUnreadCount(0);
+        }
+        onToggleChat();
+    };
+
+    const handleCloseChat = () => {
+        setUnreadCount(0);
+        onCloseChat();
+    };
 
     return (
         <div className="pointer-events-none fixed bottom-3 right-3 z-50 flex flex-col items-end gap-2">
@@ -142,7 +147,7 @@ export default function ChatDropdown({
                             Trò chuyện
                         </div>
                         <button
-                            onClick={onCloseChat}
+                            onClick={handleCloseChat}
                             className="rounded-full p-1 transition hover:bg-black/10 cursor-pointer"
                             style={{ color: theme.textMuted }}
                             aria-label="Đóng khung chat"
@@ -314,7 +319,7 @@ export default function ChatDropdown({
                     </button>
                 )}
                 <button
-                    onClick={onToggleChat}
+                    onClick={handleToggleChat}
                     className="pointer-events-auto relative rounded-full border p-3 shadow-lg backdrop-blur cursor-pointer"
                     style={{
                         backgroundColor: theme.surface,

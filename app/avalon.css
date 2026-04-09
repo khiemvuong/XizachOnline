@@ -80,7 +80,7 @@
   background-color: var(--surface);
   background-image:
     linear-gradient(to bottom, rgba(6, 20, 35, 0.4), rgba(6, 20, 35, 0.95)),
-    url("https://lh3.googleusercontent.com/aida-public/AB6AXuCX--GK7a96dUItJ3kEtZv_Uwb4VgVk4rWxx0Wy7nz59ytudSiaZUFq_838B5tBz0gsMrgpx6sQ8PvDF9K0GXMuhuE05hnHPzrGfUlCEMqNG8_QqIYLg7oCJo3pkfHthtzkdS5gMQ4Zgc_Xkfk4iEODKnPyOl7wTeNGb4dEPsN-BZWaTGC3kEGyXblRtliWNeEke33Cx_oUPEWOtg9wK5DwfAq92E6ra0kJw2Y-M_3haYtvm50Rif-guleocbzRm69L35KOTouh5g");
+    url("/Image/castle-bg.png");
   background-size: cover;
   background-position: center;
 }
@@ -89,7 +89,7 @@
   background-color: var(--surface-container-lowest);
   background-image:
     linear-gradient(to bottom, rgba(6, 20, 35, 0.4), rgba(62, 0, 0, 0.8)),
-    url("https://lh3.googleusercontent.com/aida-public/AB6AXuAv3DLASwJi8iXen35bpfLhDWI3JS_aSjACEABC9rtsyLJa3puMabEce4kaQ_bW0d_PBcpxWKzPSBx6J-VlYEbgSQH82VX8fV78aN13SnQg4aAZ-f605p5Y4Z1s7p4RmYOC8JPi7CCqWEPggKFVZqAiON0LnVAgt1JADGCa1HAvDh2GJmEps5BP8pDAWaMcAvI5D2becBr3SJI2YjiGzhwt1GlO2V8w4qWrtDeOJiFFnwlMehmXe_VGzxDmkrQXh5IV-CAYKSwhIQ");
+    url("/Image/atmospheric-bg.png");
   background-size: cover;
   background-position: center;
 }
@@ -111,7 +111,7 @@
       rgba(6, 20, 35, 0.35),
       rgba(62, 0, 0, 0.78)
     ),
-    url("https://lh3.googleusercontent.com/aida-public/AB6AXuAm9FdfXlG3JTmwBbV14ETe7Dgx88q_nKHVgWggu2CRTot6xY8fxGdE1VXYybwiZM5LM2RAhALLdQ0TMywZKLawGdjr4GtMd0DfI4Z8feEkdl-FhOgLJy7E97PidEiJBr-_Eg_oun2FW0pTXwnb1V9VIoAgEX4Sc6xNgtSxmQHtD3v-rZLknvjhXIlryzxQXOxx33r-e8qhXS9tSPkdj8Q-64jt59mKv7D5Lm1SGFnRJpXBeD8nCrajujvj1DLFu8tBYkDBIzM60Q");
+    url("/Image/assasin_background.png");
   background-size: cover;
   background-position: center;
 }
@@ -213,44 +213,6 @@
 }
 
 @media screen and (pointer: coarse) and (orientation: landscape) and (max-width: 1100px) {
-  .avalon-home-shell {
-    align-items: flex-start;
-    padding-top: 0.45rem;
-    padding-bottom: 0.75rem;
-  }
-
-  .avalon-home-card {
-    max-width: 26rem;
-    transform: scale(0.9);
-    transform-origin: top center;
-  }
-
-  .avalon-home-title {
-    font-size: clamp(2rem, 5.2vw, 2.65rem);
-    line-height: 0.95;
-  }
-
-  .avalon-home-subtitle {
-    margin-bottom: 1rem;
-    font-size: 0.82rem;
-  }
-
-  .avalon-home-actions {
-    gap: 0.7rem;
-  }
-
-  .avalon-home-btn {
-    padding-top: 0.68rem;
-    padding-bottom: 0.68rem;
-    font-size: 0.9rem;
-  }
-
-  .avalon-home-input {
-    padding-top: 0.68rem;
-    padding-bottom: 0.68rem;
-    font-size: 0.9rem;
-  }
-
   .avalon-mobile-landscape {
     overflow: hidden;
   }
@@ -277,10 +239,7 @@
     padding: 0.78rem;
   }
 
-  .avalon-table-stage {
-    min-height: 0 !important;
-    height: calc(100dvh - 5.4rem) !important;
-  }
+
 
   .avalon-role-reveal-grid {
     grid-template-columns: minmax(16rem, 0.95fr) minmax(17rem, 1.05fr);

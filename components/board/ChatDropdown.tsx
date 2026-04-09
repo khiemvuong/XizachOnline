@@ -4,7 +4,7 @@ import SharedChatDropdown, {
     type ChatMessage,
     type ChatPeekRequest,
 } from "@/components/shared/ChatDropdown";
-import type { FormEvent, RefObject } from "react";
+import type { FormEvent } from "react";
 import type { PeekRequest, Room } from "./types";
 
 const BOARD_THEME: ChatTheme = {

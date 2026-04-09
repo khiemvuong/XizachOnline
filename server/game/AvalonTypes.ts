@@ -37,6 +37,7 @@ export interface AvalonPlayer {
   hasVoted?: boolean;
   currentVote?: 'approve' | 'reject';
   questVote?: 'success' | 'fail';
+  isHandRaised?: boolean;
 }
 
 export interface AvalonRoom {

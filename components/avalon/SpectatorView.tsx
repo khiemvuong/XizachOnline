@@ -1,15 +1,13 @@
 "use client";
 
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
-import { Socket } from 'socket.io-client';
-import { Eye, Hourglass, Shield, Swords, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Eye, Hourglass, Shield, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 export default function SpectatorView({ 
-  gameState, me, socket, roomId 
+  gameState, me, roomId 
 }: { 
   gameState: AvalonRoom; 
   me: AvalonPlayer;
-  socket: Socket | null;
   roomId: string;
 }) {
   const activePlayers = gameState.players.filter(p => !p.isSpectator && p.status === 'connected');

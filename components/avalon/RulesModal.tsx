@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Shield, VenetianMask, Swords, Info, ScrollText, 
-  Users, Gavel, Target, Eye, Flame, CloudFog, Wand2, Crosshair 
+  Users, Gavel, Target, Eye, Flame, CloudFog, Wand2, Crosshair, type LucideIcon
 } from 'lucide-react';
 
 interface RulesModalProps {
@@ -242,7 +242,7 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
 }
 
 // Custom Micro components
-function RoleDetailCard({ icon: Icon, title, desc, isEvil = false }: { icon: any, title: string, desc: string, isEvil?: boolean }) {
+function RoleDetailCard({ icon: Icon, title, desc, isEvil = false }: { icon: LucideIcon, title: string, desc: string, isEvil?: boolean }) {
   const colorClass = isEvil ? "text-(--tertiary)" : "text-(--primary)";
   const bgClass = isEvil ? "bg-(--tertiary)/10 border-(--tertiary)/30" : "bg-(--primary)/10 border-(--primary)/30";
   return (
@@ -258,7 +258,7 @@ function RoleDetailCard({ icon: Icon, title, desc, isEvil = false }: { icon: any
   );
 }
 
-function StepItem({ num, title, icon: Icon, desc }: { num: string, title: string, icon: any, desc: string }) {
+function StepItem({ num, title, icon: Icon, desc }: { num: string, title: string, icon: LucideIcon, desc: string }) {
   return (
     <div className="avalon-rules-step-item relative pl-12 flex flex-col gap-1">
        {/* Circle marker */}

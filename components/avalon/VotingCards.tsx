@@ -6,14 +6,10 @@ import { Shield, Skull, HeartCrack, Trophy } from "lucide-react";
 import { Socket } from "socket.io-client";
 
 // ── Image URLs from Template/src/App.tsx ──────────────────────────────────────
-const IMG_APPROVE =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDufUHHqCTeWHpDQ-PJvW8bk5sNJtpbjCPiq2NEG93XRDF8lNVK0RoQP1VUpn-m-y8yGr2zXf3hZcHvAaS2oVJJ5yKsmmPE-h7YRidjKqhzPP9Mr-NbAwV0jomhY1zJEW0F5s34dzSnkBOj4Gbt6U4yzAx77h7N-STJ97QTfyONJdH55BewRMJnD6sbMnWLsR5mf2CNYCYnYF6vewDNV_lJ5I42m0W5LeG2DaiIHIAGZrMU_QA493VNQsEoXQsa6F6ZeKVUtc_n6A";
-const IMG_REJECT =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAB1uF_l5tLqc-CQG0E-MoNTQhHK057wSgjoA7Lp5sky9U2TV-Vh8u2f_qSPLzYgVUPWqztO0bXgAe1qsVsGf3g8j-FstRAoKiHLNsDOtUc6TIdJB2bIx69omtaRHfe7jVaiupXW4Dj_6WNvoOTyKoXesMdu46e6NEgrapBsesGUWlCSLHS2aqZHdAGmcBk1Qc6kIZcfPcywY3kB4I4fRngz8M8JcSOW14j3HGe7ynGjD1ROS8avuijyJGDMhbrKB9eCA0VCBC_sg";
-const IMG_SUCCESS =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDW4tt0JlOiOBWcDs9O4LzssuAXho_9xNilhR-wKGdEbzzx938DCbdvSuunyOLcs2YQ7fwhMVPPftxDgvAF6KLUPQZbP5pbhcfP-ChlAsWRE4MiDiGDPmrS8T_2k2nFCnLUiT0lVZeYo7xNoZG4XMtZBqJ5AwZ9l31AlbBszG5wLeUhkr5ighoxvRLWGtY2ziciDp_MB7jjZ-i_BIcnaGdVN82vFKDtlPMUP_MBVMst0pDyzwQqA1LElCSLL9NpDnXmXAFQAFZIUQ";
-const IMG_FAIL =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuC674vtsGJSY1lh7C1UifQaMDqLOu06E6--9TunlSMoXjQNM_1vgdkLa8oCgUfipMdvKwwwMKEtcucBexVO5i-h_7bkUkCvcvnq3F_Fti4EFA7Ewekcvrg4L1N8kr4fBM12f11-bzbAUCwaH-798yazSb9EhgbIn0fQwSocljTw9XehienqwWYWnNUKwMihndc69_mXqKfONO7oZrLcZP4fwY41c8marKzt51RBpsapISNJLl66W1HjwR5bgGSETYGPps5dyCASAA";
+const IMG_APPROVE = "/card/approve.png";
+const IMG_REJECT = "/card/reject.png";
+const IMG_SUCCESS = "/card/success.png";
+const IMG_FAIL = "/card/fail.png";
 
 // ── Scene constants (all px, will be uniformly scaled down) ──────────────────
 // Layout budget:  header=72  pill=100  cards=400  gapEtc=28  → 600
@@ -108,23 +104,44 @@ function VoteCard({
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function VotingCards({
-  gameState, me, socket,
+  gameState, me, socket, isReadOnly = false,
 }: {
   gameState: AvalonRoom;
   me: AvalonPlayer;
   socket: Socket | null;
+  isReadOnly?: boolean;
 }) {
   const isVoting = gameState.state === "VOTING";
   const isQuest = gameState.state === "QUEST";
-  const canVoteQuest = isQuest && gameState.proposedTeam.includes(me.userId);
+  const isViewerLocked = isReadOnly || me.isSpectator;
+  const canVoteTeam = isVoting && !isViewerLocked;
+  const canVoteQuest = isQuest && !isViewerLocked && gameState.proposedTeam.includes(me.userId);
   const isGoodTeamMember = me.team === "Good";
   const failCardLocked = canVoteQuest && isGoodTeamMember;
+  const [showBetrayalWarning, setShowBetrayalWarning] = useState(false);
+
+  const handleFailQuestVote = () => {
+    if (isViewerLocked) return;
+    if (failCardLocked) {
+      setShowBetrayalWarning(true);
+      return;
+    }
+    socket?.emit("voteQuest", "fail");
+  };
+
+  useEffect(() => {
+    if (!showBetrayalWarning) return;
+    const timer = window.setTimeout(() => setShowBetrayalWarning(false), 2600);
+    return () => window.clearTimeout(timer);
+  }, [showBetrayalWarning]);
 
   const proposedTeamPlayers = gameState.proposedTeam
     .map((uid) => gameState.players.find((p) => p.userId === uid))
     .filter((p): p is AvalonPlayer => Boolean(p));
 
-  const showCards = (isVoting && !me.hasVoted) || (canVoteQuest && !me.hasVoted);
+  const showCards = isViewerLocked
+    ? isVoting
+    : (canVoteTeam && !me.hasVoted) || (canVoteQuest && !me.hasVoted);
 
   // ── Scale logic: same "Measure-then-Apply" pattern as old code ─────────────
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -164,7 +181,9 @@ export default function VotingCards({
         <div className="absolute top-8 left-1/2 z-50 -translate-x-1/2 pointer-events-none">
           <div className="avalon-vote-wait-pill avalon-glass px-6 py-3 rounded-full border border-(--outline-variant)">
             <span className="avalon-vote-wait-text text-primary-avalon text-sm uppercase font-bold">
-              Cố gắng giấu nhẹm nụ cười tà ác... (Chờ kết quả)
+              {isViewerLocked
+                ? 'Khán giả đang theo dõi lượt hiện tại...'
+                : 'Cố gắng giấu nhẹm nụ cười tà ác... (Chờ kết quả)'}
             </span>
           </div>
         </div>
@@ -235,7 +254,9 @@ export default function VotingCards({
                     gradientFrom="from-primary-container/80"
                     borderClass="border-primary/30"
                     glowClass="shadow-[0_0_28px_rgba(186,200,220,0.18)] hover:shadow-[0_8px_44px_rgba(186,200,220,0.36)]"
-                    onClick={() => socket?.emit("voteTeam", "approve")}
+                    onClick={() => { if (!isViewerLocked) socket?.emit("voteTeam", "approve"); }}
+                    disabled={isViewerLocked}
+                    lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
                   />
                   <VoteCard
                     label="Reject"
@@ -246,7 +267,9 @@ export default function VotingCards({
                     gradientFrom="from-surface-container-high/90"
                     borderClass="border-secondary/30"
                     glowClass="shadow-[0_0_28px_rgba(198,199,195,0.10)] hover:shadow-[0_8px_44px_rgba(198,199,195,0.28)]"
-                    onClick={() => socket?.emit("voteTeam", "reject")}
+                    onClick={() => { if (!isViewerLocked) socket?.emit("voteTeam", "reject"); }}
+                    disabled={isViewerLocked}
+                    lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
                   />
                 </>
               ) : (
@@ -260,20 +283,22 @@ export default function VotingCards({
                     gradientFrom="from-primary-container/80"
                     borderClass="border-primary/30"
                     glowClass="shadow-[0_0_28px_rgba(186,200,220,0.18)] hover:shadow-[0_8px_44px_rgba(186,200,220,0.36)]"
-                    onClick={() => socket?.emit("voteQuest", "success")}
+                    onClick={() => { if (!isViewerLocked) socket?.emit("voteQuest", "success"); }}
+                    disabled={isViewerLocked}
+                    lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
                   />
                   <VoteCard
                     label="Fail"
-                    subLabel={failCardLocked ? undefined : "Phản Bội Camelot"}
+                    subLabel="Phản Bội Camelot"
                     imageUrl={IMG_FAIL}
                     icon={<Skull className="w-full h-full fill-current opacity-90" />}
                     titleColorClass="text-tertiary"
                     gradientFrom="from-tertiary-container/80"
                     borderClass="border-tertiary/30"
                     glowClass="shadow-[0_0_28px_rgba(255,180,168,0.16)] hover:shadow-[0_8px_44px_rgba(255,180,168,0.34)]"
-                    onClick={() => { if (!failCardLocked) socket?.emit("voteQuest", "fail"); }}
-                    disabled={failCardLocked}
-                    lockedLabel="Phe Thiện bị khóa lá này"
+                    onClick={handleFailQuestVote}
+                    disabled={isViewerLocked}
+                    lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
                   />
                 </>
               )}
@@ -284,6 +309,25 @@ export default function VotingCards({
               <p className="mt-4 text-center text-xs uppercase tracking-[0.16em] text-primary-avalon/90">
                 Lưu ý: Phe tốt không được vote Thất bại.
               </p>
+            )}
+
+            {showBetrayalWarning && (
+              <div className="absolute inset-0 z-80 flex items-center justify-center pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+                <div className="max-w-145 rounded-2xl border border-rose-400/45 bg-linear-to-b from-rose-950/95 via-red-950/95 to-black/95 px-7 py-6 text-center shadow-[0_0_80px_rgba(255,80,80,0.45)] backdrop-blur-xl">
+                  <p className="text-[11px] uppercase tracking-[0.35em] text-rose-200/80 font-black">
+                    PHIÊN TOA TRUNG THÀNH
+                  </p>
+                  <h3 className="mt-2 font-headline text-3xl uppercase tracking-widest text-rose-100">
+                    muốn phản bội vua hả mà vote fail???
+                  </h3>
+                  <p className="mt-3 text-xs uppercase tracking-[0.2em] text-rose-300/85 font-bold">
+                    Triều đình ghi nhận ý đồ bất trung. Danh dự kỵ sĩ đang bị đặt dấu hỏi!
+                  </p>
+                  <p className="mt-2 text-[11px] text-rose-100/75">
+                    Ngồi xuống, giữ bình tĩnh và chọn lại cho đúng phe của mình.
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         </div>

@@ -1,29 +1,33 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, ShieldAlert, XCircle, ChevronDown, ChevronUp, X } from "lucide-react";
 import { type AvalonPlayer, type AvalonRoom } from "@/server/game/AvalonTypes";
 
-export default function VoteOutcomeOverlay({ gameState, me }: { gameState: AvalonRoom; me?: AvalonPlayer }) {
+type VoteOutcome = NonNullable<AvalonRoom["voteOutcome"]>;
+
+function createOutcomeKey(outcome: VoteOutcome): string {
+  return `${outcome.kind}-${outcome.result}-${outcome.approveCount ?? 0}-${outcome.rejectCount ?? 0}-${outcome.successCount ?? 0}-${outcome.failCount ?? 0}`;
+}
+
+export default function VoteOutcomeOverlay({ gameState }: { gameState: AvalonRoom; me?: AvalonPlayer }) {
   const outcome = gameState.voteOutcome;
-  const [expanded, setExpanded] = useState(false);
+
+  if (!outcome) return null;
+
+  return <VoteOutcomeOverlayContent key={createOutcomeKey(outcome)} outcome={outcome} />;
+}
+
+function VoteOutcomeOverlayContent({ outcome }: { outcome: VoteOutcome }) {
+  const [expanded, setExpanded] = useState(true);
   const [dismissed, setDismissed] = useState(false);
-  const prevOutcomeRef = useRef<string | null>(null);
 
-  // When a NEW outcome arrives, reset dismissed state & auto-expand briefly
   useEffect(() => {
-    if (!outcome) return;
-    const key = `${outcome.kind}-${outcome.result}-${outcome.approveCount ?? 0}-${outcome.rejectCount ?? 0}-${outcome.successCount ?? 0}-${outcome.failCount ?? 0}`;
-    if (key !== prevOutcomeRef.current) {
-      prevOutcomeRef.current = key;
-      setDismissed(false);  // Reset dismiss on new outcome
-      setExpanded(true);
-      const t = setTimeout(() => setExpanded(false), 4000);
-      return () => clearTimeout(t);
-    }
-  }, [outcome]);
+    const timer = window.setTimeout(() => setExpanded(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
-  if (!outcome || dismissed) return null;
+  if (dismissed) return null;
 
   const isQuestOutcome = outcome.kind === "quest";
 

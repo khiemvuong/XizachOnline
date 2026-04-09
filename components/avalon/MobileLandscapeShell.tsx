@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import AvalonBoard from "./AvalonBoard";
 
 export default function MobileLandscapeShell({ roomId }: { roomId: string }) {

@@ -6,7 +6,6 @@ import {
     RoomEvent,
     RemoteParticipant,
     Participant,
-    Track,
     createLocalAudioTrack,
 } from 'livekit-client';
 import { Mic, MicOff, Volume2, X, ChevronDown } from 'lucide-react';
@@ -154,7 +153,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
     return (
         <>
             {/* Collapsed pill */}
-            <div className="fixed top-14 left-3 z-50 pointer-events-auto">
+            <div className="fixed bottom-3 left-3 z-50 pointer-events-auto">
                 <button
                     onClick={() => setIsOpen(p => !p)}
                     className={`flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-lg backdrop-blur-md transition-all cursor-pointer text-xs font-bold tracking-wide ${
@@ -176,13 +175,13 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                             {speakingOthers.map(p => p.name).join(', ')}
                         </span>
                     )}
-                    <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
                 </button>
             </div>
 
             {/* Full panel */}
             {isOpen && (
-                <div className="fixed inset-0 z-60 flex flex-col items-start justify-start pointer-events-none pt-[72px] pl-3 pb-4">
+                <div className="fixed inset-0 z-60 flex flex-col items-start justify-end pointer-events-none pb-14 pl-3 pt-4">
                     <div
                         className="pointer-events-auto w-[min(280px,90vw)] flex flex-col rounded-2xl border border-(--primary)/20 shadow-2xl overflow-hidden max-h-full"
                         style={{ backgroundColor: 'rgba(8,16,30,0.96)', backdropFilter: 'blur(16px)' }}

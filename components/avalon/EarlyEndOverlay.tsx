@@ -17,8 +17,11 @@ type EarlyEndOverlayProps = {
 };
 
 export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndOverlayProps) {
+  const me = gameState.players.find(p => p.userId === userId);
+  const isSpectator = me?.isSpectator ?? false;
   const hasVoted = Boolean(gameState.earlyEndVotes?.includes(userId));
-  const connectedCount = gameState.players.filter((player) => player.status === "connected").length;
+  const activePlayers = gameState.players.filter((player) => player.status === "connected" && !player.isSpectator);
+  const connectedCount = activePlayers.length;
   const voteCount = gameState.earlyEndVotes?.length || 0;
   const [localChoice, setLocalChoice] = useState<VoteChoice | null>(null);
   const [showRetryChoices, setShowRetryChoices] = useState(false);
@@ -93,7 +96,25 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
             </p>
           </div>
 
-          {showSuccess ? (
+          {isSpectator ? (
+             <div className="avalon-earlyend-success mx-auto w-full max-w-4xl avalon-ending-panel rounded-[28px] border border-outline-variant/35 p-6 text-center shadow-[0_0_50px_rgba(0,0,0,0.45)] md:p-8 mt-6">
+               <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-surface-container-lowest/70 shadow-[0_0_30px_rgba(0,0,0,0.35)] ring-1 ring-white/10">
+                 <Shield className="h-10 w-10 text-on-surface-variant opacity-70" />
+               </div>
+               <p className="text-[10px] uppercase tracking-[0.4em] text-on-surface-variant font-label mb-3">SPECTATOR MODE</p>
+               <h3 className="avalon-earlyend-success-title font-headline text-3xl md:text-5xl uppercase tracking-[0.18em] mb-4 text-on-surface-variant">
+                 Đang chờ người chơi...
+               </h3>
+               <p className="mx-auto max-w-2xl text-sm md:text-lg leading-relaxed text-on-surface-variant/80">
+                 Phe kỵ sĩ và sát thủ đang phân định sống còn để quyết định xem có nên huỷ trận đấu hiện tại hay không. Dưới tư cách khán giả, bạn chỉ có thể lặng im quan sát.
+               </p>
+
+               <div className="mt-8 mx-auto inline-flex items-center gap-2 rounded-full border border-outline-variant/35 bg-surface-container-low/75 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.28em] text-on-surface-variant shadow-[0_0_30px_rgba(0,0,0,0.35)]">
+                 <span className="h-2 w-2 rounded-full shadow-[0_0_8px_rgba(186,200,220,0.45)] bg-on-surface-variant"></span>
+                 {voteCount} / {connectedCount} phiếu đã đồng thuận
+               </div>
+             </div>
+          ) : showSuccess ? (
             <VoteSuccessPanel
               choice={localChoice}
               voteCount={voteCount}
@@ -125,38 +146,40 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
             </div>
           )}
 
-          <div className="mx-auto mt-6 flex w-full flex-col items-center gap-3 text-center shrink-0">
-            <div className="flex gap-2">
-              <div className="h-1.5 w-8 rounded-full bg-primary shadow-[0_0_10px_rgba(186,200,220,0.45)]"></div>
-              <div className="h-1.5 w-8 rounded-full bg-tertiary shadow-[0_0_10px_rgba(255,180,168,0.45)]"></div>
-              <div className="h-1.5 w-8 rounded-full bg-surface-container-highest"></div>
-              <div className="h-1.5 w-8 rounded-full bg-surface-container-highest"></div>
-            </div>
+          {!isSpectator && (
+             <div className="mx-auto mt-6 flex w-full flex-col items-center gap-3 text-center shrink-0">
+               <div className="flex gap-2">
+                 <div className="h-1.5 w-8 rounded-full bg-primary shadow-[0_0_10px_rgba(186,200,220,0.45)]"></div>
+                 <div className="h-1.5 w-8 rounded-full bg-tertiary shadow-[0_0_10px_rgba(255,180,168,0.45)]"></div>
+                 <div className="h-1.5 w-8 rounded-full bg-surface-container-highest"></div>
+                 <div className="h-1.5 w-8 rounded-full bg-surface-container-highest"></div>
+               </div>
 
-            <p className="text-xs uppercase tracking-[0.28em] text-on-surface-variant font-label">
-              {voteCount} / {connectedCount} votes recorded
-            </p>
+               <p className="text-xs uppercase tracking-[0.28em] text-on-surface-variant font-label">
+                 {voteCount} / {connectedCount} votes recorded
+               </p>
 
-            {showSuccess ? (
-              <div className="flex flex-col items-center gap-3">
-                <div className="inline-flex items-center gap-2 rounded-full border border-outline-variant/35 bg-surface-container-low/75 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.28em] text-on-surface-variant shadow-[0_0_30px_rgba(0,0,0,0.35)]">
-                  <span className={`h-2 w-2 rounded-full shadow-[0_0_8px_rgba(255,180,168,0.45)] ${localChoice === true ? "bg-tertiary" : localChoice === false ? "bg-primary" : "bg-on-surface-variant"}`}></span>
-                  Bạn đã vote thành công
-                </div>
-                <button
-                  onClick={handleVoteAgain}
-                  className="inline-flex items-center gap-2 rounded-full border border-outline-variant/40 bg-surface-container-low/70 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.28em] text-on-surface-variant transition-all hover:border-primary/30 hover:text-on-surface active:scale-[0.98]"
-                >
-                  <RotateCw className="h-4 w-4" />
-                  Quay lại vote lại
-                </button>
-              </div>
-            ) : (
-              <p className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant/70">
-                Chạm một lựa chọn để xác nhận phiếu của bạn.
-              </p>
-            )}
-          </div>
+               {showSuccess ? (
+                 <div className="flex flex-col items-center gap-3">
+                   <div className="inline-flex items-center gap-2 rounded-full border border-outline-variant/35 bg-surface-container-low/75 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.28em] text-on-surface-variant shadow-[0_0_30px_rgba(0,0,0,0.35)]">
+                     <span className={`h-2 w-2 rounded-full shadow-[0_0_8px_rgba(255,180,168,0.45)] ${localChoice === true ? "bg-tertiary" : localChoice === false ? "bg-primary" : "bg-on-surface-variant"}`}></span>
+                     Bạn đã vote thành công
+                   </div>
+                   <button
+                     onClick={handleVoteAgain}
+                     className="inline-flex items-center gap-2 rounded-full border border-outline-variant/40 bg-surface-container-low/70 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.28em] text-on-surface-variant transition-all hover:border-primary/30 hover:text-on-surface active:scale-[0.98]"
+                   >
+                     <RotateCw className="h-4 w-4" />
+                     Quay lại vote lại
+                   </button>
+                 </div>
+               ) : (
+                 <p className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant/70">
+                   Chạm một lựa chọn để xác nhận phiếu của bạn.
+                 </p>
+               )}
+             </div>
+          )}
         </div>
       </div>
     </div>

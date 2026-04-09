@@ -13,11 +13,10 @@ import EarlyEndOverlay from './EarlyEndOverlay';
 import VoteOutcomeOverlay from './VoteOutcomeOverlay';
 import RulesModal from './RulesModal';
 import MyRoleModal from './MyRoleModal';
-import SpectatorView from './SpectatorView';
 import SharedChatDropdown, { type ChatTheme } from '@/components/shared/ChatDropdown';
 import VoiceChatPanel from './VoiceChatPanel';
 import type { LucideIcon } from 'lucide-react';
-import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, EyeOff, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX, BookText, LogOut } from 'lucide-react';
+import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, EyeOff, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX, BookText, LogOut, Hand, X } from 'lucide-react';
 
 type AudioTrackName = 'lobby' | 'win' | 'lose';
 
@@ -33,8 +32,10 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [playerName, setPlayerName] = useState('');
   const [hasJoined, setHasJoined] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [showNameEditModal, setShowNameEditModal] = useState(false);
+  const [newNameInput, setNewNameInput] = useState('');
   const [showMyRole, setShowMyRole] = useState(false);
-  const [isRoleHidden, setIsRoleHidden] = useState(false);
+  const [isRoleHidden, setIsRoleHidden] = useState(true);
   // Chat state
   const [showChat, setShowChat] = useState(false);
   const [chatText, setChatText] = useState('');
@@ -48,6 +49,9 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const lobbyAudioRef = useRef<HTMLAudioElement | null>(null);
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   const loseAudioRef = useRef<HTMLAudioElement | null>(null);
+  const raiseHandAudioContextRef = useRef<AudioContext | null>(null);
+  const previousRaisedIdsRef = useRef<Set<string>>(new Set());
+  const hasRaiseSnapshotRef = useRef(false);
   const playedGameOverWinnerRef = useRef<'Good' | 'Evil' | null>(null);
 
   const getOrCreateAudio = (
@@ -76,6 +80,57 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const safePlay = (audio: HTMLAudioElement) => {
     void audio.play().catch(() => undefined);
   };
+
+  const playRaiseHandChime = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    const AudioContextCtor = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return;
+
+    if (!raiseHandAudioContextRef.current) {
+      raiseHandAudioContextRef.current = new AudioContextCtor();
+    }
+
+    const context = raiseHandAudioContextRef.current;
+    if (!context) return;
+
+    if (context.state === 'suspended') {
+      void context.resume();
+    }
+
+    const startAt = context.currentTime;
+
+    const playTone = (
+      frequency: number,
+      offset: number,
+      duration: number,
+      peak: number,
+      type: OscillatorType = 'triangle',
+      detune = 0,
+    ) => {
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, startAt + offset);
+      oscillator.detune.setValueAtTime(detune, startAt + offset);
+
+      gainNode.gain.setValueAtTime(0.0001, startAt + offset);
+      gainNode.gain.exponentialRampToValueAtTime(peak, startAt + offset + 0.015);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, startAt + offset + duration);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+
+      oscillator.start(startAt + offset);
+      oscillator.stop(startAt + offset + duration);
+    };
+
+    // Brighter and a bit louder than previous version, but still short/lightweight.
+    playTone(620, 0, 0.1, 0.045, 'triangle');
+    playTone(860, 0.055, 0.12, 0.06, 'triangle', 6);
+    playTone(1180, 0.125, 0.1, 0.042, 'sine');
+  }, []);
 
   const gamePhase = gameState?.state;
   const gameWinner = gameState?.winner;
@@ -181,6 +236,51 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     playedGameOverWinnerRef.current = gameWinner;
   }, [gamePhase, gameWinner, isLobbyMusicEnabled]);
 
+  useEffect(() => {
+    return () => {
+      if (raiseHandAudioContextRef.current) {
+        void raiseHandAudioContextRef.current.close();
+        raiseHandAudioContextRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!gameState) return;
+
+    if (gameState.state === 'LOBBY' || gameState.state === 'GAME_OVER') {
+      previousRaisedIdsRef.current = new Set();
+      hasRaiseSnapshotRef.current = false;
+      return;
+    }
+
+    const currentlyRaisedIds = new Set(
+      gameState.players
+        .filter((player) => player.status === 'connected' && player.isHandRaised)
+        .map((player) => player.userId),
+    );
+
+    if (!hasRaiseSnapshotRef.current) {
+      previousRaisedIdsRef.current = currentlyRaisedIds;
+      hasRaiseSnapshotRef.current = true;
+      return;
+    }
+
+    let hasNewRaise = false;
+    for (const raisedId of currentlyRaisedIds) {
+      if (!previousRaisedIdsRef.current.has(raisedId)) {
+        hasNewRaise = true;
+        break;
+      }
+    }
+
+    if (hasNewRaise) {
+      playRaiseHandChime();
+    }
+
+    previousRaisedIdsRef.current = currentlyRaisedIds;
+  }, [gameState, playRaiseHandChime]);
+
   const handleSendChat = useCallback((event: FormEvent) => {
     event.preventDefault();
     if (!chatText.trim() || !socket) return;
@@ -195,9 +295,9 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
   if (!hasJoined) {
     return (
-      <div className="avalon-entry-screen font-body text-primary-avalon h-full min-h-0 overflow-y-auto overflow-x-hidden flex flex-col relative z-0">
+      <div className="avalon-entry-screen font-body text-primary-avalon h-dvh overflow-hidden flex items-center justify-center relative z-0 p-4">
         {/* Background Atmospheric Elements */}
-        <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCe79Gc9SGc6EKO9KgDlXh9feqsIYrJalRcurvGANaXucPIsKyB-ndT87S0Qw3yyiQC5jpVkN3TTMN8f3WQwYB7eFJEZQ0rgPtogy0igcGgrZbtRNH2uiu133f5tHszGaW4GHlq2-LQ7N8kvEejj2_-AFbk80B7fK8G3wqm5L0XpNvYgaP8pJV3C1pkFR550fSiPqyRT28Bvwk_mh0xJC6Nv6xHQj1HxREGxwLnq0Kcd004LWjJiy1vL5euJ2BCEloyZs-n6ihZig')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'scroll' }}>
+        <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('/avalon_roles/background.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'scroll' }}>
           <div className="absolute inset-0 bg-surface-dim-avalon/70 backdrop-blur-[2px]"></div>
         </div>
         <div className="absolute inset-0 pointer-events-none -z-10">
@@ -207,88 +307,94 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
 
-          <div className="avalon-entry-stage flex-1 mt-2 px-3 md:px-8 pt-2 pb-4 md:pb-8 min-h-full flex items-start md:items-center justify-center relative z-0">
-            <div className="avalon-entry-card w-full max-w-4xl avalon-glass p-4 sm:p-6 rounded-2xl border border-(--outline-variant) shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-              <div className="avalon-entry-grid grid grid-cols-1 md:grid-cols-[1.05fr_1fr] gap-4 md:gap-6 items-stretch">
-                <div className="avalon-entry-copy rounded-xl border border-(--outline-variant)/25 bg-(--surface-container-low)/50 p-4 sm:p-5 flex flex-col justify-between">
-                  <div className="text-center md:text-left space-y-2">
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-(--secondary)">The Illuminated Archive</p>
-                    <h2 className="text-(--primary) font-extrabold font-serif text-2xl sm:text-3xl tracking-wider uppercase avalon-title-glow-primary">Căn Phòng Ánh Sáng</h2>
-                    <p className="text-(--on-surface-variant) text-sm italic">Hãy chọn danh xưng để hội ngộ các Kỵ sĩ.</p>
-                  </div>
+        <div className="avalon-entry-card w-full max-w-md avalon-glass rounded-3xl border border-(--outline-variant) shadow-2xl overflow-y-auto max-h-full landscape:max-w-4xl lg:max-w-4xl relative z-10 custom-avalon-scrollbar">
+          <div className="avalon-entry-grid grid grid-cols-1 landscape:grid-cols-[1.05fr_1fr] lg:grid-cols-[1.05fr_1fr] gap-4 md:gap-6 p-5 sm:p-1 md:p-8 items-stretch">
+            <div className="avalon-entry-copy rounded-2xl border border-(--outline-variant)/25 bg-(--surface-container-low)/50 p-4 sm:p-5 flex flex-col justify-between">
+              <div className="text-center md:text-left space-y-2">
+                <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.28em] text-(--secondary)">The Illuminated Archive</p>
+                <h2 className="text-(--primary) font-extrabold font-serif text-2xl sm:text-3xl landscape:text-2xl lg:text-4xl tracking-wider uppercase avalon-title-glow-primary">Căn Phòng Ánh Sáng</h2>
+                <p className="text-(--on-surface-variant) text-sm italic">Hãy chọn danh xưng để hội ngộ các Kỵ sĩ.</p>
+              </div>
 
-                  <div className="mt-4 p-3 rounded-lg bg-(--primary)/10 border-l-2 border-(--primary)/40 relative">
-                    <p className="text-(--on-surface-variant) text-xs italic leading-relaxed text-center md:text-left">
-                      &quot;Một cuộc chiến trường kỳ cần sự tin tưởng. Nhưng cẩn thận, không phải ái nấy đều là Kỵ Sĩ trung tuyến...&quot;
-                    </p>
-                  </div>
-                </div>
-
-                <div className="avalon-entry-form rounded-xl border border-(--outline-variant)/25 bg-[#0f172a]/45 p-4 sm:p-5 flex flex-col justify-center space-y-4">
-                  <label className="block text-(--secondary) text-xs sm:text-sm uppercase tracking-tighter text-center">Tên của bạn</label>
-                  <div className="relative group">
-                    <input
-                      className="w-full bg-[#0f172a]/80 border border-(--outline-variant) focus:ring-1 focus:ring-(--primary) rounded-lg py-3 sm:py-4 px-5 text-white placeholder:text-slate-500 font-sans text-center font-bold tracking-widest text-base sm:text-lg outline-none transition-colors"
-                      placeholder="Nhập tên..."
-                      value={playerName}
-                      onChange={e => setPlayerName(e.target.value)}
-                      maxLength={12}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && playerName.trim()) {
-                          // Unlock audio for mobile Safari
-                          [
-                            { ref: winAudioRef, src: AVALON_AUDIO_SOURCES.win },
-                            { ref: loseAudioRef, src: AVALON_AUDIO_SOURCES.lose }
-                          ].forEach(({ ref, src }) => {
-                            const a = getOrCreateAudio(ref, src, { preload: 'auto' });
-                            a.play().then(() => a.pause()).catch(() => {});
-                          });
-                          setHasJoined(true);
-                        }
-                      }}
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                      <Edit2 className="w-5 h-5 text-(--primary)/50" />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      if (playerName.trim()) {
-                        // Unlock audio for mobile Safari
-                        [
-                          { ref: winAudioRef, src: AVALON_AUDIO_SOURCES.win },
-                          { ref: loseAudioRef, src: AVALON_AUDIO_SOURCES.lose }
-                        ].forEach(({ ref, src }) => {
-                          const a = getOrCreateAudio(ref, src, { preload: 'auto' });
-                          a.play().then(() => a.pause()).catch(() => {});
-                        });
-                        setHasJoined(true);
-                      }
-                    }}
-                    disabled={!playerName.trim()}
-                    className={`px-12 py-3.5 rounded-xl font-headline font-extrabold text-sm transform transition-all tracking-widest uppercase flex items-center justify-center gap-3 w-full
-                      ${playerName.trim()
-                        ? 'bg-primary-avalon hover:bg-white text-surface-dim-avalon shadow-[0_10px_30px_rgba(186,200,220,0.2)] active:scale-95 cursor-pointer'
-                        : 'bg-[#1e2b3b] text-[#768497] cursor-not-allowed border border-[#44474c]/50'
-                      }`}
-                  >
-                    Gia Nhập
-                    <ChevronsRight className="w-6 h-6" />
-                  </button>
-                </div>
+              <div className="mt-4 p-3 rounded-lg bg-(--primary)/10 border-l-2 border-(--primary)/40 relative">
+                <p className="text-(--on-surface-variant) text-xs italic leading-relaxed text-center md:text-left">
+                  &quot;Một cuộc chiến trường kỳ cần sự tin tưởng. Nhưng cẩn thận, không phải ai nấy đều là Kỵ Sĩ trung tuyến...&quot;
+                </p>
               </div>
             </div>
+
+            <div className="avalon-entry-form rounded-2xl border border-(--outline-variant)/25 bg-[#0f172a]/45 p-4 sm:p-5 flex flex-col justify-center space-y-4">
+              <label className="block text-(--secondary) text-xs sm:text-sm uppercase tracking-tighter text-center">Tên của bạn</label>
+              <div className="relative group">
+                <input
+                  className="w-full bg-[#0f172a]/80 border border-(--outline-variant) focus:ring-1 focus:ring-(--primary) rounded-xl py-3 sm:py-4 px-5 text-white placeholder:text-slate-500 font-sans text-center font-bold tracking-widest text-base sm:text-lg outline-none transition-colors"
+                  placeholder="Nhập tên..."
+                  value={playerName}
+                  onChange={e => setPlayerName(e.target.value)}
+                  maxLength={12}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && playerName.trim()) {
+                      // Unlock audio for mobile Safari
+                      [
+                        { ref: winAudioRef, src: AVALON_AUDIO_SOURCES.win },
+                        { ref: loseAudioRef, src: AVALON_AUDIO_SOURCES.lose }
+                      ].forEach(({ ref, src }) => {
+                        const a = getOrCreateAudio(ref, src, { preload: 'auto' });
+                        a.play().then(() => a.pause()).catch(() => {});
+                      });
+                      setHasJoined(true);
+                    }
+                  }}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+                  <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-(--primary)/50" />
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  if (playerName.trim()) {
+                    // Unlock audio for mobile Safari
+                    [
+                      { ref: winAudioRef, src: AVALON_AUDIO_SOURCES.win },
+                      { ref: loseAudioRef, src: AVALON_AUDIO_SOURCES.lose }
+                    ].forEach(({ ref, src }) => {
+                      const a = getOrCreateAudio(ref, src, { preload: 'auto' });
+                      a.play().then(() => a.pause()).catch(() => {});
+                    });
+                    setHasJoined(true);
+                  }
+                }}
+                disabled={!playerName.trim()}
+                className={`px-12 py-3.5 rounded-xl font-headline font-extrabold text-sm transform transition-all tracking-widest uppercase flex items-center justify-center gap-3 w-full
+                  ${playerName.trim()
+                    ? 'bg-primary-avalon hover:bg-white text-surface-dim-avalon shadow-[0_10px_30px_rgba(186,200,220,0.2)] active:scale-95 cursor-pointer'
+                    : 'bg-[#1e2b3b] text-[#768497] cursor-not-allowed border border-[#44474c]/50'
+                  }`}
+              >
+                Gia Nhập
+                <ChevronsRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
           </div>
+        </div>
       </div>
     );
   }
 
   if (!gameState) {
     return (
-      <div className="avalon-theme min-h-screen flex items-center justify-center">
-        <div className="text-primary-avalon animate-pulse font-serif uppercase text-xl">Đang thiết lập bàn tròn...</div>
+      <div className="avalon-theme min-h-screen flex flex-col items-center justify-center gap-6">
+        <div className="text-primary-avalon animate-pulse font-serif uppercase text-xl text-center px-4">
+          Đang thiết lập bàn tròn...
+        </div>
+        <a 
+          href="/avalon"
+          className="px-6 py-2 rounded-lg border border-primary-avalon/30 bg-primary-avalon/10 text-primary-avalon hover:bg-primary-avalon hover:text-[#0b1320] transition-colors font-headline uppercase tracking-widest text-sm shadow-[0_0_15px_rgba(186,200,220,0.15)] hover:shadow-[0_0_25px_rgba(186,200,220,0.4)]"
+        >
+          Quay lại sảnh chờ
+        </a>
       </div>
     );
   }
@@ -296,6 +402,8 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   // const userId = localStorage.getItem('avalon_userId')!;
   const userId = sessionStorage.getItem('avalon_userId')!;
   const me = gameState.players.find((p: AvalonPlayer) => p.userId === userId);
+  const isSpectator = Boolean(me?.isSpectator);
+  const isHandRaised = Boolean(me?.isHandRaised);
   const isHost = me?.isHost ?? false;
   const isLobby = gameState.state === 'LOBBY';
   const isGameOver = gameState.state === 'GAME_OVER';
@@ -323,6 +431,11 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     }
   };
 
+  const handleToggleRaiseHand = () => {
+    if (!socket || !me) return;
+    socket.emit('toggleRaiseHand', !Boolean(me.isHandRaised));
+  };
+
   const AVALON_CHAT_THEME: ChatTheme = {
     surface: 'rgba(8,16,30,0.95)',
     border: 'color-mix(in srgb, var(--primary) 20%, transparent)',
@@ -334,10 +447,24 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   return (
     <div className={`avalon-theme ${boardShellClass} flex flex-col p-4 w-full relative z-0`}>
       {/* Avalon Background Layer */}
-      <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCe79Gc9SGc6EKO9KgDlXh9feqsIYrJalRcurvGANaXucPIsKyB-ndT87S0Qw3yyiQC5jpVkN3TTMN8f3WQwYB7eFJEZQ0rgPtogy0igcGgrZbtRNH2uiu133f5tHszGaW4GHlq2-LQ7N8kvEejj2_-AFbk80B7fK8G3wqm5L0XpNvYgaP8pJV3C1pkFR550fSiPqyRT28Bvwk_mh0xJC6Nv6xHQj1HxREGxwLnq0Kcd004LWjJiy1vL5euJ2BCEloyZs-n6ihZig')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'scroll' }}>
+      <div className="fixed inset-0 z-0 pointer-events-none" style={{ backgroundImage: "url('/avalon_roles/background.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'scroll' }}>
         <div className="absolute inset-0 bg-surface-dim-avalon/70 backdrop-blur-[2px]"></div>
       </div>
       <div className="absolute top-3 right-3 z-50 flex items-center gap-2">
+        {/* Edit Name Button — Lobby only */}
+        {gameState.state === 'LOBBY' && (
+          <button
+            onClick={() => {
+              setNewNameInput(me?.name ?? '');
+              setShowNameEditModal(true);
+            }}
+            className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
+            title="Đổi tên"
+          >
+            <Edit2 className="w-5 h-5" />
+          </button>
+        )}
+
         {/* Back button: smart context-aware */}
         <button
           onClick={handleBackButton}
@@ -368,7 +495,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         )}
 
         {/* My Role — in-game only */}
-        {gameState.state !== 'LOBBY' && me?.role && (
+        {gameState.state !== 'LOBBY' && me?.role && !isSpectator && (
           <button
             onClick={() => setShowMyRole(true)}
             className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
@@ -379,7 +506,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         )}
 
         {/* Privacy Shield — in-game only */}
-        {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && (
+        {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && !isSpectator && (
           <button
             onClick={() => setIsRoleHidden(p => !p)}
             className={`p-2 bg-black/40 backdrop-blur-md rounded-full transition-colors shadow-lg cursor-pointer border ${
@@ -394,7 +521,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         )}
 
         {/* Early end — in-game only */}
-        {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && (
+        {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && !isSpectator && (
           <button
             onClick={() => socket?.emit('voteEarlyEnd', true)}
             className="p-2 bg-black/40 backdrop-blur-md border border-(--tertiary)/30 rounded-full hover:bg-(--tertiary)/10 text-(--tertiary) hover:text-white transition-colors shadow-lg cursor-pointer"
@@ -403,10 +530,25 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
             <AlertTriangle className="w-5 h-5" />
           </button>
         )}
+
+        {/* Raise hand — symbolic only */}
+        {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && me && (
+          <button
+            onClick={handleToggleRaiseHand}
+            className={`p-2 bg-black/40 backdrop-blur-md rounded-full transition-colors shadow-lg cursor-pointer border ${
+              isHandRaised
+                ? 'border-emerald-400/70 text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25'
+                : 'border-(--primary)/30 text-(--primary) hover:bg-(--primary)/10 hover:text-white'
+            }`}
+            title={isHandRaised ? 'Bỏ tay xuống' : 'Dơ tay tượng trưng'}
+          >
+            <Hand className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Early End Overlay */}
-      {gameState.earlyEndVotes && gameState.earlyEndVotes.length > 0 && gameState.state !== 'GAME_OVER' && (
+      {gameState.earlyEndVotes && gameState.earlyEndVotes.length > 0 && gameState.state !== 'GAME_OVER' && !isSpectator && (
         <EarlyEndOverlay gameState={gameState} userId={userId} socket={socket} />
       )}
 
@@ -416,11 +558,6 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       
       {gameState.state === 'ROLE_REVEAL' && me && me.role && !me.isSpectator && (
         <RoleReveal gameState={gameState} me={me} onReady={() => socket?.emit('playerReady')} roomId={roomId} />
-      )}
-
-      {/* Spectator view: mid-game joiners or players without role */}
-      {me?.isSpectator && gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && (
-        <SpectatorView gameState={gameState} me={me} socket={socket} roomId={roomId} />
       )}
 
       {/* Fallback: no me at all (stale session) */}
@@ -444,20 +581,15 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         </div>
       )}
       
-      {gameState.state !== 'LOBBY' && gameState.state !== 'ROLE_REVEAL' && gameState.state !== 'GAME_OVER' && gameState.state !== 'ASSASSINATION' && me && !me.isSpectator && (
+      {gameState.state !== 'LOBBY' && gameState.state !== 'ROLE_REVEAL' && gameState.state !== 'GAME_OVER' && gameState.state !== 'ASSASSINATION' && me && (
         <>
-          <RoundTable gameState={gameState} me={me} socket={socket} roomId={roomId} isRoleHidden={isRoleHidden} />
-          <VotingCards gameState={gameState} me={me} socket={socket} />
+          <RoundTable gameState={gameState} me={me} socket={socket} roomId={roomId} isRoleHidden={isRoleHidden} isReadOnly={isSpectator} />
+          <VotingCards gameState={gameState} me={me} socket={socket} isReadOnly={isSpectator} />
         </>
       )}
 
-      {gameState.state === 'ASSASSINATION' && me && !me.isSpectator && (
+      {gameState.state === 'ASSASSINATION' && me && (
          <AssassinationUI gameState={gameState} me={me} socket={socket} />
-      )}
-
-      {/* Spectators during assassination/game-over see SpectatorView or GameOver */}
-      {gameState.state === 'ASSASSINATION' && me?.isSpectator && (
-        <SpectatorView gameState={gameState} me={me} socket={socket} roomId={roomId} />
       )}
 
       {gameState.state === 'GAME_OVER' && me && (
@@ -469,10 +601,66 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       )}
 
       <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
-      {me && <MyRoleModal isOpen={showMyRole} onClose={() => setShowMyRole(false)} gameState={gameState} me={me} />}
+      
+      {/* Name Edit Modal */}
+      {showNameEditModal && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-surface-dim-avalon border border-(--primary)/30 shadow-2xl p-6 flex flex-col gap-6 relative">
+            <button 
+              onClick={() => setShowNameEditModal(false)}
+              className="absolute top-4 right-4 p-2 text-(--on-surface-variant) hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="text-center space-y-2 mt-2">
+              <div className="w-12 h-12 rounded-full border border-(--primary)/30 bg-(--primary)/10 flex items-center justify-center mx-auto mb-4">
+                <Edit2 className="w-6 h-6 text-(--primary)" />
+              </div>
+              <h3 className="text-xl font-headline font-extrabold text-(--primary) tracking-widest uppercase">Đổi Tên</h3>
+              <p className="text-sm text-(--on-surface-variant) italic">Hãy chọn danh xưng mới của bạn.</p>
+            </div>
+
+            <div className="flex flex-col gap-4 mb-2">
+              <input
+                type="text"
+                value={newNameInput}
+                onChange={(e) => setNewNameInput(e.target.value)}
+                maxLength={12}
+                className="w-full bg-[#0f172a]/80 border border-(--outline-variant) focus:ring-1 focus:ring-(--primary) rounded-xl py-3 px-5 text-white placeholder:text-slate-500 font-sans text-center font-bold tracking-widest text-lg outline-none transition-colors"
+                placeholder="Nhập tên mới..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newNameInput.trim()) {
+                    socket?.emit('changeName', newNameInput.trim());
+                    setShowNameEditModal(false);
+                  }
+                }}
+              />
+              <button
+                onClick={() => {
+                  if (newNameInput.trim()) {
+                    socket?.emit('changeName', newNameInput.trim());
+                    setShowNameEditModal(false);
+                  }
+                }}
+                disabled={!newNameInput.trim()}
+                className={`py-3.5 rounded-xl font-headline font-extrabold text-sm uppercase tracking-widest transition-all ${
+                  newNameInput.trim() 
+                  ? 'bg-(--primary) text-surface-dim-avalon hover:brightness-110 shadow-lg cursor-pointer' 
+                  : 'bg-(--surface-container-high) text-(--on-surface-variant)/50 cursor-not-allowed border border-(--outline-variant)/50'
+                }`}
+              >
+                Xác Nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {me && !isSpectator && <MyRoleModal isOpen={showMyRole} onClose={() => setShowMyRole(false)} gameState={gameState} me={me} />}
 
       {/* Voice Chat — always available after joining */}
-      {me && !me.isSpectator && (
+      {me && (
         <VoiceChatPanel
           roomId={roomId}
           userId={userId}

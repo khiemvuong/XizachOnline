@@ -373,30 +373,27 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
                   </div>
                 )}
               </div>
-
             </div>
           )}
         </div>
 
-        {/* The Overlaid "Hold to Reveal" Mask */}
+          {/* Mask Overlay */}
         {!isRevealing && (
           <div 
             className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl rounded-xl z-20 flex flex-col items-center justify-center p-5 sm:p-8 text-center cursor-pointer select-none touch-none border border-(--outline-variant)/50 shadow-2xl"
             onPointerDown={() => setIsRevealing(true)}
           >
-            <div className="w-25 h-25 rounded-full border-2 border-(--outline-variant)/30 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-               <Fingerprint className="w-20 h-20" />
+              <div className="w-25 h-25 rounded-full border-2 border-(--outline-variant)/30 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(0,0,0,0.5)] pointer-events-none select-none">
+                <Fingerprint className="w-20 h-20 pointer-events-none select-none" />
             </div>
-            
-            <h3 className="text-xl font-headline mb-4 uppercase tracking-wider text-(--on-surface)">Giữ Để Xác Minh Danh Tính</h3>
-            <p className="mt-8 text-[10px] text-(--on-surface-variant) uppercase tracking-widest opacity-50">
+              <h3 className="text-xl font-headline mb-4 uppercase tracking-wider text-(--on-surface) select-none pointer-events-none">Giữ Để Xác Minh Danh Tính</h3>
+              <p className="mt-8 text-[10px] text-(--on-surface-variant) uppercase tracking-widest opacity-50 select-none pointer-events-none">
               Tuyệt Mật • Chỉ Dành Cho Mắt Bạn
             </p>
           </div>
         )}
         </section>
       </div>
-
     </div>
   );
 }
