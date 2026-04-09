@@ -6,6 +6,7 @@ import {
     RoomEvent,
     RemoteParticipant,
     Participant,
+    LocalAudioTrack,
     createLocalAudioTrack,
 } from 'livekit-client';
 import { Mic, MicOff, Volume2, X, ChevronDown } from 'lucide-react';
@@ -23,6 +24,7 @@ interface VoiceChatPanelProps {
 }
 
 const LIVEKIT_URL = process.env.NEXT_PUBLIC_LIVEKIT_URL ?? 'wss://board-game-vxr9y6t8.livekit.cloud';
+const MIC_BOOST_GAIN = 2.2;
 
 async function fetchToken(roomId: string, userId: string, name: string): Promise<string> {
     const res = await fetch(
@@ -40,6 +42,26 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
     const [volumes, setVolumes] = useState<Record<string, number>>({});
     const roomRef = useRef<LiveKitRoom | null>(null);
     const audioEls = useRef<Record<string, HTMLAudioElement>>({});
+    const rawMicTrackRef = useRef<LocalAudioTrack | null>(null);
+    const boostedMicTrackRef = useRef<MediaStreamTrack | null>(null);
+    const micBoostContextRef = useRef<AudioContext | null>(null);
+
+    const cleanupMicPipeline = useCallback(() => {
+        if (rawMicTrackRef.current) {
+            rawMicTrackRef.current.stop();
+            rawMicTrackRef.current = null;
+        }
+
+        if (boostedMicTrackRef.current) {
+            boostedMicTrackRef.current.stop();
+            boostedMicTrackRef.current = null;
+        }
+
+        if (micBoostContextRef.current) {
+            void micBoostContextRef.current.close();
+            micBoostContextRef.current = null;
+        }
+    }, []);
 
     // Attach remote audio track to an <audio> element per participant
     const attachTrack = useCallback((participant: RemoteParticipant) => {
@@ -101,13 +123,14 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
         return () => {
             isCancelled = true;
             lkRoom?.disconnect();
+            cleanupMicPipeline();
             Object.values(audioEls.current).forEach(el => {
                 el.srcObject = null;
                 el.remove();
             });
             audioEls.current = {};
         };
-    }, [roomId, userId, playerName, attachTrack]);
+    }, [roomId, userId, playerName, attachTrack, cleanupMicPipeline]);
 
     // Toggle mic on/off
     const toggleMic = useCallback(async () => {
@@ -121,10 +144,42 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                     noiseSuppression: true,
                     autoGainControl: true,
                 });
-                await room.localParticipant.publishTrack(track);
+                rawMicTrackRef.current = track;
+
+                const AudioContextCtor =
+                    window.AudioContext ??
+                    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+                if (AudioContextCtor) {
+                    const context = new AudioContextCtor();
+                    micBoostContextRef.current = context;
+
+                    if (context.state === 'suspended') {
+                        await context.resume();
+                    }
+
+                    const source = context.createMediaStreamSource(
+                        new MediaStream([track.mediaStreamTrack])
+                    );
+                    const gainNode = context.createGain();
+                    gainNode.gain.value = MIC_BOOST_GAIN;
+                    const destination = context.createMediaStreamDestination();
+
+                    source.connect(gainNode);
+                    gainNode.connect(destination);
+
+                    const boostedTrack = destination.stream.getAudioTracks()[0];
+                    boostedMicTrackRef.current = boostedTrack;
+
+                    await room.localParticipant.publishTrack(boostedTrack);
+                } else {
+                    await room.localParticipant.publishTrack(track);
+                }
+
                 setIsMicOn(true);
             } catch (err) {
                 console.warn('[VoiceChat] mic enable failed', err);
+                cleanupMicPipeline();
             }
         } else {
             room.localParticipant.audioTrackPublications.forEach(pub => {
@@ -133,9 +188,11 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                     void room.localParticipant.unpublishTrack(pub.track);
                 }
             });
+
+            cleanupMicPipeline();
             setIsMicOn(false);
         }
-    }, [isMicOn, isConnected]);
+    }, [isMicOn, isConnected, cleanupMicPipeline]);
 
     // Per-participant volume control (0-100)
     const setParticipantVolume = useCallback((participantId: string, vol: number) => {

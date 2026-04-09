@@ -229,7 +229,10 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
                     alt={`Role ${me.role ?? 'Unknown'}`}
                     fill
                     sizes="192px"
-                    className="object-cover"
+                    className="object-cover pointer-events-none select-none"
+                    draggable={false}
+                    onDragStart={(event) => event.preventDefault()}
+                    style={{ WebkitTouchCallout: 'none', userSelect: 'none' }}
                     priority
                   />
                   {/* Subtle vignette instead of heavy fade */}
