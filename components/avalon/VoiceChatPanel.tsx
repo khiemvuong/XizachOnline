@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import {
     Room as LiveKitRoom,
     RoomEvent,
+    ParticipantEvent,
     RemoteParticipant,
     Participant,
     LocalAudioTrack,
@@ -64,6 +65,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
     const roomRef = useRef<LiveKitRoom | null>(null);
     const audioEls = useRef<Record<string, HTMLAudioElement>>({});
     const rawMicTrackRef = useRef<LocalAudioTrack | null>(null);
+    const speakingListenerCleanupRef = useRef<Map<string, () => void>>(new Map());
 
     const cleanupMicPipeline = useCallback(() => {
         if (rawMicTrackRef.current) {
@@ -164,6 +166,56 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
         });
     }, []);
 
+    const upsertSpeakingState = useCallback((participantId: string, isSpeaking: boolean) => {
+        setSpeakingIds(prev => {
+            const next = new Set(prev);
+            if (isSpeaking) {
+                next.add(participantId);
+            } else {
+                next.delete(participantId);
+            }
+            return next;
+        });
+    }, []);
+
+    const registerSpeakingListener = useCallback((participant: Participant) => {
+        const participantId = participant.identity;
+        if (!participantId) return;
+
+        if (speakingListenerCleanupRef.current.has(participantId)) {
+            return;
+        }
+
+        const onSpeakingChanged = (isSpeaking: boolean) => {
+            upsertSpeakingState(participantId, isSpeaking);
+        };
+
+        participant.on(ParticipantEvent.IsSpeakingChanged, onSpeakingChanged);
+        upsertSpeakingState(participantId, participant.isSpeaking);
+
+        speakingListenerCleanupRef.current.set(participantId, () => {
+            participant.off(ParticipantEvent.IsSpeakingChanged, onSpeakingChanged);
+            upsertSpeakingState(participantId, false);
+        });
+    }, [upsertSpeakingState]);
+
+    const unregisterSpeakingListener = useCallback((participantId: string) => {
+        const cleanup = speakingListenerCleanupRef.current.get(participantId);
+        if (cleanup) {
+            cleanup();
+            speakingListenerCleanupRef.current.delete(participantId);
+            return;
+        }
+
+        upsertSpeakingState(participantId, false);
+    }, [upsertSpeakingState]);
+
+    const clearSpeakingListeners = useCallback(() => {
+        speakingListenerCleanupRef.current.forEach(cleanup => cleanup());
+        speakingListenerCleanupRef.current.clear();
+        setSpeakingIds(new Set());
+    }, []);
+
     useEffect(() => {
         let lkRoom: LiveKitRoom | null = null;
 
@@ -191,11 +243,22 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                         setIsMicOn(false);
                     }
                     cleanupMicPipeline();
+                    clearSpeakingListeners();
                 });
 
                 // Track who is actively speaking
                 lkRoom.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
                     if (!isCancelled) setSpeakingIds(new Set(speakers.map(s => s.identity)));
+                });
+
+                lkRoom.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
+                    if (isCancelled) return;
+                    registerSpeakingListener(participant);
+                });
+
+                lkRoom.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
+                    if (isCancelled) return;
+                    unregisterSpeakingListener(participant.identity);
                 });
 
                 // Auto-attach audio when a remote track arrives
@@ -210,6 +273,9 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                 }
 
                 await lkRoom.connect(LIVEKIT_URL, token, { autoSubscribe: true });
+                registerSpeakingListener(lkRoom.localParticipant);
+                lkRoom.remoteParticipants.forEach(participant => registerSpeakingListener(participant));
+
                 if (isCancelled) {
                     lkRoom.disconnect();
                 }
@@ -224,13 +290,15 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
             isCancelled = true;
             lkRoom?.disconnect();
             cleanupMicPipeline();
+            clearSpeakingListeners();
+
             Object.values(audioEls.current).forEach(el => {
                 el.srcObject = null;
                 el.remove();
             });
             audioEls.current = {};
         };
-    }, [roomId, userId, playerName, attachTrack, cleanupMicPipeline]);
+    }, [roomId, userId, playerName, attachTrack, cleanupMicPipeline, registerSpeakingListener, unregisterSpeakingListener, clearSpeakingListeners]);
 
     // Toggle mic on/off
     const toggleMic = useCallback(async () => {
