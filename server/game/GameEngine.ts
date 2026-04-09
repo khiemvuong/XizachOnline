@@ -6,6 +6,7 @@ import { Server, Socket } from 'socket.io';
 export class GameEngine {
   private rooms: Map<string, Room> = new Map();
   private io: Server;
+  private chatRateLimits: Map<string, number[]> = new Map();
 
   constructor(io: Server) {
     this.io = io;
@@ -78,6 +79,17 @@ export class GameEngine {
   }
 
   chatMessage(roomId: string, senderId: string, text: string) {
+    if (!text || text.length > 500) return;
+
+    const now = Date.now();
+    let userStamps = this.chatRateLimits.get(senderId) || [];
+    userStamps = userStamps.filter(time => now - time < 10000);
+
+    if (userStamps.length >= 10) return; // Rate limit exceeded: max 10 messages per 10s
+
+    userStamps.push(now);
+    this.chatRateLimits.set(senderId, userStamps);
+
     const room = this.rooms.get(roomId);
     if (!room) return;
     const player = room.players.find(p => p.userId === senderId);

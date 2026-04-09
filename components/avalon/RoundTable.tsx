@@ -8,7 +8,7 @@ import { HelpCircle } from 'lucide-react';
 import CenterBoard from './CenterBoard';
 import { getRoleImageSrcForViewer } from './roleImage';
 
-export default function RoundTable({ gameState, me, socket, roomId }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null, roomId: string }) {
+export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden = false }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null, roomId: string, isRoleHidden?: boolean }) {
    const [isQuestHistoryOpen, setIsQuestHistoryOpen] = useState(false);
    const stageRef = useRef<HTMLDivElement | null>(null);
    const [sceneScale, setSceneScale] = useState(1);
@@ -180,7 +180,7 @@ export default function RoundTable({ gameState, me, socket, roomId }: { gameStat
                {layout.top.map((idx) => {
                   const player = seatedPlayers[idx];
                   if (!player) return null;
-                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} />;
+                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} />;
                })}
             </div>
 
@@ -191,7 +191,7 @@ export default function RoundTable({ gameState, me, socket, roomId }: { gameStat
                   {layout.left.map((idx) => {
                      const player = seatedPlayers[idx];
                      if (!player) return null;
-                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isLeft />;
+                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isLeft isRoleHidden={isRoleHidden} />;
                   })}
                </div>
 
@@ -205,7 +205,7 @@ export default function RoundTable({ gameState, me, socket, roomId }: { gameStat
                   {layout.right.map((idx) => {
                      const player = seatedPlayers[idx];
                      if (!player) return null;
-                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRight />;
+                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRight isRoleHidden={isRoleHidden} />;
                   })}
                </div>
             </div>
@@ -215,7 +215,7 @@ export default function RoundTable({ gameState, me, socket, roomId }: { gameStat
                {layout.bottom.map((idx) => {
                   const player = seatedPlayers[idx];
                   if (!player) return null;
-                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} />;
+                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} />;
                })}
             </div>
          </div>
@@ -231,9 +231,10 @@ type PlayerCardProps = {
    socket: Socket | null;
    isLeft?: boolean;
    isRight?: boolean;
+   isRoleHidden?: boolean;
 };
 
-function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCardProps) {
+function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidden = false }: PlayerCardProps) {
    const isMe = player.userId === me.userId;
    const isLeader = gameState.players[gameState.leaderIndex]?.userId === player.userId;
    const isProposed = gameState.proposedTeam?.includes(player.userId) ?? false;
@@ -245,6 +246,11 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCa
       player.userId === me.userId ||
       Boolean(player.role) ||
       (me.role === 'Merlin' && player.team === 'Evil');
+
+   // Privacy Shield: hide role-revealing info, keep leader crown
+   const effectiveShowRole = isRoleHidden ? false : shouldShowRoleAvatar;
+   const showEvilTag = !isRoleHidden && player.userId !== me.userId && player.team === 'Evil';
+   const showMerlinTag = !isRoleHidden && player.userId !== me.userId && player.role === 'Merlin' && me.role === 'Percival';
 
    let borderColor = "border-outline-variant/30";
    if (isProposed && isLeader) borderColor = "border-[#d39b2e]";
@@ -270,7 +276,7 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCa
          )}
          
          <div className={`w-20 h-20 lg:w-24 lg:h-24 rounded-lg bg-[#0f172a]/90 backdrop-blur-md border-2 p-1 transition-all ${borderColor} ${shadowColor} ${isMe ? 'scale-110 ring-4 ring-(--primary)/20' : ''}`}>
-            {shouldShowRoleAvatar ? (
+            {effectiveShowRole ? (
                <div className="relative w-full h-full rounded overflow-hidden bg-surface-container-low">
                   <Image
                      src={getRoleImageSrcForViewer(player, me)}
@@ -301,14 +307,14 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCa
          </div>
 
          {/* Good/Evil/Unknown Overlays */}
-         {!shouldShowRoleAvatar && (
+         {!effectiveShowRole && (
             <div className="absolute -top-3 right-0 flex flex-col items-end gap-1 z-30">
                <div className="bg-slate-800/95 text-slate-300 text-[6px] md:text-[7px] px-1 md:px-1.5 py-0.5 rounded font-bold uppercase tracking-widest shadow-[0_2px_10px_rgba(0,0,0,0.5)] border border-slate-600/50 whitespace-nowrap flex items-center gap-1">
                   <HelpCircle className="w-2 h-2" /> Lai Lịch Bí Ẩn
                </div>
             </div>
          )}
-         {player.userId !== me.userId && player.team === 'Evil' && (
+         {showEvilTag && (
             <div className="absolute -top-3 right-0 flex flex-col items-end gap-1 z-30">
                <div className="bg-(--tertiary) text-white text-[6px] md:text-[7px] px-1 md:px-1.5 py-0.5 rounded font-bold uppercase tracking-widest shadow-md border border-white/20 whitespace-nowrap">
                   {me.role === 'Merlin' ? 'Ác' : (player.role ? player.role.replace('_', ' ').toUpperCase() : 'Minion')}
@@ -316,7 +322,7 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight }: PlayerCa
             </div>
          )}
 
-         {player.userId !== me.userId && player.role === 'Merlin' && me.role === 'Percival' && (
+         {showMerlinTag && (
             <div className="absolute -top-3 left-0 z-30">
                <div className="bg-(--primary) text-[#0b1320] text-[6px] md:text-[7px] px-1 md:px-1.5 py-0.5 rounded font-bold uppercase tracking-widest shadow-md border border-white/20 whitespace-nowrap">
                   Merlin (?)

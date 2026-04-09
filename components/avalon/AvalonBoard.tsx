@@ -1,7 +1,7 @@
 "use client";
 
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import RoleReveal from './RoleReveal';
@@ -14,8 +14,10 @@ import VoteOutcomeOverlay from './VoteOutcomeOverlay';
 import RulesModal from './RulesModal';
 import MyRoleModal from './MyRoleModal';
 import SpectatorView from './SpectatorView';
+import SharedChatDropdown, { type ChatTheme } from '@/components/shared/ChatDropdown';
+import VoiceChatPanel from './VoiceChatPanel';
 import type { LucideIcon } from 'lucide-react';
-import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX, BookText, LogOut } from 'lucide-react';
+import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, EyeOff, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX, BookText, LogOut } from 'lucide-react';
 
 type AudioTrackName = 'lobby' | 'win' | 'lose';
 
@@ -32,6 +34,11 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [hasJoined, setHasJoined] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showMyRole, setShowMyRole] = useState(false);
+  const [isRoleHidden, setIsRoleHidden] = useState(false);
+  // Chat state
+  const [showChat, setShowChat] = useState(false);
+  const [chatText, setChatText] = useState('');
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const [isLobbyMusicEnabled, setIsLobbyMusicEnabled] = useState(() => {
     if (typeof window === 'undefined') return true;
@@ -174,6 +181,18 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     playedGameOverWinnerRef.current = gameWinner;
   }, [gamePhase, gameWinner, isLobbyMusicEnabled]);
 
+  const handleSendChat = useCallback((event: FormEvent) => {
+    event.preventDefault();
+    if (!chatText.trim() || !socket) return;
+    socket.emit('chatMessage', chatText.trim());
+    setChatText('');
+  }, [chatText, socket]);
+
+  // Scroll to bottom when messages arrive
+  useEffect(() => {
+    if (showChat) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [gameState?.messages?.length, showChat]);
+
   if (!hasJoined) {
     return (
       <div className="avalon-entry-screen font-body text-primary-avalon h-full min-h-0 overflow-y-auto overflow-x-hidden flex flex-col relative z-0">
@@ -304,6 +323,14 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     }
   };
 
+  const AVALON_CHAT_THEME: ChatTheme = {
+    surface: 'rgba(8,16,30,0.95)',
+    border: 'color-mix(in srgb, var(--primary) 20%, transparent)',
+    accent: 'var(--primary)',
+    textPrimary: 'var(--on-surface)',
+    textMuted: 'var(--on-surface-variant)',
+  };
+
   return (
     <div className={`avalon-theme ${boardShellClass} flex flex-col p-4 w-full relative z-0`}>
       {/* Avalon Background Layer */}
@@ -348,6 +375,21 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
             title="Bài Của Bạn"
           >
             <VenetianMask className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Privacy Shield — in-game only */}
+        {gameState.state !== 'LOBBY' && gameState.state !== 'GAME_OVER' && (
+          <button
+            onClick={() => setIsRoleHidden(p => !p)}
+            className={`p-2 bg-black/40 backdrop-blur-md rounded-full transition-colors shadow-lg cursor-pointer border ${
+              isRoleHidden
+                ? 'border-amber-500/60 text-amber-400 hover:bg-amber-500/10'
+                : 'border-(--primary)/30 text-(--primary) hover:bg-(--primary)/10 hover:text-white'
+            }`}
+            title={isRoleHidden ? 'Hiện thông tin vai trò' : 'Ẩn thông tin vai trò'}
+          >
+            {isRoleHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         )}
 
@@ -404,7 +446,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       
       {gameState.state !== 'LOBBY' && gameState.state !== 'ROLE_REVEAL' && gameState.state !== 'GAME_OVER' && gameState.state !== 'ASSASSINATION' && me && !me.isSpectator && (
         <>
-          <RoundTable gameState={gameState} me={me} socket={socket} roomId={roomId} />
+          <RoundTable gameState={gameState} me={me} socket={socket} roomId={roomId} isRoleHidden={isRoleHidden} />
           <VotingCards gameState={gameState} me={me} socket={socket} />
         </>
       )}
@@ -428,6 +470,33 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
       <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
       {me && <MyRoleModal isOpen={showMyRole} onClose={() => setShowMyRole(false)} gameState={gameState} me={me} />}
+
+      {/* Voice Chat — always available after joining */}
+      {me && !me.isSpectator && (
+        <VoiceChatPanel
+          roomId={roomId}
+          userId={userId}
+          playerName={me.name}
+          players={gameState.players
+            .filter(p => p.status === 'connected')
+            .map(p => ({ userId: p.userId, name: p.name }))}
+        />
+      )}
+
+      {/* Chat — always available after joining */}
+      {me && (
+        <SharedChatDropdown
+          messages={gameState.messages ?? []}
+          userId={userId}
+          showChat={showChat}
+          chatText={chatText}
+          theme={AVALON_CHAT_THEME}
+          onToggleChat={() => setShowChat(p => !p)}
+          onCloseChat={() => setShowChat(false)}
+          onChatTextChange={setChatText}
+          onSendChat={handleSendChat}
+        />
+      )}
     </div>
   );
 }

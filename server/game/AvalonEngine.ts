@@ -6,6 +6,7 @@ export class AvalonEngine {
    private io: Namespace;
    private voteOutcomeTimers: Map<string, ReturnType<typeof setTimeout>> =
       new Map();
+   private chatRateLimits: Map<string, number[]> = new Map();
 
    private getQuestHistoryByPlayerCount(playerCount: number) {
       const questSizeMap: Record<number, number[]> = {
@@ -265,6 +266,17 @@ export class AvalonEngine {
    }
 
    public chatMessage(roomId: string, userId: string, text: string) {
+      if (!text || text.length > 500) return;
+
+      const now = Date.now();
+      let userStamps = this.chatRateLimits.get(userId) || [];
+      userStamps = userStamps.filter(time => now - time < 10000);
+
+      if (userStamps.length >= 10) return; // Rate limit exceeded: max 10 messages per 10s
+
+      userStamps.push(now);
+      this.chatRateLimits.set(userId, userStamps);
+
       const room = this.rooms.get(roomId);
       if (!room) return;
 

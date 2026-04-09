@@ -1019,7 +1019,6 @@ export default function GameBoard({ roomId }: { roomId: string }) {
                         showChat={showChat}
                         showPeekNotifications={showPeekNotifications}
                         chatText={chatText}
-                        chatEndRef={chatEndRef}
                         onToggleChat={() => setShowChat((prev) => !prev)}
                         onCloseChat={() => setShowChat(false)}
                         onTogglePeekNotifications={() => setShowPeekNotifications((prev) => !prev)}
@@ -1136,7 +1135,6 @@ export default function GameBoard({ roomId }: { roomId: string }) {
                         showChat={showChat}
                         showPeekNotifications={showPeekNotifications}
                         chatText={chatText}
-                        chatEndRef={chatEndRef}
                         onToggleChat={() => setShowChat((prev) => !prev)}
                         onCloseChat={() => setShowChat(false)}
                         onTogglePeekNotifications={() => setShowPeekNotifications((prev) => !prev)}
