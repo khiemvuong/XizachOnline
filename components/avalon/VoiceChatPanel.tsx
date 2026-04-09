@@ -8,8 +8,9 @@ import {
     Participant,
     LocalAudioTrack,
     createLocalAudioTrack,
+    AudioPresets,
 } from 'livekit-client';
-import { Mic, MicOff, Volume2, X, ChevronDown } from 'lucide-react';
+import { Mic, MicOff, Volume2, X, ChevronDown, RotateCcw } from 'lucide-react';
 
 interface VoicePlayer {
     userId: string;
@@ -23,8 +24,26 @@ interface VoiceChatPanelProps {
     players: VoicePlayer[];
 }
 
+type MicPermissionState = PermissionState | 'unknown';
+
 const LIVEKIT_URL = process.env.NEXT_PUBLIC_LIVEKIT_URL ?? 'wss://board-game-vxr9y6t8.livekit.cloud';
-const MIC_BOOST_GAIN = 2.2;
+const MIC_CAPTURE_OPTIONS = {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+    channelCount: 1,
+    sampleRate: 48000,
+    latency: 0.02,
+};
+
+const MIC_PUBLISH_OPTIONS = {
+    dtx: false,
+    red: true,
+    audioPreset: {
+        ...AudioPresets.speech,
+        maxBitrate: 32000,
+    },
+};
 
 async function fetchToken(roomId: string, userId: string, name: string): Promise<string> {
     const res = await fetch(
@@ -37,31 +56,97 @@ async function fetchToken(roomId: string, userId: string, name: string): Promise
 export default function VoiceChatPanel({ roomId, userId, playerName, players }: VoiceChatPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isMicOn, setIsMicOn] = useState(false);
+    const [isResettingMic, setIsResettingMic] = useState(false);
+    const [micPermission, setMicPermission] = useState<MicPermissionState>('unknown');
     const [isConnected, setIsConnected] = useState(false);
     const [speakingIds, setSpeakingIds] = useState<Set<string>>(new Set());
     const [volumes, setVolumes] = useState<Record<string, number>>({});
     const roomRef = useRef<LiveKitRoom | null>(null);
     const audioEls = useRef<Record<string, HTMLAudioElement>>({});
     const rawMicTrackRef = useRef<LocalAudioTrack | null>(null);
-    const boostedMicTrackRef = useRef<MediaStreamTrack | null>(null);
-    const micBoostContextRef = useRef<AudioContext | null>(null);
 
     const cleanupMicPipeline = useCallback(() => {
         if (rawMicTrackRef.current) {
             rawMicTrackRef.current.stop();
             rawMicTrackRef.current = null;
         }
+    }, []);
 
-        if (boostedMicTrackRef.current) {
-            boostedMicTrackRef.current.stop();
-            boostedMicTrackRef.current = null;
+    const refreshMicPermission = useCallback(async () => {
+        if (typeof navigator === 'undefined' || !navigator.permissions?.query) {
+            setMicPermission('unknown');
+            return null;
         }
 
-        if (micBoostContextRef.current) {
-            void micBoostContextRef.current.close();
-            micBoostContextRef.current = null;
+        try {
+            const status = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+            setMicPermission(status.state);
+            return status;
+        } catch {
+            setMicPermission('unknown');
+            return null;
         }
     }, []);
+
+    const publishMicTrack = useCallback(async (room: LiveKitRoom) => {
+        const track = await createLocalAudioTrack(MIC_CAPTURE_OPTIONS);
+        rawMicTrackRef.current = track;
+        await room.localParticipant.publishTrack(track, MIC_PUBLISH_OPTIONS);
+    }, []);
+
+    const unpublishMicTracks = useCallback(async (room: LiveKitRoom) => {
+        const unpublishTasks: Array<Promise<unknown>> = [];
+
+        room.localParticipant.audioTrackPublications.forEach(pub => {
+            if (!pub.track) return;
+            pub.track.stop();
+            unpublishTasks.push(room.localParticipant.unpublishTrack(pub.track));
+        });
+
+        if (unpublishTasks.length > 0) {
+            await Promise.allSettled(unpublishTasks);
+        }
+
+        cleanupMicPipeline();
+    }, [cleanupMicPipeline]);
+
+    useEffect(() => {
+        let permissionStatus: PermissionStatus | null = null;
+        let onPermissionChange: (() => void) | null = null;
+        let isCancelled = false;
+
+        const watchMicPermission = async () => {
+            const status = await refreshMicPermission();
+            if (isCancelled || !status) return;
+
+            permissionStatus = status;
+            onPermissionChange = () => {
+                const nextState = permissionStatus?.state ?? 'unknown';
+                setMicPermission(nextState);
+
+                if (nextState === 'denied') {
+                    setIsMicOn(false);
+                    const room = roomRef.current;
+                    if (room) {
+                        void unpublishMicTracks(room);
+                    } else {
+                        cleanupMicPipeline();
+                    }
+                }
+            };
+
+            permissionStatus.addEventListener('change', onPermissionChange);
+        };
+
+        void watchMicPermission();
+
+        return () => {
+            isCancelled = true;
+            if (permissionStatus && onPermissionChange) {
+                permissionStatus.removeEventListener('change', onPermissionChange);
+            }
+        };
+    }, [refreshMicPermission, unpublishMicTracks, cleanupMicPipeline]);
 
     // Attach remote audio track to an <audio> element per participant
     const attachTrack = useCallback((participant: RemoteParticipant) => {
@@ -89,14 +174,23 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                 const token = await fetchToken(roomId, userId, playerName);
                 if (isCancelled) return;
 
-                lkRoom = new LiveKitRoom({ adaptiveStream: true, dynacast: true });
+                lkRoom = new LiveKitRoom({
+                    adaptiveStream: true,
+                    dynacast: true,
+                    audioCaptureDefaults: MIC_CAPTURE_OPTIONS,
+                    publishDefaults: MIC_PUBLISH_OPTIONS,
+                });
                 roomRef.current = lkRoom;
 
                 lkRoom.on(RoomEvent.Connected, () => {
                     if (!isCancelled) setIsConnected(true);
                 });
                 lkRoom.on(RoomEvent.Disconnected, () => {
-                    if (!isCancelled) setIsConnected(false);
+                    if (!isCancelled) {
+                        setIsConnected(false);
+                        setIsMicOn(false);
+                    }
+                    cleanupMicPipeline();
                 });
 
                 // Track who is actively speaking
@@ -108,6 +202,12 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                 lkRoom.on(RoomEvent.TrackSubscribed, (_track, _pub, participant: RemoteParticipant) => {
                     if (!isCancelled) attachTrack(participant);
                 });
+
+                try {
+                    await lkRoom.prepareConnection(LIVEKIT_URL, token);
+                } catch (prepareErr) {
+                    console.warn('[VoiceChat] prepareConnection warning', prepareErr);
+                }
 
                 await lkRoom.connect(LIVEKIT_URL, token, { autoSubscribe: true });
                 if (isCancelled) {
@@ -135,64 +235,62 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
     // Toggle mic on/off
     const toggleMic = useCallback(async () => {
         const room = roomRef.current;
-        if (!room || !isConnected) return;
+        if (!room || !isConnected || isResettingMic) return;
 
         if (!isMicOn) {
+            const permission = await refreshMicPermission();
+            if (permission?.state === 'denied') {
+                setIsMicOn(false);
+                return;
+            }
+
             try {
-                const track = await createLocalAudioTrack({
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                });
-                rawMicTrackRef.current = track;
-
-                const AudioContextCtor =
-                    window.AudioContext ??
-                    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-
-                if (AudioContextCtor) {
-                    const context = new AudioContextCtor();
-                    micBoostContextRef.current = context;
-
-                    if (context.state === 'suspended') {
-                        await context.resume();
-                    }
-
-                    const source = context.createMediaStreamSource(
-                        new MediaStream([track.mediaStreamTrack])
-                    );
-                    const gainNode = context.createGain();
-                    gainNode.gain.value = MIC_BOOST_GAIN;
-                    const destination = context.createMediaStreamDestination();
-
-                    source.connect(gainNode);
-                    gainNode.connect(destination);
-
-                    const boostedTrack = destination.stream.getAudioTracks()[0];
-                    boostedMicTrackRef.current = boostedTrack;
-
-                    await room.localParticipant.publishTrack(boostedTrack);
-                } else {
-                    await room.localParticipant.publishTrack(track);
-                }
-
+                await room.startAudio();
+                await publishMicTrack(room);
                 setIsMicOn(true);
+                void refreshMicPermission();
             } catch (err) {
                 console.warn('[VoiceChat] mic enable failed', err);
                 cleanupMicPipeline();
+                setIsMicOn(false);
+                void refreshMicPermission();
             }
         } else {
-            room.localParticipant.audioTrackPublications.forEach(pub => {
-                if (pub.track) {
-                    pub.track.stop();
-                    void room.localParticipant.unpublishTrack(pub.track);
-                }
-            });
+            await unpublishMicTracks(room);
+            setIsMicOn(false);
+            void refreshMicPermission();
+        }
+    }, [isMicOn, isConnected, isResettingMic, publishMicTrack, cleanupMicPipeline, unpublishMicTracks, refreshMicPermission]);
 
+    const resetMic = useCallback(async () => {
+        const room = roomRef.current;
+        if (!room || !isConnected || isResettingMic || !isMicOn) return;
+
+        const permission = await refreshMicPermission();
+        if (permission?.state === 'denied') {
+            await unpublishMicTracks(room);
+            setIsMicOn(false);
+            return;
+        }
+
+        setIsResettingMic(true);
+        try {
+            await room.startAudio();
+            await unpublishMicTracks(room);
+            setIsMicOn(false);
+
+            await publishMicTrack(room);
+            setIsMicOn(true);
+            void refreshMicPermission();
+        } catch (err) {
+            console.warn('[VoiceChat] mic reset failed', err);
             cleanupMicPipeline();
             setIsMicOn(false);
+            void refreshMicPermission();
+        } finally {
+            setIsResettingMic(false);
         }
-    }, [isMicOn, isConnected, cleanupMicPipeline]);
+    }, [isConnected, isResettingMic, isMicOn, unpublishMicTracks, publishMicTrack, cleanupMicPipeline, refreshMicPermission]);
 
     // Per-participant volume control (0-100)
     const setParticipantVolume = useCallback((participantId: string, vol: number) => {
@@ -206,6 +304,14 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
 
     const speakingOthers = players.filter(p => speakingIds.has(p.userId) && p.userId !== userId);
     const iAmSpeaking = speakingIds.has(userId);
+    const isMicToggleDisabled = !isConnected || isResettingMic || (micPermission === 'denied' && !isMicOn);
+    const micToggleTitle = !isConnected
+        ? 'Chưa kết nối voice'
+        : micPermission === 'denied' && !isMicOn
+            ? 'Trình duyệt đang chặn quyền mic'
+            : isMicOn
+                ? 'Tắt mic'
+                : 'Bật mic';
 
     return (
         <>
@@ -253,15 +359,29 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={toggleMic}
-                                    className={`p-1.5 rounded-full border transition-all cursor-pointer ${
+                                    disabled={isMicToggleDisabled}
+                                    className={`p-1.5 rounded-full border transition-all ${
                                         isMicOn
                                             ? 'bg-(--primary)/20 border-(--primary)/50 text-(--primary)'
                                             : 'bg-white/5 border-white/10 text-slate-400 hover:border-(--primary)/30'
-                                    }`}
-                                    title={isMicOn ? 'Tắt mic' : 'Bật mic'}
-                                    aria-label={isMicOn ? 'Tắt mic' : 'Bật mic'}
+                                    } ${isMicToggleDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                                    title={micToggleTitle}
+                                    aria-label={micToggleTitle}
                                 >
                                     {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                                </button>
+                                <button
+                                    onClick={resetMic}
+                                    disabled={!isConnected || !isMicOn || isResettingMic}
+                                    className={`p-1.5 rounded-full border transition-all ${
+                                        !isConnected || !isMicOn
+                                            ? 'bg-white/5 border-white/10 text-slate-600 cursor-not-allowed'
+                                            : 'bg-white/5 border-white/10 text-slate-300 hover:border-(--primary)/30 cursor-pointer'
+                                    } ${isResettingMic ? 'opacity-70' : ''}`}
+                                    title={isResettingMic ? 'Đang reset mic...' : 'Reset mic'}
+                                    aria-label={isResettingMic ? 'Đang reset mic' : 'Reset mic'}
+                                >
+                                    <RotateCcw className={`w-4 h-4 ${isResettingMic ? 'animate-spin' : ''}`} />
                                 </button>
                                 <button
                                     onClick={() => setIsOpen(false)}
@@ -343,6 +463,11 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                         </div>
 
                         <div className="shrink-0 px-4 py-2 border-t border-(--primary)/10">
+                            {micPermission === 'denied' && (
+                                <p className="text-[9px] text-amber-300/90 uppercase tracking-wider text-center mb-1">
+                                    Trinh duyet dang chan microphone
+                                </p>
+                            )}
                             <p className="text-[9px] text-(--on-surface-variant) uppercase tracking-wider text-center opacity-50">
                                 Powered by LiveKit
                             </p>

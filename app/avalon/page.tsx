@@ -77,7 +77,7 @@ export default function AvalonHome() {
           
           <button 
             onClick={handleCreate}
-            className="avalon-home-btn w-full max-w-[280px] rounded-xl bg-(--primary) p-4 font-bold uppercase tracking-wider text-surface-dim-avalon shadow-lg transition-transform hover:opacity-90 active:scale-95 lg:max-w-[320px] lg:py-5 lg:text-lg"
+            className="avalon-home-btn w-full max-w-70 rounded-xl bg-(--primary) p-4 font-bold uppercase tracking-wider text-surface-dim-avalon shadow-lg transition-transform hover:opacity-90 active:scale-95 lg:max-w-[320px] lg:py-5 lg:text-lg"
           >
             Tạo Hội Yến (Host)
           </button>
@@ -92,7 +92,7 @@ export default function AvalonHome() {
 
         {/* Right Section: Join Room */}
         <div className="flex w-full flex-1 flex-col items-center justify-center px-1 lg:px-6">
-          <div className="flex w-full max-w-[320px] flex-col gap-4 lg:max-w-[380px] lg:gap-6">
+          <div className="flex w-full max-w-[320px] flex-col gap-4 lg:max-w-95 lg:gap-6">
             {/* Display Code */}
             <div className="flex w-full justify-between gap-2 lg:gap-4">
               {[0, 1, 2, 3].map((index) => (

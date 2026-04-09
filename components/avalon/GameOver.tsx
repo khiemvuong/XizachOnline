@@ -316,7 +316,7 @@ export default function GameOver({
 
                 {/* "Victory" sub-heading */}
                 <h3
-                  className={`font-headline text-2xl font-bold tracking-widest uppercase mb-[-10px] ${t.victoryWordColor}`}
+                  className={`font-headline text-2xl font-bold tracking-widest uppercase -mb-2.5 ${t.victoryWordColor}`}
                 >
                   {t.victoryWord}
                 </h3>
@@ -419,7 +419,7 @@ export default function GameOver({
               </p>
 
               {/* Bento grid: players left+right, dominant center */}
-              <div className="grid grid-cols-12 gap-4 w-full max-w-[1100px] mt-6">
+              <div className="grid grid-cols-12 gap-4 w-full max-w-275 mt-6">
                 {/* Left: Winner faction */}
                 <div className="col-span-4">
                   <FactionPanel

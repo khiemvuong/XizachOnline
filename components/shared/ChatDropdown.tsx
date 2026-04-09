@@ -330,7 +330,7 @@ export default function ChatDropdown({
                 >
                     <MessageCircle className="h-5 w-5" />
                     {unreadCount > 0 && !showChat && (
-                        <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-md transition-all animate-bounce">
+                        <span className="absolute -right-1 -top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-md transition-all animate-bounce">
                             {unreadCount > 99 ? '99+' : unreadCount}
                         </span>
                     )}
