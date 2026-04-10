@@ -66,6 +66,8 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
     const audioEls = useRef<Record<string, HTMLAudioElement>>({});
     const rawMicTrackRef = useRef<LocalAudioTrack | null>(null);
     const speakingListenerCleanupRef = useRef<Map<string, () => void>>(new Map());
+    // Guard against double-click race condition on toggleMic
+    const isTogglingMicRef = useRef(false);
 
     const cleanupMicPipeline = useCallback(() => {
         if (rawMicTrackRef.current) {
@@ -97,18 +99,19 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
     }, []);
 
     const unpublishMicTracks = useCallback(async (room: LiveKitRoom) => {
-        const unpublishTasks: Array<Promise<unknown>> = [];
-
-        room.localParticipant.audioTrackPublications.forEach(pub => {
+        // Collect all publications first to avoid mutation-while-iterating
+        const pubs = Array.from(room.localParticipant.audioTrackPublications.values());
+        const unpublishTasks = pubs.map(async pub => {
             if (!pub.track) return;
-            pub.track.stop();
-            unpublishTasks.push(room.localParticipant.unpublishTrack(pub.track));
+            try {
+                pub.track.stop();
+                await room.localParticipant.unpublishTrack(pub.track);
+            } catch (e) {
+                console.warn('[VoiceChat] unpublish track error', e);
+            }
         });
 
-        if (unpublishTasks.length > 0) {
-            await Promise.allSettled(unpublishTasks);
-        }
-
+        await Promise.allSettled(unpublishTasks);
         cleanupMicPipeline();
     }, [cleanupMicPipeline]);
 
@@ -246,10 +249,9 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                     clearSpeakingListeners();
                 });
 
-                // Track who is actively speaking
-                lkRoom.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
-                    if (!isCancelled) setSpeakingIds(new Set(speakers.map(s => s.identity)));
-                });
+                // Note: per-participant IsSpeakingChanged handles speaking state granularly.
+                // ActiveSpeakersChanged is intentionally omitted to avoid replacing the full
+                // Set and wiping out per-participant state managed by registerSpeakingListener.
 
                 lkRoom.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
                     if (isCancelled) return;
@@ -300,39 +302,54 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
         };
     }, [roomId, userId, playerName, attachTrack, cleanupMicPipeline, registerSpeakingListener, unregisterSpeakingListener, clearSpeakingListeners]);
 
-    // Toggle mic on/off
+    // Toggle mic on/off — guarded with isTogglingMicRef to prevent race condition
     const toggleMic = useCallback(async () => {
         const room = roomRef.current;
         if (!room || !isConnected || isResettingMic) return;
+        // Prevent double-click from publishing multiple tracks
+        if (isTogglingMicRef.current) return;
+        isTogglingMicRef.current = true;
 
-        if (!isMicOn) {
-            const permission = await refreshMicPermission();
-            if (permission?.state === 'denied') {
-                setIsMicOn(false);
-                return;
-            }
+        try {
+            if (!isMicOn) {
+                const permission = await refreshMicPermission();
+                if (permission?.state === 'denied') {
+                    setIsMicOn(false);
+                    return;
+                }
 
-            try {
-                await room.startAudio();
-                await publishMicTrack(room);
-                setIsMicOn(true);
-                void refreshMicPermission();
-            } catch (err) {
-                console.warn('[VoiceChat] mic enable failed', err);
-                cleanupMicPipeline();
+                try {
+                    await room.startAudio();
+                    await publishMicTrack(room);
+                    setIsMicOn(true);
+                    void refreshMicPermission();
+                } catch (err) {
+                    console.warn('[VoiceChat] mic enable failed', err);
+                    await unpublishMicTracks(room); // cleanup any partial publish
+                    cleanupMicPipeline();
+                    setIsMicOn(false);
+                    void refreshMicPermission();
+                }
+            } else {
+                await unpublishMicTracks(room);
                 setIsMicOn(false);
                 void refreshMicPermission();
             }
-        } else {
-            await unpublishMicTracks(room);
-            setIsMicOn(false);
-            void refreshMicPermission();
+        } finally {
+            isTogglingMicRef.current = false;
         }
     }, [isMicOn, isConnected, isResettingMic, publishMicTrack, cleanupMicPipeline, unpublishMicTracks, refreshMicPermission]);
 
     const resetMic = useCallback(async () => {
         const room = roomRef.current;
-        if (!room || !isConnected || isResettingMic || !isMicOn) return;
+        if (!room || !isConnected || isResettingMic) return;
+        // Guard against concurrent toggle
+        if (isTogglingMicRef.current) return;
+
+        // Allow reset even if isMicOn=false: there may be orphan tracks from a failed toggle
+        const hasOrphanTracks = room.localParticipant.audioTrackPublications.size > 0;
+        const canReset = isMicOn || hasOrphanTracks;
+        if (!canReset) return;
 
         const permission = await refreshMicPermission();
         if (permission?.state === 'denied') {
@@ -341,6 +358,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
             return;
         }
 
+        isTogglingMicRef.current = true;
         setIsResettingMic(true);
         try {
             await room.startAudio();
@@ -357,6 +375,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
             void refreshMicPermission();
         } finally {
             setIsResettingMic(false);
+            isTogglingMicRef.current = false;
         }
     }, [isConnected, isResettingMic, isMicOn, unpublishMicTracks, publishMicTrack, cleanupMicPipeline, refreshMicPermission]);
 
@@ -373,6 +392,9 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
     const speakingOthers = players.filter(p => speakingIds.has(p.userId) && p.userId !== userId);
     const iAmSpeaking = speakingIds.has(userId);
     const isMicToggleDisabled = !isConnected || isResettingMic || (micPermission === 'denied' && !isMicOn);
+    // Reset is available when mic is on OR there are orphan tracks to clean up
+    const hasOrphanTracks = (roomRef.current?.localParticipant.audioTrackPublications.size ?? 0) > 0;
+    const isResetDisabled = !isConnected || isResettingMic || (!isMicOn && !hasOrphanTracks);
     const micToggleTitle = !isConnected
         ? 'Chưa kết nối voice'
         : micPermission === 'denied' && !isMicOn
@@ -428,7 +450,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                                 <button
                                     onClick={toggleMic}
                                     disabled={isMicToggleDisabled}
-                                    className={`p-1.5 rounded-full border transition-all ${
+                                    className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full border transition-all ${
                                         isMicOn
                                             ? 'bg-(--primary)/20 border-(--primary)/50 text-(--primary)'
                                             : 'bg-white/5 border-white/10 text-slate-400 hover:border-(--primary)/30'
@@ -440,9 +462,9 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                                 </button>
                                 <button
                                     onClick={resetMic}
-                                    disabled={!isConnected || !isMicOn || isResettingMic}
-                                    className={`p-1.5 rounded-full border transition-all ${
-                                        !isConnected || !isMicOn
+                                    disabled={isResetDisabled}
+                                    className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full border transition-all ${
+                                        isResetDisabled
                                             ? 'bg-white/5 border-white/10 text-slate-600 cursor-not-allowed'
                                             : 'bg-white/5 border-white/10 text-slate-300 hover:border-(--primary)/30 cursor-pointer'
                                     } ${isResettingMic ? 'opacity-70' : ''}`}

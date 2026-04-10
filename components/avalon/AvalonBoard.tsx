@@ -136,11 +136,8 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const gameWinner = gameState?.winner;
 
   useEffect(() => {
-    // if (!localStorage.getItem('avalon_userId')) {
-    //   localStorage.setItem('avalon_userId', Math.random().toString(36).substr(2, 9));
-    // }
-    if (!sessionStorage.getItem('avalon_userId')) {
-      sessionStorage.setItem('avalon_userId', Math.random().toString(36).substr(2, 9));
+    if (!localStorage.getItem('avalon_userId')) {
+      localStorage.setItem('avalon_userId', Math.random().toString(36).substr(2, 9));
     }
   }, []);
 
@@ -152,8 +149,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     if (!hasJoined || initialized.current) return;
     initialized.current = true;
 
-    // const userId = localStorage.getItem('avalon_userId')!;
-    const userId = sessionStorage.getItem('avalon_userId')!;
+    const userId = localStorage.getItem('avalon_userId')!;
     
     // Connect specifically to the /avalon namespace
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "";
@@ -399,8 +395,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     );
   }
 
-  // const userId = localStorage.getItem('avalon_userId')!;
-  const userId = sessionStorage.getItem('avalon_userId')!;
+  const userId = localStorage.getItem('avalon_userId')!;
   const me = gameState.players.find((p: AvalonPlayer) => p.userId === userId);
   const isSpectator = Boolean(me?.isSpectator);
   const isHandRaised = Boolean(me?.isHandRaised);

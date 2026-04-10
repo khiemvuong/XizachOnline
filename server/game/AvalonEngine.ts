@@ -718,6 +718,14 @@ export class AvalonEngine {
       const player = room.players.find((p) => p.userId === userId);
       if (!player || !player.isHost) return;
 
+      // --- Determine next host BEFORE roles are cleared ---
+      // Priority: Mordred ván trước → Merlin (luôn có) → giữ nguyên host
+      const connectedPlayers = room.players.filter((p) => p.status === "connected");
+      const nextHostCandidate =
+         connectedPlayers.find((p) => p.role === "Mordred") ??
+         connectedPlayers.find((p) => p.role === "Merlin") ??
+         null;
+
       // Reset room state to lobby
       room.state = "LOBBY";
 
@@ -750,6 +758,15 @@ export class AvalonEngine {
          delete p.isHandRaised;
          p.isReady = false;
       });
+
+      // Apply next-host transfer if a valid candidate was found and still connected
+      if (nextHostCandidate) {
+         const newHost = room.players.find((p) => p.userId === nextHostCandidate.userId);
+         if (newHost) {
+            room.players.forEach((p) => { p.isHost = false; });
+            newHost.isHost = true;
+         }
+      }
 
       // Clear early end votes too
       room.earlyEndVotes = [];
