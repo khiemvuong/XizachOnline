@@ -4,11 +4,11 @@ import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
 import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import Image from 'next/image';
-import { HelpCircle, Hand, ChevronUp, ChevronDown } from 'lucide-react';
+import { HelpCircle, Hand, ChevronUp, ChevronDown, Wifi } from 'lucide-react';
 import CenterBoard from './CenterBoard';
 import { getRoleImageSrcForViewer } from './roleImage';
 
-export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden = false, isReadOnly = false }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null, roomId: string, isRoleHidden?: boolean, isReadOnly?: boolean }) {
+export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden = false, isReadOnly = false, playerPings = {} }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null, roomId: string, isRoleHidden?: boolean, isReadOnly?: boolean, playerPings?: Record<string, number> }) {
    const [isQuestHistoryOpen, setIsQuestHistoryOpen] = useState(false);
    const [isSpectatorPanelExpanded, setIsSpectatorPanelExpanded] = useState(true);
    const stageRef = useRef<HTMLDivElement | null>(null);
@@ -242,7 +242,7 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                {layout.top.map((idx) => {
                   const player = seatedPlayers[idx];
                   if (!player) return null;
-                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} />;
+                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} ping={playerPings[player.userId]} />;
                })}
             </div>
 
@@ -253,7 +253,7 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                   {layout.left.map((idx) => {
                      const player = seatedPlayers[idx];
                      if (!player) return null;
-                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isLeft isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} />;
+                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isLeft isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} ping={playerPings[player.userId]} />;
                   })}
                </div>
 
@@ -267,7 +267,7 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                   {layout.right.map((idx) => {
                      const player = seatedPlayers[idx];
                      if (!player) return null;
-                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRight isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} />;
+                     return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRight isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} ping={playerPings[player.userId]} />;
                   })}
                </div>
             </div>
@@ -277,7 +277,7 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                {layout.bottom.map((idx) => {
                   const player = seatedPlayers[idx];
                   if (!player) return null;
-                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} />;
+                  return <PlayerCard key={player.userId} player={player} me={me} gameState={gameState} socket={socket} isRoleHidden={isRoleHidden} isReadOnly={isReadOnly} ping={playerPings[player.userId]} />;
                })}
             </div>
          </div>
@@ -295,9 +295,10 @@ type PlayerCardProps = {
    isRight?: boolean;
    isRoleHidden?: boolean;
    isReadOnly?: boolean;
+   ping?: number;
 };
 
-function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidden = false, isReadOnly = false }: PlayerCardProps) {
+function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidden = false, isReadOnly = false, ping }: PlayerCardProps) {
    const isMe = player.userId === me.userId;
    const isLeader = gameState.players[gameState.leaderIndex]?.userId === player.userId;
    const isProposed = gameState.proposedTeam?.includes(player.userId) ?? false;
@@ -418,13 +419,13 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
 
          {/* MISSION Tag */}
          {isProposed && (isLeft || !isRight) && ( // Default to left side tag unless it's explicitly the right column
-            <div className="absolute -left-14 top-1/2 -translate-y-1/2 bg-green-500/20 border border-green-500/50 px-2.5 py-0.5 rounded-full text-[8px] font-black tracking-[0.2em] text-green-400 backdrop-blur-md z-30 shadow-[0_0_15px_rgba(34,197,94,0.5)] uppercase">
-               Mission
+            <div className="absolute -left-12 top-1/2 -translate-y-1/2 bg-green-600 border border-green-400 px-3 py-1 rounded-full text-[9px] font-extrabold tracking-[0.2em] text-white shadow-[0_0_15px_rgba(34,197,94,0.7)] z-30 uppercase ring-1 ring-white/30">
+               QUEST
             </div>
          )}
          {isProposed && isRight && (
-            <div className="absolute -right-14 top-1/2 -translate-y-1/2 bg-green-500/20 border border-green-500/50 px-2.5 py-0.5 rounded-full text-[8px] font-black tracking-[0.2em] text-green-400 backdrop-blur-md z-30 shadow-[0_0_15px_rgba(34,197,94,0.5)] uppercase">
-               Mission
+            <div className="absolute -right-12 top-1/2 -translate-y-1/2 bg-green-600 border border-green-400 px-3 py-1 rounded-full text-[9px] font-extrabold tracking-[0.2em] text-white shadow-[0_0_15px_rgba(34,197,94,0.7)] z-30 uppercase ring-1 ring-white/30">
+               QUEST
             </div>
          )}
 
@@ -435,10 +436,20 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
          )}
 
          {/* Name Label */}
-         <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded text-[9px] font-headline tracking-widest border border-white/10 whitespace-nowrap z-50 flex flex-col items-center leading-none ${isLeader ? 'bg-[#d39b2e] text-[#2a1e0b] shadow-[0_4px_12px_rgba(211,155,46,0.4)]' : 'bg-[#1e293b] text-slate-300'} ${isMe ? 'border-(--primary)/50 px-4 shadow-lg ring-1 ring-(--primary)/30' : ''}`}>
+         <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded text-[9px] font-headline tracking-widest border border-white/10 whitespace-nowrap z-50 flex flex-col items-center leading-none ${isLeader ? 'bg-[#d39b2e] text-[#2a1e0b] shadow-[0_4px_12px_rgba(211,155,46,0.4)]' : 'bg-[#1e293b] text-slate-300'} ${isMe ? 'border-(--primary)/50 px-4 shadow-lg ring-1 ring-(--primary)/30' : ''}`}>
             {isLeader && <span className="text-[5px] font-black tracking-[0.2em] opacity-80 mb-0.5 uppercase">LEADER</span>}
-            <span className="font-bold">{player.name}</span>
+            <span className="font-bold">
+               {player.name}
+            </span>
          </div>
+
+         {/* Ping Label */}
+         {ping !== undefined && (
+            <div className={`absolute -right-10 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-full text-[8px] font-black font-mono tracking-tighter flex items-center gap-1 z-40 bg-black/60 backdrop-blur-md border border-white/10 shadow-[0_4px_10px_rgba(0,0,0,0.5)] ${ping < 150 ? 'text-emerald-400' : ping < 350 ? 'text-amber-400' : 'text-red-500'}`}>
+               <Wifi className="w-2.5 h-2.5 opacity-80" />
+               <span className="mt-px">{Math.min(999, ping)}ms</span>
+            </div>
+         )}
       </div>
    );
 }

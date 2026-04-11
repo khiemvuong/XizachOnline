@@ -191,6 +191,24 @@ export class AvalonEngine {
                this.toggleRaiseHand(socket.data.roomId, socket.data.userId, isRaised);
             }
          });
+
+         socket.on("toggleSpectatorLobby", () => {
+            if (socket.data.roomId && socket.data.userId) {
+               this.toggleSpectatorLobby(socket.data.roomId, socket.data.userId);
+            }
+         });
+
+         socket.on("measurePing", (timestamp: number, callback: (ts: number) => void) => {
+            if (typeof callback === "function") {
+               callback(timestamp);
+            }
+         });
+
+         socket.on("updatePing", (userId: string, ping: number) => {
+            if (socket.data.roomId && userId) {
+               socket.to(socket.data.roomId).emit("playerPing", userId, ping);
+            }
+         });
       });
    }
 
@@ -369,9 +387,9 @@ export class AvalonEngine {
       const host = room.players.find((p) => p.id === socketId);
       if (!host || !host.isHost) return;
 
-      const activePlayers = room.players.filter((p) => p.status === "connected");
+      const activePlayers = room.players.filter((p) => p.status === "connected" && !p.isSpectator);
       const numPlayers = activePlayers.length;
-      if (numPlayers < 5) return;
+      if (numPlayers < 5 || numPlayers > 10) return;
 
       room.questHistory = this.getQuestHistoryByPlayerCount(numPlayers);
       room.questParticipantsHistory = [];
@@ -754,7 +772,6 @@ export class AvalonEngine {
          delete p.hasVoted;
          delete p.currentVote;
          delete p.questVote;
-         delete p.isSpectator;
          delete p.isHandRaised;
          p.isReady = false;
       });
@@ -840,6 +857,7 @@ export class AvalonEngine {
       const newHost = room.players.find((p) => p.userId === targetUserId);
       if (!newHost || newHost.userId === currentHost.userId) return;
       if (newHost.status !== "connected") return;
+      if (newHost.isSpectator) return; // spectator cannot become host
 
       currentHost.isHost = false;
       newHost.isHost = true;
@@ -867,6 +885,18 @@ export class AvalonEngine {
       if (!player) return;
 
       player.isHandRaised = typeof isRaised === "boolean" ? isRaised : !Boolean(player.isHandRaised);
+      this.broadcastState(roomId);
+   }
+
+   // Toggle spectator in LOBBY — player can opt in/out before game starts
+   public toggleSpectatorLobby(roomId: string, userId: string) {
+      const room = this.rooms.get(roomId);
+      if (!room || room.state !== "LOBBY") return;
+
+      const player = room.players.find((p) => p.userId === userId && p.status === "connected");
+      if (!player || player.isHost) return; // host can't become spectator in lobby
+
+      player.isSpectator = !player.isSpectator;
       this.broadcastState(roomId);
    }
 

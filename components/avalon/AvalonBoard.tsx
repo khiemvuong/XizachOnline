@@ -16,7 +16,7 @@ import MyRoleModal from './MyRoleModal';
 import SharedChatDropdown, { type ChatTheme } from '@/components/shared/ChatDropdown';
 import VoiceChatPanel from './VoiceChatPanel';
 import type { LucideIcon } from 'lucide-react';
-import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, EyeOff, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX, BookText, LogOut, Hand, X } from 'lucide-react';
+import { Edit2, ChevronsRight, Copy, Shield, CheckCircle2, Hourglass, Plus, Settings, Wand2, Eye, EyeOff, VenetianMask, Flame, Swords, CloudFog, Gavel, AlertTriangle, Volume2, VolumeX, BookText, LogOut, Hand, X, Wifi, Camera, Moon } from 'lucide-react';
 
 type AudioTrackName = 'lobby' | 'win' | 'lose';
 
@@ -36,6 +36,8 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [newNameInput, setNewNameInput] = useState('');
   const [showMyRole, setShowMyRole] = useState(false);
   const [isRoleHidden, setIsRoleHidden] = useState(true);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
   // Chat state
   const [showChat, setShowChat] = useState(false);
   const [chatText, setChatText] = useState('');
@@ -43,7 +45,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const router = useRouter();
   const [isLobbyMusicEnabled, setIsLobbyMusicEnabled] = useState(() => {
     if (typeof window === 'undefined') return true;
-    return localStorage.getItem('avalon_lobby_music_enabled') !== '0';
+    return sessionStorage.getItem('avalon_lobby_music_enabled') !== '0';
   });
   const initialized = useRef(false);
   const lobbyAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -136,20 +138,20 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const gameWinner = gameState?.winner;
 
   useEffect(() => {
-    if (!localStorage.getItem('avalon_userId')) {
-      localStorage.setItem('avalon_userId', Math.random().toString(36).substr(2, 9));
+    if (!sessionStorage.getItem('avalon_userId')) {
+      sessionStorage.setItem('avalon_userId', Math.random().toString(36).substr(2, 9));
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('avalon_lobby_music_enabled', isLobbyMusicEnabled ? '1' : '0');
+    sessionStorage.setItem('avalon_lobby_music_enabled', isLobbyMusicEnabled ? '1' : '0');
   }, [isLobbyMusicEnabled]);
 
   useEffect(() => {
     if (!hasJoined || initialized.current) return;
     initialized.current = true;
 
-    const userId = localStorage.getItem('avalon_userId')!;
+    const userId = sessionStorage.getItem('avalon_userId')!;
     
     // Connect specifically to the /avalon namespace
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "";
@@ -164,6 +166,10 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
     socketio.on('avalonGameState', (state: AvalonRoom) => {
       setGameState(state);
+    });
+
+    socketio.on('playerPing', (userId: string, ping: number) => {
+      setPlayerPings(prev => ({ ...prev, [userId]: ping }));
     });
 
     return () => {
@@ -395,7 +401,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     );
   }
 
-  const userId = localStorage.getItem('avalon_userId')!;
+  const userId = sessionStorage.getItem('avalon_userId')!;
   const me = gameState.players.find((p: AvalonPlayer) => p.userId === userId);
   const isSpectator = Boolean(me?.isSpectator);
   const isHandRaised = Boolean(me?.isHandRaised);
@@ -407,22 +413,15 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     : 'h-full min-h-0 overflow-hidden';
 
   const handleBackButton = () => {
-    if (!isHost) {
-      // Non-host: just leave the room
-      router.push('/avalon');
-      return;
-    }
     if (isLobby || isGameOver) {
-      // Host at lobby/game-over: just navigate away (no game in progress)
       router.push('/avalon');
       return;
     }
-    // Host mid-game: confirm before resetting everyone to lobby
-    const confirmed = window.confirm(
-      'Bạn là trưởng phòng. Quay về sẽ kết thúc ván chơi đang diễn ra và đưa tất cả mọi người về trang thiết lập phòng. Tiếp tục?'
-    );
-    if (confirmed) {
-      socket?.emit('returnToLobby');
+    // Mid-game: host resets everyone to lobby; non-host leaves
+    if (isHost) {
+      setShowResetConfirm(true);
+    } else {
+      router.push('/avalon');
     }
   };
 
@@ -548,12 +547,28 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       )}
 
       {gameState.state === 'LOBBY' && (
-        <AvalonLobby gameState={gameState} me={me} socket={socket} roomId={roomId} />
+        <AvalonLobby gameState={gameState} me={me} socket={socket} roomId={roomId} playerPings={playerPings} setPlayerPings={setPlayerPings} />
       )}
       
-      {gameState.state === 'ROLE_REVEAL' && me && me.role && !me.isSpectator && (
-        <RoleReveal gameState={gameState} me={me} onReady={() => socket?.emit('playerReady')} roomId={roomId} />
-      )}
+      {gameState.state === 'ROLE_REVEAL' ? (
+        me && me.role && !me.isSpectator ? (
+          <RoleReveal gameState={gameState} me={me} onReady={() => socket?.emit('playerReady')} roomId={roomId} />
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 relative z-10 w-full h-full px-4 text-center">
+            <div className="w-24 h-24 rounded-full bg-(--surface-container-high)/50 border border-(--primary)/30 flex items-center justify-center shadow-[0_0_30px_rgba(131,195,163,0.15)] relative">
+              <Moon className="w-10 h-10 text-(--primary) animate-pulse relative z-10" />
+              <div className="absolute inset-0 rounded-full border border-(--primary)/10 scale-[1.2]"></div>
+              <div className="absolute inset-0 rounded-full border border-(--primary)/5 scale-[1.4]"></div>
+            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-white tracking-widest uppercase shadow-black drop-shadow-lg">
+              Mọi người đang ngủ...
+            </h1>
+            <p className="text-xs sm:text-sm font-medium text-(--on-surface-variant)/70 uppercase tracking-[0.25em]">
+              Góc nhìn Khán Giả
+            </p>
+          </div>
+        )
+      ) : null}
 
       {/* Fallback: no me at all (stale session) */}
       {!me && gameState.state !== 'LOBBY' && (
@@ -578,7 +593,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       
       {gameState.state !== 'LOBBY' && gameState.state !== 'ROLE_REVEAL' && gameState.state !== 'GAME_OVER' && gameState.state !== 'ASSASSINATION' && me && (
         <>
-          <RoundTable gameState={gameState} me={me} socket={socket} roomId={roomId} isRoleHidden={isRoleHidden} isReadOnly={isSpectator} />
+          <RoundTable gameState={gameState} me={me} socket={socket} roomId={roomId} isRoleHidden={isRoleHidden} isReadOnly={isSpectator} playerPings={playerPings} />
           <VotingCards gameState={gameState} me={me} socket={socket} isReadOnly={isSpectator} />
         </>
       )}
@@ -654,6 +669,45 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       )}
       {me && !isSpectator && <MyRoleModal isOpen={showMyRole} onClose={() => setShowMyRole(false)} gameState={gameState} me={me} />}
 
+      {/* Host Reset Confirm Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-surface-dim-avalon border border-(--primary)/30 shadow-2xl p-6 flex flex-col gap-6 relative">
+            <button 
+              onClick={() => setShowResetConfirm(false)}
+              className="absolute top-4 right-4 text-(--on-surface-variant)/50 hover:text-(--secondary) transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-(--secondary) font-headline text-lg sm:text-xl uppercase tracking-widest border-b border-(--outline-variant)/30 pb-3 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" /> Cảnh báo
+            </h3>
+            <p className="text-(--on-surface-variant) text-sm sm:text-base leading-relaxed text-center sm:text-left">
+              Bạn là trưởng phòng. Nếu quay về, <strong className="text-amber-500">ván chơi đang diễn ra sẽ bị huỷ</strong> và đưa tất cả mọi người trở lại sảnh chờ.
+              <br/><br/>
+              Bạn có chắc chắn muốn tiếp tục?
+            </p>
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="flex-1 py-3 rounded-xl font-headline font-semibold text-sm uppercase tracking-wider text-(--on-surface-variant) bg-(--surface-container-high) hover:bg-(--surface-container-highest) transition-colors cursor-pointer border border-(--outline-variant)/50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  socket?.emit('returnToLobby');
+                  setShowResetConfirm(false);
+                }}
+                className="flex-1 py-3 rounded-xl font-headline font-extrabold text-sm uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-400 transition-colors shadow-lg cursor-pointer"
+              >
+                Đồng ý
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Voice Chat — always available after joining */}
       {me && (
         <VoiceChatPanel
@@ -684,9 +738,41 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   );
 }
 
-function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom, me?: AvalonPlayer, socket: Socket | null, roomId: string }) {
+function PingIndicator({ socket, userId, setPlayerPings }: { socket: Socket | null, userId?: string, setPlayerPings: React.Dispatch<React.SetStateAction<Record<string, number>>> }) {
+  const [ping, setPing] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!socket || !userId) return;
+
+    const interval = setInterval(() => {
+      const start = Date.now();
+      socket.emit("measurePing", start, () => {
+        const p = Date.now() - start;
+        setPing(p);
+        setPlayerPings(prev => ({ ...prev, [userId]: p }));
+        socket.emit("updatePing", userId, p);
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [socket, userId, setPlayerPings]);
+
+  if (ping === null) return null;
+
+  const color = ping < 150 ? "text-emerald-400" : ping < 350 ? "text-amber-400" : "text-red-500";
+  const iconClass = ping < 150 ? "text-emerald-400/80" : ping < 350 ? "text-amber-400/80" : "text-red-500/80";
+
+  return (
+    <div className="flex items-center gap-1 bg-black/40 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-md shadow-lg mr-2" title="Ping hiện tại của thiết bị đến máy chủ">
+      <Wifi className={`w-3.5 h-3.5 ${iconClass}`} />
+      <span className={`text-[10px] font-bold font-mono tracking-wider ${color}`}>{ping}ms</span>
+    </div>
+  );
+}
+
+function AvalonLobby({ gameState, me, socket, roomId, playerPings, setPlayerPings }: { gameState: AvalonRoom, me?: AvalonPlayer, socket: Socket | null, roomId: string, playerPings: Record<string, number>, setPlayerPings: React.Dispatch<React.SetStateAction<Record<string, number>>> }) {
   const isHost = me?.isHost;
-  const connectedCount = gameState.players.filter(p => p.status === 'connected').length;
+  const connectedCount = gameState.players.filter(p => p.status === 'connected' && !p.isSpectator).length;
 
   // ── Reorder state (mobile-friendly with up/down buttons) ──
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -753,9 +839,12 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
             <h2 className="text-(--secondary) font-headline text-sm tracking-[0.2em] uppercase mb-1">Mã Hội Yến</h2>
             <div className="flex items-center gap-3">
               <span className="text-4xl font-headline font-bold text-(--primary) tracking-tighter uppercase avalon-title-glow-primary">#{roomId.substring(0,6)}</span>
-              <button onClick={copyRoomId} className="p-2 hover:bg-white/10 rounded-full transition-colors text-(--primary)/60 cursor-pointer">
+              <button onClick={copyRoomId} className="p-2 hover:bg-white/10 rounded-full transition-colors text-(--primary)/60 cursor-pointer" title="Sao chép Mã phòng">
                 <Copy className="w-5 h-5" />
               </button>
+              <div className="ml-2 scale-110 origin-left">
+                <PingIndicator socket={socket} userId={me?.userId} setPlayerPings={setPlayerPings} />
+              </div>
             </div>
           </div>
           <div className="text-right">
@@ -838,31 +927,69 @@ function AvalonLobby({ gameState, me, socket, roomId }: { gameState: AvalonRoom,
                      {player.name.charAt(0).toUpperCase()}
                    </div>
                    <div>
-                     <p className={`text-(--on-surface) font-bold text-sm tracking-wide ${player.status === 'disconnected' ? 'text-gray-500 line-through' : ''}`}>
+                     <p className={`text-(--on-surface) font-bold text-sm tracking-wide flex items-center gap-1.5 ${player.status === 'disconnected' ? 'text-gray-500 line-through' : ''}`}>
                        {player.name} {player.userId === me?.userId && '(Bạn)'}
+                       {playerPings[player.userId] !== undefined && (
+                         <span className={`text-[10px] font-black font-mono tracking-tighter ${playerPings[player.userId] < 150 ? 'text-emerald-400' : playerPings[player.userId] < 350 ? 'text-amber-400' : 'text-red-500'}`}>
+                           {Math.min(999, playerPings[player.userId])}ms
+                         </span>
+                       )}
                      </p>
-                     <p className={`text-[10px] uppercase font-bold ${player.isHost ? 'text-(--tertiary)/80' : 'text-(--primary)/60'}`}>
-                       {player.isHost ? 'Host' : (player.status === 'connected' ? 'Sẵn Sàng' : 'Mất Kết Nối')}
-                     </p>
+                      <p className={`text-[10px] uppercase font-bold ${
+                          player.isHost ? 'text-(--tertiary)/80'
+                          : player.isSpectator ? 'text-amber-400/80'
+                          : 'text-(--primary)/60'
+                        }`}>
+                        {player.isHost ? 'Host' : player.isSpectator ? 'Góc Nhìn Khán Giả' : (player.status === 'connected' ? 'Sẵn Sàng' : 'Mất Kết Nối')}
+                      </p>
                    </div>
                  </div>
-                 <div className="flex items-center gap-2">
-                   {/* Transfer host button — host can click on other players */}
-                   {isHost && !player.isHost && player.status === 'connected' && (
-                     <button
-                       onClick={(e) => { e.stopPropagation(); handleTransferHost(player.userId); }}
-                       className="p-1.5 rounded-full hover:bg-(--tertiary)/15 text-(--tertiary) transition-all cursor-pointer"
-                       title="Chuyển Host"
-                     >
-                       <Shield className="w-4 h-4" />
-                     </button>
-                   )}
-                   {player.isHost ? <Shield className="w-6 h-6 text-(--tertiary)/50 fill-(--tertiary)/20" /> : <CheckCircle2 className="w-6 h-6 text-(--primary)/30" />}
-                 </div>
+                  <div className="flex items-center gap-2">
+                    {/* Spectator toggle for self / read-only badge for others */}
+                    {!player.isHost && (
+                      player.userId === me?.userId ? (
+                        // Self: interactive toggle
+                        <button
+                          onClick={(e) => { e.stopPropagation(); socket?.emit('toggleSpectatorLobby'); }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer shadow-md ${
+                            player.isSpectator
+                              ? 'text-amber-400 bg-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                              : 'bg-surface-container-low/50 border-(--primary)/40 text-(--primary)/90 bg-(--primary)/10 hover:shadow-[0_0_15px_rgba(131,195,163,0.2)]'
+                          }`}
+                          title={player.isSpectator ? 'Đang bật Góc Nhìn Khán Giả — bấm để trở lại thành Người Chơi' : 'Bấm để chuyển sang Góc Nhìn Khán Giả'}
+                        >
+                          <Camera className="w-4 h-4" />
+                          <span className="hidden sm:inline">{player.isSpectator ? 'Đang Xem' : 'Làm Khán Giả'}</span>
+                        </button>
+                      ) : player.isSpectator ? (
+                        // Others: read-only badge when spectator
+                        <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-amber-400/30 bg-amber-500/10 text-amber-400/80">
+                          <Camera className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Khán Giả</span>
+                        </span>
+                      ) : null
+                    )}
+                    {/* Transfer host — hidden for spectators */}
+                    {isHost && !player.isHost && !player.isSpectator && player.status === 'connected' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleTransferHost(player.userId); }}
+                        className="p-1.5 rounded-full hover:bg-(--tertiary)/15 text-(--tertiary) transition-all cursor-pointer"
+                        title="Chuyển Host"
+                      >
+                        <Shield className="w-4 h-4" />
+                      </button>
+                    )}
+                    {player.isSpectator
+                      ? <Eye className="w-5 h-5 text-(--tertiary)/50" />
+                      : player.isHost
+                        ? <Shield className="w-6 h-6 text-(--tertiary)/50 fill-(--tertiary)/20" />
+                        : <CheckCircle2 className="w-6 h-6 text-(--primary)/30" />
+                    }
+                  </div>
                </div>
             ))}
             
-            {gameState.players.length < 10 && (
+            {gameState.players.filter(p => !p.isSpectator).length < 10 && (
               <div className="flex items-center justify-between p-4 bg-[#0f172a]/30 rounded-lg border border-dashed border-(--primary)/20 opacity-60">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-[#1e293b]/50 border border-(--outline-variant)/20 flex items-center justify-center text-(--primary)/30">
