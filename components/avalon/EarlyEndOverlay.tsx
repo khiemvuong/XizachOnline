@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { AlertTriangle, RotateCw, Shield, Skull } from "lucide-react";
 import { type Socket } from "socket.io-client";
 import { type AvalonRoom } from "@/server/game/AvalonTypes";
+import { useSceneScale } from "@/hooks/useSceneScale";
 
 type VoteChoice = boolean;
 
@@ -28,28 +29,15 @@ export default function EarlyEndOverlay({ gameState, userId, socket }: EarlyEndO
 
   // ── Scale logic ────────────────────────────────────────────────────────────
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const compute = () => {
-      if (!viewportRef.current) return;
-      const r = viewportRef.current.getBoundingClientRect();
-      const aw = Math.max(280, r.width - 16);
-      const ah = Math.max(200, r.height - 16);
-      setScale(Math.max(0.3, Math.min(1, aw / SCENE_W, ah / SCENE_H)));
-    };
-
-    compute();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(compute) : null;
-    if (ro && viewportRef.current) ro.observe(viewportRef.current);
-    window.addEventListener("resize", compute);
-    window.addEventListener("orientationchange", compute);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", compute);
-      window.removeEventListener("orientationchange", compute);
-    };
-  }, []);
+  const scale = useSceneScale({
+    viewportRef,
+    sceneWidth: SCENE_W,
+    sceneHeight: SCENE_H,
+    padding: 16,
+    minScale: 0.3,
+    minViewportWidth: 280,
+    minViewportHeight: 200,
+  });
 
   const showSuccess = localChoice !== null || (hasVoted && !showRetryChoices);
 

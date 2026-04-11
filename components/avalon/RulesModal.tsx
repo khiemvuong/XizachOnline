@@ -13,7 +13,7 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="avalon-rules-modal-shell fixed inset-0 z-120 flex items-center justify-center p-2 sm:p-4">
+        <div className="avalon-rules-modal-shell avalon-theme fixed inset-0 z-120 flex items-center justify-center p-2 sm:p-4">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

@@ -1,20 +1,27 @@
 "use client";
 
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import Image from 'next/image';
 import { HelpCircle, Hand, ChevronUp, ChevronDown, Wifi } from 'lucide-react';
 import CenterBoard from './CenterBoard';
 import { getRoleImageSrcForViewer } from './roleImage';
+import { useSceneScale } from '@/hooks/useSceneScale';
 
 export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden = false, isReadOnly = false, playerPings = {} }: { gameState: AvalonRoom, me: AvalonPlayer, socket: Socket | null, roomId: string, isRoleHidden?: boolean, isReadOnly?: boolean, playerPings?: Record<string, number> }) {
    const [isQuestHistoryOpen, setIsQuestHistoryOpen] = useState(false);
    const [isSpectatorPanelExpanded, setIsSpectatorPanelExpanded] = useState(true);
    const stageRef = useRef<HTMLDivElement | null>(null);
-   const [sceneScale, setSceneScale] = useState(1);
    const SCENE_BASE_WIDTH = 1120;
    const SCENE_BASE_HEIGHT = 560;
+   const sceneScale = useSceneScale({
+      viewportRef: stageRef,
+      sceneWidth: SCENE_BASE_WIDTH,
+      sceneHeight: SCENE_BASE_HEIGHT,
+      padding: 20,
+      minViewportWidth: 300,
+   });
    // Keep disconnected players in the active pool so they don't lose their seats mid-game.
    const activePlayers = gameState.players.filter((p: AvalonPlayer) => !p.isSpectator);
    const spectators = gameState.players.filter((p: AvalonPlayer) => p.status === 'connected' && p.isSpectator);
@@ -54,39 +61,7 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
 
    const layout = getMapping(numPlayers);
 
-   useEffect(() => {
-      const updateScale = () => {
-         if (!stageRef.current) return;
-
-         const rect = stageRef.current.getBoundingClientRect();
-         const availableWidth = Math.max(280, rect.width - 16);
-         const availableHeight = Math.max(200, rect.height - 16);
-
-         const widthScale = availableWidth / SCENE_BASE_WIDTH;
-         const heightScale = availableHeight / SCENE_BASE_HEIGHT;
-         const nextScale = Math.min(1, widthScale, heightScale);
-
-         setSceneScale(Math.max(0.26, nextScale));
-      };
-
-      updateScale();
-
-      const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateScale) : null;
-      if (observer && stageRef.current) {
-         observer.observe(stageRef.current);
-      }
-
-      window.addEventListener('resize', updateScale);
-      window.addEventListener('orientationchange', updateScale);
-
-      return () => {
-         if (observer) {
-            observer.disconnect();
-         }
-         window.removeEventListener('resize', updateScale);
-         window.removeEventListener('orientationchange', updateScale);
-      };
-   }, []);
+   // Responsive layout is now handled by useSceneScale
 
    return (
       <div

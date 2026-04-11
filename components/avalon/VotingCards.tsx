@@ -4,6 +4,7 @@ import { AvalonPlayer, AvalonRoom } from "@/server/game/AvalonTypes";
 import { useEffect, useRef, useState } from "react";
 import { Shield, Skull, HeartCrack, Trophy } from "lucide-react";
 import { Socket } from "socket.io-client";
+import { useSceneScale } from "@/hooks/useSceneScale";
 
 // ── Image URLs from Template/src/App.tsx ──────────────────────────────────────
 const IMG_APPROVE = "/card/approve.png";
@@ -145,34 +146,17 @@ export default function VotingCards({
 
   // ── Scale logic: same "Measure-then-Apply" pattern as old code ─────────────
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(1);
   const sceneH = isVoting ? SCENE_H_VOTE : SCENE_H_QUEST;
-
-  useEffect(() => {
-    if (!showCards) return;
-
-    const compute = () => {
-      if (!viewportRef.current) return;
-      const r = viewportRef.current.getBoundingClientRect();
-      const aw = Math.max(280, r.width - 16);
-      const ah = Math.max(200, r.height - 16);
-      const ws = aw / SCENE_W;
-      const hs = ah / sceneH;
-      setScale(Math.max(0.3, Math.min(1, ws, hs)));
-    };
-
-    compute();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(compute) : null;
-    if (ro && viewportRef.current) ro.observe(viewportRef.current);
-    window.addEventListener("resize", compute);
-    window.addEventListener("orientationchange", compute);
-
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", compute);
-      window.removeEventListener("orientationchange", compute);
-    };
-  }, [showCards, sceneH]);
+  const scale = useSceneScale({
+    viewportRef,
+    sceneWidth: SCENE_W,
+    sceneHeight: sceneH,
+    padding: 16,
+    minScale: 0.3,
+    minViewportWidth: 280,
+    minViewportHeight: 200,
+    active: showCards
+  });
 
   // Waiting state
   if (!showCards) {

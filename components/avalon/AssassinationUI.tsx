@@ -3,8 +3,9 @@
 import { AvalonRoom, AvalonPlayer } from "@/server/game/AvalonTypes";
 import { Skull, Sword } from "lucide-react";
 import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Socket } from "socket.io-client";
+import { useSceneScale } from "@/hooks/useSceneScale";
 
 // Scene canvas — everything will be scaled to fit inside the viewport
 const SCENE_W = 1060;
@@ -43,29 +44,15 @@ export default function AssassinationUI({
 
   // ── Scale logic ────────────────────────────────────────────────────────────
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const compute = () => {
-      if (!viewportRef.current) return;
-      const r = viewportRef.current.getBoundingClientRect();
-      const aw = Math.max(280, r.width - 16);
-      const ah = Math.max(200, r.height - 16);
-      setScale(Math.max(0.3, Math.min(1, aw / SCENE_W, ah / SCENE_H)));
-    };
-
-    compute();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(compute) : null;
-    if (ro && viewportRef.current) ro.observe(viewportRef.current);
-    window.addEventListener("resize", compute);
-    window.addEventListener("orientationchange", compute);
-
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", compute);
-      window.removeEventListener("orientationchange", compute);
-    };
-  }, []);
+  const scale = useSceneScale({
+    viewportRef,
+    sceneWidth: SCENE_W,
+    sceneHeight: SCENE_H,
+    padding: 16,
+    minScale: 0.3,
+    minViewportWidth: 280,
+    minViewportHeight: 200,
+  });
 
   // Card dimensions computed based on player count — fit them all side-by-side
   const cardCount = goodPlayers.length || 3;

@@ -2,16 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useScrollFitScale } from '@/hooks/useScrollFitScale';
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
 import { Fingerprint, CheckCircle2, Eye, AlertTriangle, Swords } from 'lucide-react';
 import { getRoleImageSrcForViewer, getVisibleRoleLabelForViewer } from './roleImage';
 
 export default function RoleReveal({ gameState, me, onReady, roomId }: { gameState: AvalonRoom, me: AvalonPlayer, onReady: () => void, roomId: string }) {
   const [isRevealing, setIsRevealing] = useState(false);
-  const [leftScale, setLeftScale] = useState(1);
-  const [autoFitLeft, setAutoFitLeft] = useState(false);
-  const [rightScale, setRightScale] = useState(1);
-  const [autoFitRight, setAutoFitRight] = useState(false);
   const leftViewportRef = useRef<HTMLElement | null>(null);
   const leftContentRef = useRef<HTMLDivElement | null>(null);
   const rightViewportRef = useRef<HTMLElement | null>(null);
@@ -44,70 +41,41 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
   const maskedRoleLabel = 'Danh tính đang được phong ấn';
   const maskedRoleDesc = 'Giữ ở khung bên phải để tạm mở danh tính của bạn.';
 
+  const [isCompact, setIsCompact] = useState(false);
+
   useEffect(() => {
-    const compact = () => window.matchMedia('(pointer: coarse) and (orientation: landscape) and (max-width: 1100px)').matches;
+    const media = window.matchMedia('(pointer: coarse) and (orientation: landscape) and (max-width: 1100px)');
+    
+    // Defer initial check to avoid synchronous setState warning during effect initialization
+    const frameId = requestAnimationFrame(() => setIsCompact(media.matches));
 
-    const updateLeftScale = () => {
-      if (!leftViewportRef.current || !leftContentRef.current) return;
-      const isCompact = compact();
-      setAutoFitLeft(isCompact);
-      if (!isCompact) { setLeftScale(1); return; }
-      
-      const el = leftContentRef.current;
-      const prevTransform = el.style.transform;
-      const prevWidth = el.style.width;
-      el.style.transform = '';
-      el.style.width = '100%';
-
-      const vh = leftViewportRef.current.clientHeight;
-      const nh = el.scrollHeight;
-
-      if (vh <= 0 || nh <= 0) { setLeftScale(1); return; }
-      setLeftScale(Math.max(0.62, Math.min(1, vh / nh)));
-
-      el.style.transform = prevTransform;
-      el.style.width = prevWidth;
-    };
-
-    const updateRightScale = () => {
-      if (!rightViewportRef.current || !rightContentRef.current) return;
-      const isCompact = compact();
-      setAutoFitRight(isCompact);
-      if (!isCompact) { setRightScale(1); return; }
-
-      const el = rightContentRef.current;
-      const prevTransform = el.style.transform;
-      const prevWidth = el.style.width;
-      el.style.transform = '';
-      el.style.width = '100%';
-
-      const vh = rightViewportRef.current.clientHeight;
-      const nh = el.scrollHeight;
-
-      if (vh <= 0 || nh <= 0) { setRightScale(1); return; }
-      setRightScale(Math.max(0.55, Math.min(1, vh / nh)));
-
-      el.style.transform = prevTransform;
-      el.style.width = prevWidth;
-    };
-
-    const update = () => { updateLeftScale(); updateRightScale(); };
-    update();
-
-    const obs = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
-    if (obs) {
-      [leftViewportRef, rightViewportRef].forEach(r => {
-        if (r.current) obs.observe(r.current);
-      });
-    }
-    window.addEventListener('resize', update);
-    window.addEventListener('orientationchange', update);
+    const listener = (e: MediaQueryListEvent) => setIsCompact(e.matches);
+    media.addEventListener('change', listener);
+    
     return () => {
-      obs?.disconnect();
-      window.removeEventListener('resize', update);
-      window.removeEventListener('orientationchange', update);
+       cancelAnimationFrame(frameId);
+       media.removeEventListener('change', listener);
     };
-  }, [gameState, me.role, me.isReady, isRevealing]);
+  }, []);
+
+  const leftScale = useScrollFitScale({
+    containerRef: leftViewportRef,
+    contentRef: leftContentRef,
+    minScale: 0.62,
+    active: isCompact,
+    dependencies: [gameState, me.role, me.isReady, isRevealing]
+  });
+
+  const rightScale = useScrollFitScale({
+    containerRef: rightViewportRef,
+    contentRef: rightContentRef,
+    minScale: 0.55,
+    active: isCompact,
+    dependencies: [gameState, me.role, me.isReady, isRevealing]
+  });
+
+  const autoFitLeft = isCompact;
+  const autoFitRight = isCompact;
 
   const leftScaleStyle = autoFitLeft && leftScale < 0.999
     ? { transform: `scale(${leftScale})`, transformOrigin: 'top left', width: `${100 / leftScale}%` }

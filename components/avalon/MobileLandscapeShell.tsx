@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AvalonBoard from "./AvalonBoard";
+import AvalonBoard from "./board/AvalonBoard";
 
 export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
   const [isLandscape, setIsLandscape] = useState(true);
