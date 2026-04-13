@@ -79,12 +79,12 @@ export default function PhaseTransitionOverlay({
         <div className="text-center space-y-4">
           <h2
             className={`font-headline text-5xl sm:text-7xl font-black uppercase tracking-[0.2em] ${
-              overlayState.type === "good" ? "text-primary drop-shadow-xl" : "text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.5)]"
+              overlayState.type === "good" ? "text-green-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.5)]" : "text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.5)]"
             }`}
           >
             {overlayState.type === "good"
-              ? "Sự Phán Xét"
-              : "Thất Bại Diện Rộng"}
+              ? "Thành Công Rồi"
+              : "Thất Bại Rồi"}
           </h2>
           <p className="font-label text-base sm:text-xl tracking-[0.25em] uppercase text-on-surface-variant/90 drop-shadow-md">
             {overlayState.type === "good"

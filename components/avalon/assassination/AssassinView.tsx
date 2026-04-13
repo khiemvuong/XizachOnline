@@ -19,16 +19,20 @@ interface Props {
 export default function AssassinView({ gameState, me, socket }: Props) {
   // Bug fix: exclude spectators from target list
   const goodPlayers = gameState.players.filter(
-    (p: AvalonPlayer) => p.team !== "Evil" && p.status === "connected" && !p.isSpectator
+    (p: AvalonPlayer) =>
+      p.team !== "Evil" && p.status === "connected" && !p.isSpectator,
   );
 
   const evilPlayers = gameState.players.filter(
-    (p: AvalonPlayer) => p.team === "Evil" && p.userId !== me.userId && !p.isSpectator
+    (p: AvalonPlayer) =>
+      p.team === "Evil" && p.userId !== me.userId && !p.isSpectator,
   );
 
   const suggestions = gameState.assassinationSuggestions ?? {};
 
-  const [selectedTarget, setSelectedTarget] = useState<AvalonPlayer | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<AvalonPlayer | null>(
+    null,
+  );
 
   const handleConfirm = () => {
     if (!selectedTarget) return;
@@ -49,7 +53,10 @@ export default function AssassinView({ gameState, me, socket }: Props) {
 
   const cardCount = goodPlayers.length || 3;
   const cardGap = 16;
-  const maxCardW = Math.min(240, (SCENE_W - 80 - cardGap * (cardCount - 1)) / cardCount);
+  const maxCardW = Math.min(
+    240,
+    (SCENE_W - 80 - cardGap * (cardCount - 1)) / cardCount,
+  );
   const cardH = 320;
 
   // Suggestions — map userId→name of suggested target
@@ -97,66 +104,82 @@ export default function AssassinView({ gameState, me, socket }: Props) {
             </div>
 
             <div className="shrink-0" style={{ height: "12px" }} />
-
-            {/* Advisory strip — suggestions from teammates */}
-            {suggestionEntries.length > 0 && (
-              <div
-                className="w-full shrink-0 flex items-center gap-2 mb-3 px-2 py-2 rounded-xl bg-black/40 border border-(--tertiary)/15 backdrop-blur-sm"
-              >
-                <Eye className="w-3.5 h-3.5 text-(--tertiary)/60 shrink-0" />
-                <span className="text-[10px] uppercase tracking-[0.2em] text-(--tertiary)/50 font-bold shrink-0">Đồng Minh Gợi Ý:</span>
-                <div className="flex flex-wrap gap-2">
-                  {suggestionEntries.map((s, i) => (
-                    <span
-                      key={i}
-                      className="text-[10px] font-semibold text-(--on-surface-variant)/70 bg-(--surface-container)/50 px-2 py-0.5 rounded-md border border-white/10"
-                    >
-                      {s.evilName} <span className="text-(--tertiary)/60">→</span> <span className="text-white/80">{s.targetName}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Advisory strip removed — suggestions moved to cards */}
 
             {/* Target Cards */}
             <div
               className="w-full flex-1 flex items-start justify-center overflow-x-auto overflow-y-hidden"
-              style={{ height: `${cardH + 20}px`, maxHeight: `${cardH + 20}px` }}
+              style={{
+                height: `${cardH + 20}px`,
+                maxHeight: `${cardH + 20}px`,
+              }}
             >
-              <div className="flex items-start justify-center" style={{ gap: `${cardGap}px` }}>
-                {goodPlayers.map((player: AvalonPlayer) => (
-                  <button
-                    key={player.userId}
-                    type="button"
-                    onClick={() => setSelectedTarget(player)}
-                    style={{ width: `${maxCardW}px`, height: `${cardH}px` }}
-                    className="relative shrink-0 rounded-xl border border-(--outline-variant)/35 bg-(--surface-container-low)/80 backdrop-blur-md overflow-hidden group transition-all duration-300 hover:-translate-y-2 hover:border-(--tertiary)/45 hover:shadow-[0_0_28px_rgba(255,180,168,0.24)] cursor-pointer text-left flex flex-col"
-                  >
-                    <div className="relative flex-2 overflow-hidden bg-black">
-                      <Image
-                        src="/avalon_roles/unknown.jpeg"
-                        alt={player.name}
-                        fill
-                        sizes="240px"
-                        className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 opacity-80 group-hover:opacity-100"
-                      />
-                      <div className="absolute inset-0 bg-linear-to-t from-(--surface-container-low) to-transparent" />
-                      <div className="absolute left-3 bottom-3 rounded-md bg-black/65 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">
-                        {player.name}
+              <div
+                className="flex items-start justify-center"
+                style={{ gap: `${cardGap}px` }}
+              >
+                {goodPlayers.map((player: AvalonPlayer) => {
+                  const suggestedBy = evilPlayers.filter(
+                    (evil) => suggestions[evil.userId] === player.userId,
+                  );
+
+                  return (
+                    <button
+                      key={player.userId}
+                      type="button"
+                      onClick={() => setSelectedTarget(player)}
+                      style={{ width: `${maxCardW}px`, height: `${cardH}px` }}
+                      className="relative shrink-0 rounded-xl border border-(--outline-variant)/35 bg-(--surface-container-low)/80 backdrop-blur-md overflow-hidden group transition-all duration-300 hover:-translate-y-2 hover:border-(--tertiary)/45 hover:shadow-[0_0_28px_rgba(255,180,168,0.24)] cursor-pointer text-left flex flex-col"
+                    >
+                      <div className="relative flex-2 overflow-hidden bg-black">
+                        <Image
+                          src="/avalon_roles/unknown.jpeg"
+                          alt={player.name}
+                          fill
+                          sizes="240px"
+                          className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 opacity-80 group-hover:opacity-100"
+                        />
+                        <div className="absolute inset-0 bg-linear-to-t from-(--surface-container-low) to-transparent" />
+
+                        {/* Suggestion Badges */}
+                        {suggestedBy.length > 0 && (
+                          <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10 pointer-events-none">
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/60 border border-(--tertiary)/30 backdrop-blur-md w-fit">
+                              <Eye className="w-3.5 h-3.5 text-(--tertiary) drop-shadow-[0_0_8px_var(--color-tertiary-avalon,var(--tertiary))]" />
+                              <span className="text-[9px] uppercase tracking-widest text-(--tertiary) font-black drop-shadow-md">
+                                Gợi ý
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1 max-w-[150px]">
+                              {suggestedBy.map((evil) => (
+                                <span
+                                  key={evil.userId}
+                                  className="rounded bg-(--tertiary) px-2 py-0.5 text-[10px] font-extrabold text-white shadow-[0_0_15px_rgba(255,180,168,0.3)]"
+                                >
+                                  {evil.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="absolute top-3 right-3 rounded-full bg-(--primary-container)/90 px-2 py-0.5 text-[10px] uppercase tracking-tight text-(--primary) shadow-lg backdrop-blur-md">
+                          Servant
+                        </div>
                       </div>
-                      <div className="absolute top-3 right-3 rounded-full bg-(--primary-container)/90 px-2 py-0.5 text-[10px] uppercase tracking-tight text-(--primary) shadow-lg backdrop-blur-md">
-                        Servant
+                      <div className="flex-1 flex flex-col p-3 items-center text-center">
+                        <h3 className="font-headline text-base mb-0.5 truncate text-(--on-surface) w-full">
+                          {player.name}
+                        </h3>
+                        <p className="text-[9px] uppercase tracking-widest mb-2 text-(--on-surface-variant)/60">
+                          Danh tính ẩn
+                        </p>
+                        <p className="mt-auto w-full rounded-lg border border-(--outline-variant)/35 bg-(--surface-container)/40 py-1.5 text-[10px] font-bold uppercase tracking-widest text-(--on-surface-variant) group-hover:bg-(--tertiary)/20 group-hover:text-(--tertiary) group-hover:border-(--tertiary)/40 transition-colors">
+                          Chọn mục tiêu
+                        </p>
                       </div>
-                    </div>
-                    <div className="flex-1 flex flex-col p-3 items-center text-center">
-                      <h3 className="font-headline text-base mb-0.5 truncate text-(--on-surface) w-full">{player.name}</h3>
-                      <p className="text-[9px] uppercase tracking-widest mb-2 text-(--on-surface-variant)/60">Danh tính ẩn</p>
-                      <p className="mt-auto w-full rounded-lg border border-(--outline-variant)/35 bg-(--surface-container)/40 py-1.5 text-[10px] font-bold uppercase tracking-widest text-(--on-surface-variant) group-hover:bg-(--tertiary)/20 group-hover:text-(--tertiary) group-hover:border-(--tertiary)/40 transition-colors">
-                        Chọn mục tiêu
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -171,7 +194,11 @@ export default function AssassinView({ gameState, me, socket }: Props) {
               <Sword className="h-5 w-5" /> Xác Nhận Mục Tiêu
             </h3>
             <p className="text-(--on-surface-variant)">
-              Ám sát <span className="font-bold text-white tracking-wide uppercase px-1">{selectedTarget.name}</span>?
+              Ám sát{" "}
+              <span className="font-bold text-white tracking-wide uppercase px-1">
+                {selectedTarget.name}
+              </span>
+              ?
             </p>
             <p className="mt-1.5 text-sm text-(--tertiary)/70 italic">
               Nếu mục tiêu không phải là Merlin, phe Ác sẽ thất bại.
