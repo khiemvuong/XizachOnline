@@ -6,6 +6,7 @@ const ROLE_IMAGE_MAP: Record<string, string> = {
   Assassin: "/avalon_roles/assassin.jpeg",
   Morgana: "/avalon_roles/morgana.jpeg",
   Mordred: "/avalon_roles/mordred.jpeg",
+  Athena: "/avalon_roles/athena.jpeg",
   Oberon: "/avalon_roles/oberon.jpeg",
   Minion_Good: "/avalon_roles/good_minion.jpeg",
   Minion_Evil: "/avalon_roles/evil_minion.jpeg",

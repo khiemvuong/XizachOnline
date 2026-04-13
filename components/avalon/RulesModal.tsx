@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Shield, VenetianMask, Swords, Info, ScrollText, 
-  Users, Gavel, Target, Eye, Flame, CloudFog, Wand2, Crosshair, type LucideIcon
+  Users, Gavel, Target, Eye, Flame, CloudFog, Wand2, Crosshair, Sparkles, type LucideIcon
 } from 'lucide-react';
 
 interface RulesModalProps {
@@ -53,9 +53,9 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
               <section className="avalon-rules-section space-y-3 md:space-y-4">
                 <div className="avalon-rules-intro p-4 md:p-5 rounded-xl border border-(--primary)/30 bg-(--primary)/5 backdrop-blur-md">
                    <p className="text-xs md:text-sm font-sans text-gray-300 leading-relaxed">
-                     Ác quỷ đang tràn lan trong vương quốc. Vua Arthur vĩ đại tựa như một lời hứa về sự thịnh vượng, nhưng lẩn giấu trong số những chiến binh dũng cảm là tay sai máu lạnh của Mordred. 
+                     Ác quỷ đang tràn lan trong vương quốc. Vua Arthur vĩ đại tựa như một lời hứa về sự thịnh vượng, nhưng lẩn giấu trong số những chiến binh dũng cảm là tay sai máu lạnh của Mordred.
                      <br/><br/>
-                     Dù ít ỏi, <strong>Phe Ác</strong> có thể nhận ra nhau và ẩn mình với tất cả, ngoại trừ vị pháp sư già <strong>Merlin</strong>.
+                     Ván đấu có 2 nhịp luật: <strong>Chế độ Cơ bản</strong> và <strong>Chế độ Nâng cao</strong>. Khi bật Nâng cao ở Lobby, game sẽ mở thêm phase kỹ năng, Athena, Mordred nguyền fail, Merlin Đồng Quy và bảng log kỹ năng cuối game.
                    </p>
                 </div>
               </section>
@@ -74,11 +74,15 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <RoleDetailCard 
                       icon={Wand2} title="Merlin" 
-                      desc="Biết thân phận của tất cả thành viên phe Ác (trừ Mordred). Phải ẩn mình để tránh bị Ám sát cuối game."
+                      desc="Biết phe Ác (trừ Mordred). Ở chế độ Nâng cao, trước Ám sát Merlin có thể chọn dùng Đồng Quy Vô Tận."
                     />
                     <RoleDetailCard 
                       icon={Eye} title="Percival" 
-                      desc="Nhìn thấy 2 người: một là Merlin, một là Morgana giả mạo. Phải tinh ý nhận ra ai là Merlin thật."
+                      desc="Cơ bản: thấy cặp Merlin/Morgana mơ hồ. Nâng cao: có thể Truy Vết người đi quest theo kết quả CÓ/KHÔNG CÓ CHỨC NĂNG."
+                    />
+                    <RoleDetailCard
+                      icon={Sparkles} title="Athena (Nâng Cao)"
+                      desc="Lộ diện công khai khi dùng Đảo Thiên Kiền Khôn để đảo ngược kết quả nhiệm vụ sau khi lật phiếu."
                     />
                   </div>
                 </div>
@@ -91,17 +95,17 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <RoleDetailCard 
                       icon={Crosshair} title="Assassin (Sát thủ)" 
-                      desc="Nếu Phe Thiện thắng 3 vòng, Assassin sẽ tung đòn chí mạng chỉ ra ai là Merlin. Trúng thì Phe Ác đổi bại thành thắng!"
+                      desc="Cuối game có quyền Ám sát Merlin. Ở Nâng cao, Assassin còn có kỹ năng Soi Vai lên người trong đội quest."
                       isEvil
                     />
                     <RoleDetailCard 
                       icon={Flame} title="Morgana" 
-                      desc="Đóng giả làm Merlin trong mắt Percival để thao túng niềm tin."
+                      desc="Đóng giả Merlin trong mắt Percival. Nâng cao: dùng Đêm Câm Lặng để khóa toàn bộ kỹ năng ở phase đó."
                       isEvil
                     />
                     <RoleDetailCard 
                       icon={VenetianMask} title="Mordred" 
-                      desc="Kẻ đầu sỏ. Tàng hình hoàn toàn trước pháp nhãn của Merlin."
+                      desc="Tàng hình trước Merlin. Nâng cao: có thể Nguyền Thất Bại lên 1 người đi quest, kể cả khi Mordred không đi quest."
                       isEvil
                     />
                     <RoleDetailCard 
@@ -129,13 +133,55 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
                     desc="Mọi người trong phòng (dù có được chọn đi nhiệm vụ hay không) đều bình bầu ẤN DANH: Tán Thành (Approve) hoặc Phản Đối (Reject). Nếu đa số Tán thành, đội được chốt đi làm nhiệm vụ. Nếu bị Phản đối (hoặc Hòa), vai trò Đội Trưởng chuyển sang người tiếp theo. LUẬT CỨNG: Nếu 5 lần đề xuất đội liên tiếp bị Phản đối, PHE ÁC THẮNG NGAY LẬP TỨC."
                   />
                   <StepItem 
-                    num="3" title="Thực Hiện Nhiệm Vụ" icon={Target}
-                    desc="Những Kỵ sĩ trong đội đã được chốt sẽ thả phiếu vào nhiệm vụ. Phe Thiện bắt buộc phải thả THÀNH CÔNG. Phe Ác có quyền thả THẤT BẠI hoặc THÀNH CÔNG để trà trộn. Chỉ cần có 1 phiếu THẤT BẠI đưa ra, nhiệm vụ coi như thất bại cho phe Thiện."
+                    num="3" title="Phase Kỹ Năng (Khi Bật Nâng Cao)" icon={Sparkles}
+                    desc="Trước khi vào vote nhiệm vụ, người liên quan sẽ chọn DÙNG/KHÔNG DÙNG kỹ năng theo role. Kết quả soi/truy vết là thông tin riêng tư; Athena là kỹ năng có hiệu ứng công khai khi kích hoạt."
                   />
                   <StepItem 
-                    num="4" title="Ám Sát Merlin (Phút Chót)" icon={Crosshair}
-                    desc="Nếu Phe Thiện thắng trọn vẹn 3 nhiệm vụ, Phe Ác được hội ý lật ngược thế cờ. Assassin sẽ chĩa gươm vào 1 người tình nghi nhất. Nếu đó đúng là Merlin, Phe Ác chiến thắng cuối cùng!"
+                    num="4" title="Thực Hiện Nhiệm Vụ" icon={Target}
+                    desc="Những Kỵ sĩ trong đội đã được chốt sẽ thả phiếu vào nhiệm vụ. Phe Thiện bắt buộc thả THÀNH CÔNG. Phe Ác có thể thả THẤT BẠI hoặc THÀNH CÔNG để trà trộn."
                   />
+                  <StepItem 
+                    num="5" title="Ám Sát Merlin (Phút Chót)" icon={Crosshair}
+                    desc="Nếu Phe Thiện thắng 3 nhiệm vụ, Assassin được ám sát. Nâng cao: Merlin có bước quyết định trước Ám sát; nếu đã kích hoạt Đồng Quy và bị ám sát trúng thì trận đấu kết thúc HÒA."
+                  />
+                </div>
+              </section>
+
+              {/* Section: Advanced Mode */}
+              <section className="avalon-rules-section space-y-3 md:space-y-4">
+                <h3 className="avalon-rules-heading font-headline text-(--secondary) tracking-widest uppercase text-base md:text-xl flex items-center gap-2 border-b border-(--outline-variant)/30 pb-2">
+                  <Sparkles className="w-5 h-5" />
+                  Chế Độ Nâng Cao (NEW)
+                </h3>
+
+                <div className="p-4 rounded-xl border border-(--primary)/30 bg-(--primary)/8">
+                  <p className="text-xs md:text-sm text-(--on-surface-variant) leading-relaxed">
+                    Bật trong Lobby để dùng bộ luật mở rộng: phase kỹ năng, Athena đảo mệnh, Minion Cha Cha Cha, Mordred nguyền fail và Merlin Đồng Quy trước ám sát.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <AdvancedSkillCard icon={Crosshair} title="Assassin - Soi Vai" desc="Soi 1 người trong đội quest, nhận kết quả CÓ/KHÔNG CÓ CHỨC NĂNG." />
+                  <AdvancedSkillCard icon={Eye} title="Percival - Truy Vết" desc="Truy vết 1 người trong đội quest theo nhị phân chức năng." />
+                  <AdvancedSkillCard icon={Flame} title="Morgana - Đêm Câm Lặng" desc="Khóa toàn bộ kỹ năng ở phase kỹ năng của quest đó." />
+                  <AdvancedSkillCard icon={VenetianMask} title="Mordred - Nguyền Thất Bại" desc="Ép 1 người trong đội quest bị buộc thả FAIL." />
+                  <AdvancedSkillCard icon={Sparkles} title="Athena - Đảo Thiên Kiền Khôn" desc="Lật kết quả quest sau khi lật phiếu và lộ diện công khai." />
+                  <AdvancedSkillCard icon={Wand2} title="Merlin - Đồng Quy Vô Tận" desc="Quyết định trước Ám sát; nếu bị ám sát trúng khi đã kích hoạt thì ván đấu HÒA." />
+                  <AdvancedSkillCard icon={Users} title="Quest Ẩn Minion" desc="Nếu 2 Minion cùng đi nhiệm vụ đủ 3 lần và trong đó thắng ít nhất 2 lần, cặp đó sẽ thấy mặt nhau." />
+                </div>
+
+                <div className="p-4 rounded-xl border border-amber-400/30 bg-amber-500/10 flex gap-3 items-start">
+                  <Info className="w-5 h-5 shrink-0 mt-0.5 text-amber-300" />
+                  <div className="text-xs md:text-sm text-amber-100/85 leading-relaxed">
+                    Nếu có từ <strong>3 Minion trở lên</strong> cùng thỏa điều kiện Quest Ẩn, hệ thống sẽ <strong>random 2 Minion</strong> để kích hoạt hiệu ứng thấy mặt nhau cho ván đó.
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-cyan-400/30 bg-cyan-500/10 flex gap-3 items-start">
+                  <Info className="w-5 h-5 shrink-0 mt-0.5 text-cyan-300" />
+                  <div className="text-xs md:text-sm text-cyan-100/85 leading-relaxed">
+                    Khi game kết thúc, góc trên bên trái sẽ có bảng <strong>Log Lịch Sử Kỹ Năng</strong> (bật/tắt được) để xem ai đã dùng kỹ năng nào, ở phase nào, và dùng lên ai.
+                  </div>
                 </div>
               </section>
 
@@ -190,7 +236,7 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
                           <th className="py-3 px-2 font-bold">Q1</th>
                           <th className="py-3 px-2 font-bold">Q2</th>
                           <th className="py-3 px-2 font-bold">Q3</th>
-                          <th className="py-3 px-2 font-bold text-amber-500/80">Q4 (Phase Đêm)</th>
+                          <th className="py-3 px-2 font-bold text-amber-500/80">Q4 (7+ cần 2 Fail)</th>
                           <th className="py-3 px-2 font-bold">Q5</th>
                         </tr>
                       </thead>
@@ -219,7 +265,7 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
                 <div className="mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex gap-3 text-amber-200/80 items-start">
                    <Info className="w-5 h-5 shrink-0 mt-0.5" />
                    <div className="text-sm leading-relaxed font-sans">
-                     <strong>(*) Lưu ý:</strong> Tại vòng 4 khi bàn có từ 7 người chơi trở lên, yêu cầu phải có <strong>2 phiếu THẤT BẠI (Fail)</strong> thì nhiệm vụ mới bị phá. Nếu chỉ có 1 phiếu Fail, nhiệm vụ đó vẫn được tính là THÀNH CÔNG cho phe Thiện.
+                     <strong>(*) Lưu ý:</strong> Tại vòng 4 khi bàn có từ 7 người chơi trở lên, yêu cầu phải có <strong>2 phiếu THẤT BẠI (Fail)</strong> thì nhiệm vụ mới thất bại. Nếu chỉ có 1 phiếu Fail, nhiệm vụ vẫn tính THÀNH CÔNG cho phe Thiện.
                    </div>
                 </div>
               </section>
@@ -252,6 +298,20 @@ function RoleDetailCard({ icon: Icon, title, desc, isEvil = false }: { icon: Luc
         <span className="font-bold text-xs md:text-sm">{title}</span>
       </div>
       <p className="text-gray-300 text-[11px] md:text-xs font-sans leading-relaxed">
+        {desc}
+      </p>
+    </div>
+  );
+}
+
+function AdvancedSkillCard({ icon: Icon, title, desc }: { icon: LucideIcon, title: string, desc: string }) {
+  return (
+    <div className="p-3 md:p-4 rounded-xl border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/15 transition-colors">
+      <div className="flex items-center gap-2 text-cyan-200 font-headline uppercase tracking-widest">
+        <Icon className="w-5 h-5" />
+        <span className="font-bold text-xs md:text-sm">{title}</span>
+      </div>
+      <p className="mt-1 text-[11px] md:text-xs text-cyan-100/80 leading-relaxed font-sans">
         {desc}
       </p>
     </div>

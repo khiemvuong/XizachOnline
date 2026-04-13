@@ -71,9 +71,9 @@ export default function PhaseTransitionOverlay({
           }`}
         >
           {overlayState.type === "good" ? (
-            <CheckCircle2 className="w-20 h-20" />
+            <CheckCircle2 className="w-20 h-20 text-green-600" />
           ) : (
-            <XOctagon className="w-20 h-20" />
+            <XOctagon className="w-20 h-20 text-red-600" />
           )}
         </div>
         <div className="text-center space-y-4">

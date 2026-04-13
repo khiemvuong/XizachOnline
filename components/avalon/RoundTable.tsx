@@ -4,7 +4,7 @@ import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
 import { useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import Image from 'next/image';
-import { HelpCircle, Hand, ChevronUp, ChevronDown, Wifi } from 'lucide-react';
+import { HelpCircle, Hand, ChevronUp, ChevronDown, Wifi, Crown } from 'lucide-react';
 import CenterBoard from './CenterBoard';
 import { getRoleImageSrcForViewer } from './roleImage';
 import { useSceneScale } from '@/hooks/useSceneScale';
@@ -79,6 +79,7 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                      Lịch sử
                   </button>
                )}
+               <Crown className="w-5 h-5 text-yellow-400 drop-shadow-[0_0_10px_rgba(252,211,77,0.7)]" />
                <div className="rounded-lg border border-(--outline-variant)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--secondary)/80 shadow-[0_8px_24px_rgba(0,0,0,0.35)] flex items-center">
                   #{roomId.substring(0, 6)}
                </div>
@@ -274,6 +275,8 @@ type PlayerCardProps = {
 };
 
 function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidden = false, isReadOnly = false, ping }: PlayerCardProps) {
+   void isLeft;
+   void isRight;
    const isMe = player.userId === me.userId;
    const isLeader = gameState.players[gameState.leaderIndex]?.userId === player.userId;
    const isProposed = gameState.proposedTeam?.includes(player.userId) ?? false;
@@ -290,6 +293,7 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
    const effectiveShowRole = isRoleHidden ? false : shouldShowRoleAvatar;
    const showEvilTag = !isRoleHidden && player.userId !== me.userId && player.team === 'Evil';
    const showMerlinTag = !isRoleHidden && player.userId !== me.userId && player.role === 'Merlin' && me.role === 'Percival';
+   const publicFunctionTag = gameState.privateFunctionTagByTargetUserId?.[player.userId];
 
    let borderColor = "border-outline-variant/30";
    if (isProposed && isLeader) borderColor = "border-[#d39b2e]";
@@ -317,7 +321,7 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
          )}
 
          {player.isHandRaised && !isDisconnected && (
-            <div className="absolute -right-6 -bottom-2 z-60 rounded-full bg-emerald-500 p-2 text-white ring-2 ring-emerald-200 shadow-[0_8px_18px_rgba(16,185,129,0.65)]">
+            <div className="absolute -left-6 -bottom-2 z-60 rounded-full bg-emerald-500 p-2 text-white ring-2 ring-emerald-200 shadow-[0_8px_18px_rgba(16,185,129,0.65)]">
                <Hand className="w-4 h-4" />
             </div>
          )}
@@ -358,6 +362,18 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
                    </div>
                </div>
             )}
+
+            {publicFunctionTag && !isRoleHidden && !isDisconnected && (
+               <div className="absolute inset-0 z-35 flex items-center justify-center pointer-events-none px-1">
+                  <div className={`rounded-md border px-2 py-1 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-center leading-none shadow-[0_8px_16px_rgba(0,0,0,0.55)] ${
+                     publicFunctionTag === 'hasFunction'
+                        ? 'border-cyan-300/65 bg-cyan-500/80 text-[#021925]'
+                        : 'border-amber-200/70 bg-amber-500/80 text-[#261701]'
+                  }`}>
+                     {publicFunctionTag === 'hasFunction' ? 'CÓ CHỨC NĂNG' : 'KHÔNG CÓ CHỨC NĂNG'}
+                  </div>
+               </div>
+            )}
          </div>
 
          {/* Good/Evil/Unknown Overlays */}
@@ -393,13 +409,8 @@ function PlayerCard({ player, me, gameState, socket, isLeft, isRight, isRoleHidd
          )}
 
          {/* MISSION Tag */}
-         {isProposed && (isLeft || !isRight) && ( // Default to left side tag unless it's explicitly the right column
+         {isProposed && (
             <div className="absolute -left-12 top-1/2 -translate-y-1/2 bg-green-600 border border-green-400 px-3 py-1 rounded-full text-[9px] font-extrabold tracking-[0.2em] text-white shadow-[0_0_15px_rgba(34,197,94,0.7)] z-30 uppercase ring-1 ring-white/30">
-               QUEST
-            </div>
-         )}
-         {isProposed && isRight && (
-            <div className="absolute -right-12 top-1/2 -translate-y-1/2 bg-green-600 border border-green-400 px-3 py-1 rounded-full text-[9px] font-extrabold tracking-[0.2em] text-white shadow-[0_0_15px_rgba(34,197,94,0.7)] z-30 uppercase ring-1 ring-white/30">
                QUEST
             </div>
          )}

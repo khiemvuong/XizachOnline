@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { type AvalonRoom, type AvalonPlayer } from "@/server/game/AvalonTypes";
 import { type Socket } from "socket.io-client";
-import { Copy, Hourglass, ChevronsRight, Plus, Settings, Wand2, Eye, Flame, VenetianMask, CloudFog, Swords, Gavel, Camera, Shield, CheckCircle2 } from "lucide-react";
+import { Copy, Hourglass, ChevronsRight, Plus, Settings, Wand2, Eye, Flame, VenetianMask, CloudFog, Swords, Gavel, Camera, Shield, CheckCircle2, Sparkles } from "lucide-react";
 import PingIndicator from "./PingIndicator";
 import { type LucideIcon } from "lucide-react";
 
-function RoleCard({ label, icon: Icon, isOn, onToggle, disabled, type }: { label: string, icon: LucideIcon, isOn: boolean, onToggle: () => void, disabled: boolean, type: "good" | "evil" }) {
+function RoleCard({ label, icon: Icon, isOn, onToggle, disabled, type, tag }: { label: string, icon: LucideIcon, isOn: boolean, onToggle: () => void, disabled: boolean, type: "good" | "evil", tag?: string }) {
   const isGood = type === "good";
   const colorVar = isGood ? "var(--primary)" : "var(--tertiary)";
   const baseBg = isOn ? (isGood ? "bg-(--primary)/10" : "bg-(--tertiary)/10") : "bg-[#0f172a]/50";
@@ -17,8 +17,11 @@ function RoleCard({ label, icon: Icon, isOn, onToggle, disabled, type }: { label
       className={`p-3 rounded-xl border ${borderColor} ${baseBg} flex flex-col items-center gap-2 transition-all ${disabled ? (isOn ? "opacity-80" : "opacity-50 cursor-not-allowed") : "cursor-pointer hover:border-(--primary)/50 hover:bg-[#1e293b]"}`}
     >
       <Icon className="w-6 h-6" style={{ color: isOn ? colorVar : "var(--on-surface-variant)" }} />
-      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: isOn ? colorVar : "var(--on-surface-variant)" }}>{label}</span>
-      <div className="w-8 h-1 rounded-full bg-slate-700 relative overflow-hidden">
+      <div className="flex flex-col items-center">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-center" style={{ color: isOn ? colorVar : "var(--on-surface-variant)" }}>{label}</span>
+        {tag && <span className="text-[8px] bg-(--primary)/20 text-(--primary) px-1.5 py-0.5 rounded uppercase tracking-tighter mt-1 font-bold">{tag}</span>}
+      </div>
+      <div className="w-8 h-1 rounded-full bg-slate-700 relative overflow-hidden mt-1">
         {isOn && <div className="absolute inset-0 rounded-full" style={{ backgroundColor: colorVar }}></div>}
       </div>
     </div>
@@ -49,10 +52,18 @@ export default function AvalonLobby({
 
   const handleToggleSetting = (key: keyof typeof gameState.settings) => {
     if (!isHost || !socket) return;
-    socket.emit("updateSettings", {
+    
+    const newSettings = {
        ...gameState.settings,
        [key]: !gameState.settings[key]
-    });
+    };
+    
+    // Automatically toggle Athena with advanced mode
+    if (key === "advancedMode") {
+      newSettings.athena = newSettings.advancedMode;
+    }
+
+    socket.emit("updateSettings", newSettings);
   };
 
   const copyRoomId = () => {
@@ -265,9 +276,44 @@ export default function AvalonLobby({
             Nghi Thức Khởi Nguồn
           </h3>
 
+          <div
+            onClick={() => isHost && handleToggleSetting("advancedMode")}
+            className={`mb-6 relative overflow-hidden rounded-2xl border p-4 transition-all ${isHost ? "cursor-pointer" : "cursor-not-allowed opacity-70"} ${gameState.settings.advancedMode ? "border-(--primary)/60 bg-linear-to-r from-(--primary)/18 to-cyan-500/10 shadow-[0_0_30px_rgba(131,195,163,0.18)]" : "border-(--outline-variant)/35 bg-[#0f172a]/55 hover:bg-[#1e293b]/70"}`}
+          >
+            <div className="absolute inset-0 pointer-events-none bg-linear-to-r from-transparent via-white/5 to-transparent opacity-30" />
+            <div className="relative flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-(--primary)" />
+                  <p className="text-xs uppercase tracking-[0.22em] font-headline text-(--on-surface)">
+                    Chế Độ Nâng Cao
+                  </p>
+                  <span className="px-1.5 py-0.5 rounded-md border border-cyan-300/40 bg-cyan-500/20 text-cyan-200 text-[9px] font-black uppercase tracking-wider">
+                    NEW
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-(--on-surface-variant)">
+                  Kích hoạt bộ luật mở rộng: phase kỹ năng, Athena, Minion Cha Cha Cha và log lịch sử kỹ năng cuối game.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <span className="px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider border border-(--primary)/35 bg-(--primary)/12 text-(--primary)">Skill Phase</span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider border border-cyan-300/35 bg-cyan-500/12 text-cyan-200">Athena</span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider border border-amber-300/35 bg-amber-500/12 text-amber-200">Skill Log</span>
+                </div>
+                <p className="mt-2 text-[10px] text-(--on-surface-variant)/75">
+                  {isHost ? "Chỉ Host có thể bật/tắt chế độ này." : "Chỉ Host có thể thay đổi cài đặt này."}
+                </p>
+              </div>
+              <div className={`relative mt-0.5 h-7 w-14 shrink-0 rounded-full border overflow-hidden ${gameState.settings.advancedMode ? "border-(--primary)/70 bg-(--primary)/40" : "border-(--outline-variant)/55 bg-(--outline-variant)/35"}`}>
+                <div className={`absolute top-1 left-1 h-5 w-5 rounded-full bg-surface-dim-avalon shadow-[0_1px_6px_rgba(0,0,0,0.45)] transition-transform duration-200 ${gameState.settings.advancedMode ? "translate-x-6" : "translate-x-0"}`} />
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3 mb-8">
             <RoleCard label="Merlin" icon={Wand2} isOn={gameState.settings.merlin} onToggle={() => handleToggleSetting("merlin")} disabled={!isHost} type="good" />
             <RoleCard label="Percival" icon={Eye} isOn={gameState.settings.percival} onToggle={() => handleToggleSetting("percival")} disabled={!isHost} type="good" />
+            <RoleCard label="Athena" icon={Sparkles} isOn={!!gameState.settings.athena} onToggle={() => handleToggleSetting("athena")} disabled={!isHost || !gameState.settings.advancedMode} type="good" tag="NEW" />
             <RoleCard label="Assassin" icon={Swords} isOn={gameState.settings.assassin} onToggle={() => handleToggleSetting("assassin")} disabled={!isHost} type="evil" />
             <RoleCard label="Morgana" icon={Flame} isOn={gameState.settings.morgana} onToggle={() => handleToggleSetting("morgana")} disabled={!isHost} type="evil" />
             <RoleCard label="Mordred" icon={VenetianMask} isOn={gameState.settings.mordred} onToggle={() => handleToggleSetting("mordred")} disabled={!isHost} type="evil" />
@@ -322,15 +368,15 @@ export default function AvalonLobby({
             <div>
               <button 
                 className={`w-full py-4 rounded-xl font-headline font-extrabold text-sm tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-3
-                  ${connectedCount >= 5 
+                  ${connectedCount >= (gameState.settings.athena ? 7 : 5)
                     ? "bg-primary-avalon text-surface-dim-avalon shadow-[0_4px_20px_rgba(131,195,163,0.3)] hover:scale-[1.02] active:scale-[0.98]" 
                     : "bg-[#1e2b3b] text-[#768497] border border-[#44474c]/50 cursor-not-allowed"
                   }`}
-                disabled={connectedCount < 5}
+                disabled={connectedCount < (gameState.settings.athena ? 7 : 5)}
                 onClick={() => socket?.emit("startAvalonGame")}
               >
                 <Gavel className="w-6 h-6" />
-                {connectedCount >= 5 ? "Khai Mạc Tiệc Rượu" : "Tối Thiểu 5 Người"}
+                {connectedCount >= (gameState.settings.athena ? 7 : 5) ? "Khai Mạc Tiệc Rượu" : (gameState.settings.athena ? "Cần >= 7 Người (Athena)" : "Tối Thiểu 5 Người")}
               </button>
             </div>
           ) : (
@@ -338,7 +384,7 @@ export default function AvalonLobby({
                Chờ Host Bắt Đầu...
             </div>
           )}
-          <p className="text-center text-[10px] text-(--primary)/40 mt-4 uppercase tracking-tighter">Bàn tròn yêu cầu tối thiểu 5 hiệp sĩ để khởi động.</p>
+          <p className="text-center text-[10px] text-(--primary)/40 mt-4 uppercase tracking-tighter">Bàn tròn yêu cầu tối thiểu 5 hiệp sĩ (7 nếu có rãnh Athena) để khởi động.</p>
         </div>
 
         <div className="p-4 bg-linear-to-br from-(--primary)/5 to-transparent border-l-2 border-(--primary)/40 rounded-r-xl">

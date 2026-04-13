@@ -7,6 +7,7 @@ import { io, Socket } from "socket.io-client";
 import RoleReveal from "../RoleReveal";
 import RoundTable from "../RoundTable";
 import VotingCards from "../VotingCards";
+import SkillDecisionOverlay from "../SkillDecisionOverlay";
 import AssassinationUI from "../assassination/AssassinationUI";
 import GameOver from "../game-over/GameOver";
 import EarlyEndOverlay from "../EarlyEndOverlay";
@@ -15,6 +16,7 @@ import RulesModal from "../RulesModal";
 import MyRoleModal from "../MyRoleModal";
 import SharedChatDropdown, { type ChatTheme } from "@/components/shared/ChatDropdown";
 import VoiceChatPanel from "../VoiceChatPanel";
+import MinionCinematicOverlays from "../MinionCinematicOverlays";
 import { AlertTriangle, X, Moon, Edit2 } from "lucide-react";
 
 import { useAvalonAudio } from "@/hooks/useAvalonAudio";
@@ -285,7 +287,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
           <EarlyEndOverlay gameState={gameState} userId={userId} socket={socket} />
         )}
 
-      {/* Phases Routing with Cinematic Black Crossfade Transition */}
+      {/* Phases Routing */}
       <AnimatePresence mode="wait">
         <motion.div
           key={gameState.state}
@@ -295,15 +297,6 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className="flex-1 flex flex-col w-full relative min-h-0 overflow-y-auto overflow-x-hidden"
         >
-          {/* The Black Cinematic Curtain */}
-          <motion.div
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 0 }}
-            exit={{ opacity: 1 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="fixed inset-0 z-199 bg-[#03060a] pointer-events-none"
-          />
-
           {gameState.state === "LOBBY" && (
             <AvalonLobby
               gameState={gameState}
@@ -380,6 +373,14 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
                   playerPings={playerPings}
                 />
                 <VotingCards gameState={gameState} me={me} socket={socket} isReadOnly={isSpectator} />
+                {gameState.state === "SKILL_DECISION" && (
+                  <SkillDecisionOverlay
+                    gameState={gameState}
+                    me={me}
+                    socket={socket}
+                    isReadOnly={isSpectator}
+                  />
+                )}
               </>
             )}
 
@@ -404,6 +405,8 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         gameState.state !== "GAME_OVER" && (
           <VoteOutcomeOverlay gameState={gameState} me={me} />
         )}
+
+      {me && <MinionCinematicOverlays gameState={gameState} me={me} />}
 
       <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
 

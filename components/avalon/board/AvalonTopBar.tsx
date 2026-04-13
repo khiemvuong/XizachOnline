@@ -51,7 +51,7 @@ export default function AvalonTopBar({
   handleToggleRaiseHand: () => void;
 }) {
   return (
-    <div className="absolute top-3 right-3 z-50 flex items-center gap-2">
+    <div className="absolute top-3 right-3 z-70 flex items-center gap-2">
       {/* Edit Name Button — Lobby only */}
       {isLobby && (
         <button
@@ -123,7 +123,11 @@ export default function AvalonTopBar({
               ? "border-amber-500/60 text-amber-400 hover:bg-amber-500/10"
               : "border-(--primary)/30 text-(--primary) hover:bg-(--primary)/10 hover:text-white"
           }`}
-          title={isRoleHidden ? "Hiện thông tin vai trò" : "Ẩn thông tin vai trò"}
+          title={
+            isRoleHidden
+              ? "Hiện thông tin vai trò"
+              : "Ẩn thông tin vai trò"
+          }
         >
           {isRoleHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
         </button>

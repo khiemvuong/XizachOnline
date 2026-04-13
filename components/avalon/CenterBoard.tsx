@@ -24,6 +24,8 @@ export default function CenterBoard({
     !isReadOnly &&
     !me.isSpectator &&
     gameState.proposedTeam.length === currentQ?.teamSize;
+  const publicSkillAnnouncements =
+    gameState.skillDecisionState?.publicAnnouncements ?? [];
 
   return (
     <div
@@ -120,6 +122,40 @@ export default function CenterBoard({
             </h3>
             <p className="text-[7px] md:text-[10px] font-medium text-slate-400 mt-0.5 uppercase tracking-widest opacity-80">
               Tán thành đội hình được đề cử?
+            </p>
+          </div>
+        )}
+
+        {gameState.state === "SKILL_DECISION" && (
+          <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <h3 className="text-(--primary) font-headline uppercase tracking-[0.2em] text-[10px] md:text-sm drop-shadow-md">
+              Quyết Định Kỹ Năng
+            </h3>
+            <p className="text-[7px] md:text-[10px] font-medium text-slate-400 mt-0.5 uppercase tracking-widest opacity-80 text-center">
+              Người đi quest đang chọn dùng kỹ năng trước khi bỏ phiếu nhiệm vụ
+            </p>
+            {publicSkillAnnouncements.length > 0 && (
+              <div className="mt-2 space-y-1 max-w-60">
+                {publicSkillAnnouncements.slice(-2).map((line, idx) => (
+                  <p
+                    key={`${line}-${idx}`}
+                    className="text-[8px] md:text-[10px] text-cyan-200/90 text-center border border-cyan-400/25 bg-cyan-500/10 rounded-lg px-2 py-1"
+                  >
+                    {line}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {gameState.state === "QUEST_RESOLUTION" && (
+          <div className="flex flex-col items-center animate-in fade-in duration-500">
+            <h3 className="text-cyan-300 font-headline uppercase tracking-[0.2em] text-[10px] md:text-sm drop-shadow-md">
+              Kết Toán Nhiệm Vụ
+            </h3>
+            <p className="text-[7px] md:text-[10px] font-medium text-slate-400 mt-0.5 uppercase tracking-widest opacity-80">
+              Đang xử lý hiệu ứng đảo số phận
             </p>
           </div>
         )}

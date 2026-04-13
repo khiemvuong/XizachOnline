@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle2, ShieldAlert, XCircle, ChevronDown, ChevronUp, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { CheckCircle2, ShieldAlert, XCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { type AvalonPlayer, type AvalonRoom } from "@/server/game/AvalonTypes";
 
 type VoteOutcome = NonNullable<AvalonRoom["voteOutcome"]>;
 
 function createOutcomeKey(outcome: VoteOutcome): string {
-  return `${outcome.kind}-${outcome.result}-${outcome.approveCount ?? 0}-${outcome.rejectCount ?? 0}-${outcome.successCount ?? 0}-${outcome.failCount ?? 0}`;
+  return `${outcome.kind}-${outcome.result}-${outcome.approveCount ?? 0}-${outcome.rejectCount ?? 0}-${outcome.successCount ?? 0}-${outcome.failCount ?? 0}-${outcome.athenaStage ?? "none"}-${outcome.athenaRawResult ?? "none"}-${outcome.athenaFinalResult ?? "none"}`;
 }
 
 export default function VoteOutcomeOverlay({ gameState }: { gameState: AvalonRoom; me?: AvalonPlayer }) {
@@ -19,17 +20,112 @@ export default function VoteOutcomeOverlay({ gameState }: { gameState: AvalonRoo
 }
 
 function VoteOutcomeOverlayContent({ outcome }: { outcome: VoteOutcome }) {
-  const [expanded, setExpanded] = useState(true);
-  const [dismissed, setDismissed] = useState(false);
+  const isQuestOutcome = outcome.kind === "quest";
+  const isAthenaFlippedStage = Boolean(
+    isQuestOutcome && outcome.athenaFlip && outcome.athenaStage === "flipped",
+  );
+  const shouldTriggerQuestSplash = isQuestOutcome && !isAthenaFlippedStage;
+
+  const [expanded, setExpanded] = useState(false);
+  const [showQuestSplash, setShowQuestSplash] = useState(shouldTriggerQuestSplash);
+  const [showAthenaCinematic, setShowAthenaCinematic] = useState(isAthenaFlippedStage);
+  const [cinematicLoadFailed, setCinematicLoadFailed] = useState(false);
+  const cinematicVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  const finishAthenaCinematic = useCallback(() => {
+    setShowAthenaCinematic(false);
+    if (isQuestOutcome) {
+      setShowQuestSplash(true);
+    }
+  }, [isQuestOutcome]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setExpanded(false), 4000);
+    if (!showQuestSplash) return;
+
+    const timer = window.setTimeout(() => {
+      setShowQuestSplash(false);
+    }, 1700);
+
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [showQuestSplash]);
 
-  if (dismissed) return null;
+  useEffect(() => {
+    if (!showAthenaCinematic) return;
 
-  const isQuestOutcome = outcome.kind === "quest";
+    const safetyTimer = window.setTimeout(() => {
+      finishAthenaCinematic();
+    }, 9500);
+
+    const video = cinematicVideoRef.current;
+    if (!video) {
+      return () => window.clearTimeout(safetyTimer);
+    }
+
+    const playPromise = video.play();
+    if (playPromise) {
+      playPromise.catch(() => {
+        video.muted = true;
+        video.play().catch(() => {
+          setCinematicLoadFailed(true);
+        });
+      });
+    }
+
+    return () => window.clearTimeout(safetyTimer);
+  }, [showAthenaCinematic, finishAthenaCinematic]);
+
+  if (showAthenaCinematic) {
+    return (
+      <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/92 backdrop-blur-sm">
+        <div className="w-full max-w-5xl px-4 sm:px-6">
+          <div className="relative aspect-video overflow-hidden rounded-2xl border border-cyan-300/30 shadow-[0_0_45px_rgba(34,211,238,0.35)] bg-black">
+            <video
+              ref={cinematicVideoRef}
+              src="/audio/cinematic_video.mp4"
+              className="w-full h-full object-cover"
+              autoPlay
+              muted
+              playsInline
+              preload="auto"
+              onEnded={finishAthenaCinematic}
+              onError={() => setCinematicLoadFailed(true)}
+            />
+
+            {cinematicLoadFailed && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/80 px-6 text-center">
+                <p className="text-sm uppercase tracking-[0.16em] text-cyan-200/90">
+                  Không tải được video Athena. Hệ thống sẽ tự tiếp tục.
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="text-center space-y-2 mt-4">
+
+            <h3 className="font-headline text-2xl sm:text-3xl uppercase tracking-[0.16em] text-cyan-200 drop-shadow-[0_0_20px_rgba(34,211,238,0.45)]">
+              Athena Đang Đảo Ngược Số Phận
+            </h3>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const splashImageSrc =
+    outcome.result === "success"
+      ? "/Image/mission_success.png"
+      : outcome.result === "fail"
+        ? "/Image/mission_failed.png"
+        : null;
+
+  const splashGradientClass =
+    outcome.result === "success"
+      ? "from-cyan-900/45 via-emerald-700/25 to-black"
+      : "from-rose-900/50 via-amber-700/25 to-black";
+
+  const splashGlowClass =
+    outcome.result === "success"
+      ? "bg-[radial-gradient(ellipse_at_center,rgba(20,184,166,0.28)_0%,rgba(14,116,144,0.16)_40%,rgba(0,0,0,0)_74%)]"
+      : "bg-[radial-gradient(ellipse_at_center,rgba(244,63,94,0.26)_0%,rgba(251,146,60,0.16)_38%,rgba(0,0,0,0)_74%)]";
 
   const styles = {
     approve: {
@@ -61,95 +157,115 @@ function VoteOutcomeOverlayContent({ outcome }: { outcome: VoteOutcome }) {
   const s = styles[outcome.result];
 
   return (
-    <div className="avalon-vote-outcome-shell pointer-events-none absolute top-0 left-0 right-0 z-70 flex justify-center pt-2 px-3">
-      <div className="inline-flex items-center gap-1">
-        {/* Main pill */}
-        <button
-          type="button"
-          onClick={() => setExpanded(v => !v)}
-          className={`
-            avalon-vote-outcome-toggle pointer-events-auto
-            inline-flex items-center gap-1.5 rounded-full border
-            px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]
-            backdrop-blur-md shadow-lg transition-all duration-200
-            ${s.pill}
-          `}
-        >
-          {s.icon}
-          {s.label}
-          <span className="opacity-60 font-mono text-[9px] ml-0.5">{s.detail}</span>
-          {expanded
-            ? <ChevronUp className="h-3 w-3 opacity-50" />
-            : <ChevronDown className="h-3 w-3 opacity-50" />
-          }
-        </button>
+    <>
+      {showQuestSplash && splashImageSrc && (
+        <div className="fixed inset-0 z-85 overflow-hidden animate-in fade-in duration-200 pointer-events-none">
+          <div className="absolute inset-0 bg-black" />
+          <div className={`absolute inset-0 bg-linear-to-b ${splashGradientClass}`} />
+          <div className={`absolute inset-0 ${splashGlowClass}`} />
 
-        {/* Dismiss button — hides until next round */}
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          className="pointer-events-auto rounded-full border border-white/15 bg-black/60 backdrop-blur-md p-1 hover:bg-white/15 transition-colors"
-          title="Ẩn cho tới lượt tiếp theo"
-        >
-          <X className="h-3 w-3 text-white/60" />
-        </button>
-      </div>
-
-      {/* Expanded detail — small card */}
-      {expanded && (
-        <div className={`
-          avalon-vote-outcome-card pointer-events-auto
-          absolute top-8 rounded-xl border shadow-xl
-          backdrop-blur-md px-4 py-3 w-64
-          bg-surface-container-low/95 border-outline-variant/40
-        `}>
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`${s.pill.split(' ').find(c => c.startsWith('text-')) ?? ''}`}>
-              {s.icon}
-            </span>
-            <h3 className={`avalon-vote-outcome-title font-headline text-base uppercase tracking-wider ${s.pill.split(' ').find(c => c.startsWith('text-')) ?? 'text-on-surface'}`}>
-              {styles[outcome.result].label}
-            </h3>
+          <div className="relative flex h-dvh min-h-svh w-screen items-center justify-center px-2 py-[8svh] sm:px-6 sm:py-[10vh]">
+            <div className="relative h-[min(84svh,980px)] w-[min(100vw,1900px)] sm:h-[min(88vh,1080px)]">
+              <Image
+                src={splashImageSrc}
+                alt={outcome.result === "success" ? "MISSION SUCCESS" : "MISSION FAILED"}
+                fill
+                priority
+                sizes="100vw"
+                className="object-contain drop-shadow-[0_0_34px_rgba(255,255,255,0.2)]"
+              />
+            </div>
           </div>
-
-          <div className="flex flex-wrap gap-1.5 text-[10px] uppercase tracking-[0.15em]">
-            {isQuestOutcome ? (
-              <>
-                <span className="rounded border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-cyan-200">
-                  Success: {outcome.successCount ?? 0}
-                </span>
-                <span className="rounded border border-rose-400/30 bg-rose-500/10 px-2 py-0.5 text-rose-200">
-                  Fail: {outcome.failCount ?? 0}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">
-                  Approve: {outcome.approveCount ?? 0}
-                </span>
-                <span className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">
-                  Reject: {outcome.rejectCount ?? 0}
-                </span>
-              </>
-            )}
-            {typeof outcome.totalVotes === "number" && (
-              <span className="rounded border border-outline-variant/40 bg-surface-container-high/40 px-2 py-0.5 text-on-surface-variant">
-                Total: {outcome.totalVotes}
-              </span>
-            )}
-          </div>
-
-          <p className="avalon-vote-outcome-subtitle mt-2 text-[10px] text-on-surface-variant/80 leading-relaxed">
-            {isQuestOutcome
-              ? outcome.result === "success"
-                ? "Nhiệm vụ hoàn thành. Hành trình tiếp tục."
-                : "Nhiệm vụ thất bại. Bóng tối ghi dấu ấn."
-              : outcome.result === "approve"
-                ? "Đội được thông qua. Sẵn sàng lên đường."
-                : "Đề cử bị bác. Quyền thủ lĩnh chuyển tiếp."}
-          </p>
         </div>
       )}
-    </div>
+
+      <div className="avalon-vote-outcome-shell pointer-events-none absolute top-0 left-0 right-0 z-70 flex justify-center pt-2 px-3">
+        <div className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className={`
+              avalon-vote-outcome-toggle pointer-events-auto
+              inline-flex items-center gap-1.5 rounded-full border
+              px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]
+              backdrop-blur-md shadow-lg transition-all duration-200
+              ${s.pill}
+            `}
+            title={expanded ? "Ẩn chi tiết kết quả" : "Xem chi tiết kết quả"}
+          >
+            {s.icon}
+            {expanded ? "Ẩn Kết Quả" : "Xem Kết Quả"}
+            {expanded ? (
+              <ChevronUp className="h-3 w-3 opacity-60" />
+            ) : (
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            )}
+          </button>
+        </div>
+
+        {expanded && (
+          <div
+            className={`
+            avalon-vote-outcome-card pointer-events-auto
+            absolute top-8 rounded-xl border shadow-xl
+            backdrop-blur-md px-4 py-3 w-64
+            bg-surface-container-low/95 border-outline-variant/40
+          `}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`${s.pill.split(" ").find((c) => c.startsWith("text-")) ?? ""}`}>
+                {s.icon}
+              </span>
+              <h3
+                className={`avalon-vote-outcome-title font-headline text-base uppercase tracking-wider ${s.pill
+                  .split(" ")
+                  .find((c) => c.startsWith("text-")) ?? "text-on-surface"}`}
+              >
+                {styles[outcome.result].label}
+              </h3>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 text-[10px] uppercase tracking-[0.15em]">
+              {isQuestOutcome ? (
+                <>
+                  <span className="rounded border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-cyan-200">
+                    Success: {outcome.successCount ?? 0}
+                  </span>
+                  <span className="rounded border border-rose-400/30 bg-rose-500/10 px-2 py-0.5 text-rose-200">
+                    Fail: {outcome.failCount ?? 0}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">
+                    Approve: {outcome.approveCount ?? 0}
+                  </span>
+                  <span className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">
+                    Reject: {outcome.rejectCount ?? 0}
+                  </span>
+                </>
+              )}
+              {typeof outcome.totalVotes === "number" && (
+                <span className="rounded border border-outline-variant/40 bg-surface-container-high/40 px-2 py-0.5 text-on-surface-variant">
+                  Total: {outcome.totalVotes}
+                </span>
+              )}
+            </div>
+
+            <p className="avalon-vote-outcome-subtitle mt-2 text-[10px] text-on-surface-variant/80 leading-relaxed">
+              {outcome.announcement
+                ? outcome.announcement
+                : isQuestOutcome
+                  ? outcome.result === "success"
+                    ? "Nhiệm vụ hoàn thành. Hành trình tiếp tục."
+                    : "Nhiệm vụ thất bại. Bóng tối ghi dấu ấn."
+                  : outcome.result === "approve"
+                    ? "Đội được thông qua. Sẵn sàng lên đường."
+                    : "Đề cử bị bác. Quyền thủ lĩnh chuyển tiếp."}
+            </p>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

@@ -10,6 +10,7 @@ const ASSETS_TO_PRELOAD = [
   "/avalon_roles/morgana.jpeg",
   "/avalon_roles/mordred.jpeg",
   "/avalon_roles/oberon.jpeg",
+  "/avalon_roles/athena.jpeg",
   "/avalon_roles/good_minion.jpeg",
   "/avalon_roles/evil_minion.jpeg",
   "/avalon_roles/unknown.jpeg",
@@ -26,6 +27,8 @@ const ASSETS_TO_PRELOAD = [
   "/Image/assasin_background.png",
   "/Image/atmospheric-bg.png",
   "/Image/castle-bg.png",
+  "/Image/mission_success.png",
+  "/Image/mission_failed.png",
 ];
 
 export default function AvalonAssetPreloader() {

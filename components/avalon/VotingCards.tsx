@@ -114,12 +114,22 @@ export default function VotingCards({
 }) {
   const isVoting = gameState.state === "VOTING";
   const isQuest = gameState.state === "QUEST";
+  const isQuestResolution = gameState.state === "QUEST_RESOLUTION";
   const isViewerLocked = isReadOnly || me.isSpectator;
   const canVoteTeam = isVoting && !isViewerLocked;
   const canVoteQuest = isQuest && !isViewerLocked && gameState.proposedTeam.includes(me.userId);
+  const isForcedFailTarget =
+    canVoteQuest &&
+    gameState.forcedFailState?.questNumber === gameState.currentQuestIndex + 1 &&
+    gameState.forcedFailState?.targetUserId === me.userId;
   const isGoodTeamMember = me.team === "Good";
-  const failCardLocked = canVoteQuest && isGoodTeamMember;
+  const failCardLocked = canVoteQuest && isGoodTeamMember && !isForcedFailTarget;
   const [showBetrayalWarning, setShowBetrayalWarning] = useState(false);
+
+  const handleSuccessQuestVote = () => {
+    if (isViewerLocked) return;
+    socket?.emit("voteQuest", isForcedFailTarget ? "fail" : "success");
+  };
 
   const handleFailQuestVote = () => {
     if (isViewerLocked) return;
@@ -141,7 +151,7 @@ export default function VotingCards({
     .filter((p): p is AvalonPlayer => Boolean(p));
 
   const showCards = isViewerLocked
-    ? isVoting
+    ? isVoting || isQuest || isQuestResolution
     : (canVoteTeam && !me.hasVoted) || (canVoteQuest && !me.hasVoted);
 
   // ── Scale logic: same "Measure-then-Apply" pattern as old code ─────────────
@@ -160,12 +170,14 @@ export default function VotingCards({
 
   // Waiting state
   if (!showCards) {
-    if (isVoting || isQuest) {
+    if (isVoting || isQuest || isQuestResolution) {
       return (
         <div className="absolute top-8 left-1/2 z-50 -translate-x-1/2 pointer-events-none">
           <div className="avalon-vote-wait-pill avalon-glass px-6 py-3 rounded-full border border-(--outline-variant)">
             <span className="avalon-vote-wait-text text-primary-avalon text-sm uppercase font-bold">
-              {isViewerLocked
+              {isQuestResolution
+                ? "Đang kết toán nhiệm vụ..."
+                : isViewerLocked
                 ? 'Khán giả đang theo dõi lượt hiện tại...'
                 : 'Cố gắng giấu nhẹm nụ cười tà ác... (Chờ kết quả)'}
             </span>
@@ -258,38 +270,71 @@ export default function VotingCards({
                 </>
               ) : (
                 <>
-                  <VoteCard
-                    label="Success"
-                    subLabel="Giữ Vững Lời Thề"
-                    imageUrl={IMG_SUCCESS}
-                    icon={<Trophy className="w-full h-full fill-current opacity-90" />}
-                    titleColorClass="text-primary"
-                    gradientFrom="from-primary-container/80"
-                    borderClass="border-primary/30"
-                    glowClass="shadow-[0_0_28px_rgba(186,200,220,0.18)] hover:shadow-[0_8px_44px_rgba(186,200,220,0.36)]"
-                    onClick={() => { if (!isViewerLocked) socket?.emit("voteQuest", "success"); }}
-                    disabled={isViewerLocked}
-                    lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
-                  />
-                  <VoteCard
-                    label="Fail"
-                    subLabel="Phản Bội Camelot"
-                    imageUrl={IMG_FAIL}
-                    icon={<Skull className="w-full h-full fill-current opacity-90" />}
-                    titleColorClass="text-tertiary"
-                    gradientFrom="from-tertiary-container/80"
-                    borderClass="border-tertiary/30"
-                    glowClass="shadow-[0_0_28px_rgba(255,180,168,0.16)] hover:shadow-[0_8px_44px_rgba(255,180,168,0.34)]"
-                    onClick={handleFailQuestVote}
-                    disabled={isViewerLocked}
-                    lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
-                  />
+                  {isForcedFailTarget ? (
+                    <>
+                      <VoteCard
+                        label="Fail"
+                        subLabel="Lời Nguyền Cưỡng Bức"
+                        imageUrl={IMG_FAIL}
+                        icon={<Skull className="w-full h-full fill-current opacity-90" />}
+                        titleColorClass="text-tertiary"
+                        gradientFrom="from-tertiary-container/80"
+                        borderClass="border-tertiary/30"
+                        glowClass="shadow-[0_0_28px_rgba(255,180,168,0.16)] hover:shadow-[0_8px_44px_rgba(255,180,168,0.34)]"
+                        onClick={handleFailQuestVote}
+                        disabled={isViewerLocked}
+                        lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
+                      />
+                      <VoteCard
+                        label="Fail"
+                        subLabel="Phản Bội Camelot"
+                        imageUrl={IMG_FAIL}
+                        icon={<Skull className="w-full h-full fill-current opacity-90" />}
+                        titleColorClass="text-tertiary"
+                        gradientFrom="from-tertiary-container/80"
+                        borderClass="border-tertiary/30"
+                        glowClass="shadow-[0_0_28px_rgba(255,180,168,0.16)] hover:shadow-[0_8px_44px_rgba(255,180,168,0.34)]"
+                        onClick={handleFailQuestVote}
+                        disabled={isViewerLocked}
+                        lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <VoteCard
+                        label="Success"
+                        subLabel="Giữ Vững Lời Thề"
+                        imageUrl={IMG_SUCCESS}
+                        icon={<Trophy className="w-full h-full fill-current opacity-90" />}
+                        titleColorClass="text-primary"
+                        gradientFrom="from-primary-container/80"
+                        borderClass="border-primary/30"
+                        glowClass="shadow-[0_0_28px_rgba(186,200,220,0.18)] hover:shadow-[0_8px_44px_rgba(186,200,220,0.36)]"
+                        onClick={handleSuccessQuestVote}
+                        disabled={isViewerLocked}
+                        lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
+                      />
+                      <VoteCard
+                        label="Fail"
+                        subLabel="Phản Bội Camelot"
+                        imageUrl={IMG_FAIL}
+                        icon={<Skull className="w-full h-full fill-current opacity-90" />}
+                        titleColorClass="text-tertiary"
+                        gradientFrom="from-tertiary-container/80"
+                        borderClass="border-tertiary/30"
+                        glowClass="shadow-[0_0_28px_rgba(255,180,168,0.16)] hover:shadow-[0_8px_44px_rgba(255,180,168,0.34)]"
+                        onClick={handleFailQuestVote}
+                        disabled={isViewerLocked}
+                        lockedLabel={isViewerLocked ? "Khán giả chỉ xem" : undefined}
+                      />
+                    </>
+                  )}
                 </>
               )}
             </div>
 
             {/* ── Good-team note ─────────────────────────────────────────── */}
-            {canVoteQuest && isGoodTeamMember && (
+            {canVoteQuest && isGoodTeamMember && !isForcedFailTarget && (
               <p className="mt-4 text-center text-xs uppercase tracking-[0.16em] text-primary-avalon/90">
                 Lưu ý: Phe tốt không được vote Thất bại.
               </p>

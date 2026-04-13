@@ -23,10 +23,11 @@ export default function MyRoleModal({ isOpen, onClose, gameState, me }: { isOpen
   const getRoleDetails = (role: string | null | undefined) => {
     switch(role) {
       case 'Merlin': return { desc: 'Phù thủy thông thái thấu hiểu vạn vật—nhưng phải giấu mình.' };
-      case 'Percival': return { desc: 'Kỵ sĩ trung thành tìm kiếm người dẫn đường đích thực.' };
+      case 'Percival': return { desc: gameState.settings.advancedMode ? 'Kỵ sĩ truy vết chức năng trong từng nhiệm vụ.' : 'Kỵ sĩ trung thành tìm kiếm người dẫn đường đích thực.' };
       case 'Morgana': return { desc: 'Phù thủy bóng tối. Đóng giả Merlin để lừa gạt Percival.' };
       case 'Assassin': return { desc: 'Lưỡi kiếm trong đêm. Truy sát Merlin nếu nhiệm vụ thất bại.' };
       case 'Mordred': return { desc: 'Kẻ tha hóa vĩ đại. Tàng hình trước con mắt của Merlin.' };
+      case 'Athena': return { desc: 'Người bẻ cong số phận, có thể lật kết quả nhiệm vụ ở thời khắc quyết định.' };
       case 'Oberon': return { desc: 'Kẻ ngoài rìa hỗn mang. Vô diện trước đồng minh.' };
       case 'Minion_Evil': return { desc: 'Tay sai trung thành của chúa tể Mordred.' };
       case 'Minion_Good': return { desc: 'Kỵ sĩ trung kiên của Bàn Tròn.' };
@@ -196,7 +197,7 @@ export default function MyRoleModal({ isOpen, onClose, gameState, me }: { isOpen
                     )}
 
                     {/* Percival's Vision */}
-                    {me.role === 'Percival' && (
+                    {me.role === 'Percival' && !gameState.settings.advancedMode && (
                       <>
                         <div className="flex items-center gap-2">
                           <Eye className="w-4 h-4 text-(--primary)" />
@@ -229,6 +230,47 @@ export default function MyRoleModal({ isOpen, onClose, gameState, me }: { isOpen
                           </div>
                         ) : (
                           <p className="text-[10px] text-(--on-surface-variant) italic">Không có bóng dáng Merlin hay Morgana.</p>
+                        )}
+                      </>
+                    )}
+
+                    {me.role === 'Percival' && gameState.settings.advancedMode && (
+                      <div className="bg-(--surface-container-high) rounded-lg p-3 border border-(--outline-variant)/30 text-center mt-2">
+                        <p className="text-[10px] leading-relaxed text-(--on-surface-variant) italic">
+                          Chế Độ Nâng Cao: Percival không còn tầm nhìn thụ động lúc mở vai. Bạn sẽ truy vết theo từng quest ở phase kỹ năng.
+                        </p>
+                      </div>
+                    )}
+
+                    {me.role === 'Athena' && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Eye className="w-4 h-4 text-cyan-300" />
+                          <h4 className="text-[10px] font-headline font-bold text-cyan-300 uppercase tracking-widest">Tầm Nhìn Nữ Thần</h4>
+                        </div>
+                        {visibleMerlinLikes.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {visibleMerlinLikes.map(p => (
+                              <div key={p.userId} className="bg-(--surface-container-high) rounded-lg p-2 border-l-2 border-cyan-300/60 shadow-sm flex items-center gap-2">
+                                <div className="relative h-7 w-7 overflow-hidden rounded-md border border-(--outline-variant)/35 shrink-0">
+                                  <Image
+                                    src={getRoleImageSrcForViewer(p, me)}
+                                    alt={`Avatar ${p.name}`}
+                                    fill
+                                    sizes="28px"
+                                    className="object-cover"
+                                    unoptimized
+                                  />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-[10px] text-(--on-surface) font-bold truncate">{p.name}</p>
+                                  <p className="text-[8px] text-cyan-200 uppercase tracking-tighter">Merlin</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-(--on-surface-variant) italic">Không có tín hiệu Merlin trong tầm nhìn hiện tại.</p>
                         )}
                       </>
                     )}

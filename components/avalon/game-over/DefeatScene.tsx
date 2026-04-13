@@ -12,6 +12,7 @@ export default function DefeatScene({
   me,
   gameState,
   actionButton,
+  isDraw = false,
 }: {
   t: GameOverTheme;
   winnerLabel: string;
@@ -21,7 +22,11 @@ export default function DefeatScene({
   me: AvalonPlayer;
   gameState: AvalonRoom;
   actionButton: ReactNode;
+  isDraw?: boolean;
 }) {
+  const leftResultTag = isDraw ? "DRAW" : "WINNER";
+  const rightResultTag = isDraw ? "DRAW" : "DEFEATED";
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center px-8">
       {/* Center icon circle */}
@@ -43,12 +48,18 @@ export default function DefeatScene({
         {t.sub}
       </p>
 
+      {isDraw && (
+        <p className="mt-3 text-[11px] uppercase tracking-[0.22em] text-cyan-200/90 text-center">
+          Không có phe thắng cuộc: Merlin và Mordred đã bị ràng buộc bởi Đồng Quy Vô Tận.
+        </p>
+      )}
+
       {/* 2-Column Grid: left+right symmetric layout */}
-      <div className="grid grid-cols-2 gap-8 w-full max-w-[1100px] mt-6 items-start">
+      <div className="grid grid-cols-2 gap-8 w-full max-w-275 mt-6 items-start">
         {/* Left: Winner faction */}
         <FactionPanel
           label={winnerLabel}
-          resultTag="WINNER"
+          resultTag={leftResultTag}
           players={winnerPlayers}
           me={me}
           accentClass={t.winAccent}
@@ -60,14 +71,14 @@ export default function DefeatScene({
         {/* Right: Loser faction */}
         <FactionPanel
           label={loserLabel}
-          resultTag="DEFEATED"
+          resultTag={rightResultTag}
           players={loserPlayers}
           me={me}
           accentClass={t.loseAccent}
           borderClass={t.losePanelBorder}
           icon={t.loseIcon}
           assassinationTarget={gameState.assassinationTarget}
-          muted
+          muted={!isDraw}
         />
       </div>
 

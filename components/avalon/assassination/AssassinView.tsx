@@ -59,15 +59,7 @@ export default function AssassinView({ gameState, me, socket }: Props) {
   );
   const cardH = 320;
 
-  // Suggestions — map userId→name of suggested target
-  const suggestionEntries = evilPlayers
-    .map((evil) => {
-      const suggestedId = suggestions[evil.userId];
-      if (!suggestedId) return null;
-      const target = gameState.players.find((p) => p.userId === suggestedId);
-      return { evilName: evil.name, targetName: target?.name ?? "???" };
-    })
-    .filter(Boolean) as { evilName: string; targetName: string }[];
+
 
   return (
     <div className="avalon-assassination-shell absolute inset-0 z-50 overflow-hidden animate-in fade-in duration-500">

@@ -35,10 +35,11 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
   const getRoleDetails = (role: string | null | undefined) => {
     switch(role) {
       case 'Merlin': return { desc: 'Phù thủy thông thái thấu hiểu vạn vật—nhưng phải giấu mình.' };
-      case 'Percival': return { desc: 'Kỵ sĩ trung thành tìm kiếm người dẫn đường đích thực.' };
+      case 'Percival': return { desc: gameState.settings.advancedMode ? 'Kỵ sĩ truy vết chức năng trong từng nhiệm vụ.' : 'Kỵ sĩ trung thành tìm kiếm người dẫn đường đích thực.' };
       case 'Morgana': return { desc: 'Phù thủy bóng tối. Đóng giả Merlin để lừa gạt Percival.' };
       case 'Assassin': return { desc: 'Lưỡi kiếm trong đêm. Truy sát Merlin nếu nhiệm vụ thất bại.' };
       case 'Mordred': return { desc: 'Kẻ tha hóa vĩ đại. Tàng hình trước con mắt của Merlin.' };
+      case 'Athena': return { desc: 'Người bẻ cong số phận, có thể lật kết quả nhiệm vụ ở thời khắc quyết định.' };
       case 'Oberon': return { desc: 'Kẻ ngoài rìa hỗn mang. Vô diện trước đồng minh.' };
       case 'Minion_Evil': return { desc: 'Tay sai trung thành của chúa tể Mordred.' };
       case 'Minion_Good': return { desc: 'Kỵ sĩ trung kiên của Bàn Tròn.' };
@@ -69,7 +70,7 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
           transformOrigin: 'center center'
         }}
       >
-        <div className="flex-1 grid grid-cols-2 gap-16 min-h-0 items-stretch px-8 sm:px-16 w-full max-w-[1400px] mx-auto">
+        <div className="flex-1 grid grid-cols-2 gap-16 min-h-0 items-stretch px-8 sm:px-16 w-full max-w-350 mx-auto">
           <section className="flex flex-col space-y-6 pr-8 py-2 w-full h-full justify-center">
             <div className="avalon-role-reveal-intro text-left space-y-2">
               <div className="flex items-center justify-between w-full">
@@ -301,6 +302,39 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
                       </div>
                     ) : (
                       <p className="text-xs text-(--on-surface-variant) italic">Không có bóng dáng Merlin hay Morgana.</p>
+                    )}
+                  </>
+                )}
+
+
+                {me.role === 'Athena' && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-cyan-300" />
+                      <h4 className="text-xs font-headline font-bold text-cyan-300 uppercase tracking-widest">Tầm Nhìn Nữ Thần</h4>
+                    </div>
+                    {visibleMerlinLikes.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        {visibleMerlinLikes.map(p => (
+                          <div key={p.userId} className="bg-(--surface-container-high) rounded-lg p-3 border-l-2 border-cyan-300/60 shadow-sm flex items-center gap-2">
+                            <div className="relative h-9 w-9 overflow-hidden rounded-md border border-(--outline-variant)/35">
+                              <Image
+                                src={getRoleImageSrcForViewer(p, me)}
+                                alt={`Avatar ${p.name}`}
+                                fill
+                                sizes="36px"
+                                className="object-cover"
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-(--on-surface) font-bold truncate">{p.name}</p>
+                              <p className="text-[10px] text-cyan-200 uppercase tracking-tighter">Merlin</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-(--on-surface-variant) italic">Không có tín hiệu Merlin trong tầm nhìn hiện tại.</p>
                     )}
                   </>
                 )}

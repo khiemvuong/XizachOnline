@@ -450,7 +450,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                                 <button
                                     onClick={toggleMic}
                                     disabled={isMicToggleDisabled}
-                                    className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full border transition-all ${
+                                    className={`min-w-11 min-h-11 flex items-center justify-center rounded-full border transition-all ${
                                         isMicOn
                                             ? 'bg-(--primary)/20 border-(--primary)/50 text-(--primary)'
                                             : 'bg-white/5 border-white/10 text-slate-400 hover:border-(--primary)/30'
@@ -463,7 +463,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                                 <button
                                     onClick={resetMic}
                                     disabled={isResetDisabled}
-                                    className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full border transition-all ${
+                                    className={`min-w-11 min-h-11 flex items-center justify-center rounded-full border transition-all ${
                                         isResetDisabled
                                             ? 'bg-white/5 border-white/10 text-slate-600 cursor-not-allowed'
                                             : 'bg-white/5 border-white/10 text-slate-300 hover:border-(--primary)/30 cursor-pointer'

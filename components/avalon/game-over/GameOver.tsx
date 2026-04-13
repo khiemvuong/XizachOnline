@@ -16,6 +16,7 @@ import {
 import { useSceneScale } from "@/hooks/useSceneScale";
 import VictoryScene from "./VictoryScene";
 import DefeatScene from "./DefeatScene";
+import SkillUsageHistoryPanel from "./SkillUsageHistoryPanel";
 import { type GameOverTheme } from "./gameoverTypes";
 
 // ── Background images from Template2 ──────────────────────────────────────────
@@ -85,14 +86,18 @@ export default function GameOver({
   // Split players by team
   const goodPlayers = gameState.players.filter((p) => p.team === "Good");
   const evilPlayers = gameState.players.filter((p) => p.team === "Evil");
-  const winnerLabel = goodWon
+  const winnerLabel = isAbandoned
     ? "Loyal Servants of Arthur"
-    : "Minions of Mordred";
-  const loserLabel = goodWon
+    : goodWon
+      ? "Loyal Servants of Arthur"
+      : "Minions of Mordred";
+  const loserLabel = isAbandoned
     ? "Minions of Mordred"
-    : "Loyal Servants of Arthur";
-  const winnerPlayers = goodWon ? goodPlayers : evilPlayers;
-  const loserPlayers = goodWon ? evilPlayers : goodPlayers;
+    : goodWon
+      ? "Minions of Mordred"
+      : "Loyal Servants of Arthur";
+  const winnerPlayers = isAbandoned ? goodPlayers : goodWon ? goodPlayers : evilPlayers;
+  const loserPlayers = isAbandoned ? evilPlayers : goodWon ? evilPlayers : goodPlayers;
 
   // Theme config per case
   const themes: Record<string, GameOverTheme> = {
@@ -184,17 +189,17 @@ export default function GameOver({
       bg: BG_DEFEAT_LOYAL,
       bgMix: "grayscale opacity-30",
       overlayTint: "",
-      centerIcon: <HeartCrack className="text-on-surface-variant w-12 h-12" />,
-      iconBg: "bg-surface-container/40 border-outline-variant/20",
-      title: "THE TABLE FALLS SILENT",
-      sub: "The round ends before either side can claim the crown",
-      accentColor: "text-on-surface-variant",
-      subColor: "text-secondary",
-      dominantLabel: "No Dominant Faction",
+      centerIcon: <HeartCrack className="text-cyan-200 w-12 h-12" />,
+      iconBg: "bg-cyan-500/10 border-cyan-300/25 shadow-[0_0_24px_rgba(56,189,248,0.22)]",
+      title: "ETERNAL BOND FULFILLED",
+      sub: "Merlin đã đồng quy vô tận thành công. Trận đấu khép lại trong thế hòa.",
+      accentColor: "text-cyan-200",
+      subColor: "text-cyan-100/80",
+      dominantLabel: "BOTH FACTIONS BOUND",
       dominantDesc:
-        "The match was abandoned before the prophecy could be fulfilled.",
-      dominantAccent: "text-on-surface-variant",
-      dominantBorder: "bg-surface-container/20 border-outline-variant/20",
+        "Thanh gươm sát thủ chạm tới Merlin, nhưng lời nguyền kéo Mordred cùng chìm vào hư vô. Không phe nào giành được vinh quang cuối cùng.",
+      dominantAccent: "text-cyan-200",
+      dominantBorder: "bg-cyan-500/10 border-cyan-300/25",
       winAccent: "text-primary",
       loseAccent: "text-tertiary",
       winPanelBorder: "border-outline-variant/30",
@@ -265,6 +270,8 @@ export default function GameOver({
         )}
       </button>
 
+      <SkillUsageHistoryPanel gameState={gameState} />
+
       {/* === Scaled viewport === */}
       <div ref={viewportRef} className="relative w-full h-full z-10">
         <div
@@ -300,6 +307,7 @@ export default function GameOver({
               me={me}
               gameState={gameState}
               actionButton={actionButton}
+              isDraw={isAbandoned}
             />
           )}
         </div>

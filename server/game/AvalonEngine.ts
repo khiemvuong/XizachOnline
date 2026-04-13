@@ -1,5 +1,11 @@
 import { Server, Socket, Namespace } from "socket.io";
-import { AvalonRoom, AvalonRole, AvalonVoteOutcome } from "./AvalonTypes";
+import {
+  AvalonRoom,
+  AvalonRole,
+  AvalonSkillDecision,
+  AvalonSkillType,
+  AvalonVoteOutcome,
+} from "./AvalonTypes";
 
 export class AvalonEngine {
   private rooms: Map<string, AvalonRoom> = new Map();
@@ -7,6 +13,8 @@ export class AvalonEngine {
   private voteOutcomeTimers: Map<string, ReturnType<typeof setTimeout>> =
     new Map();
   private chatRateLimits: Map<string, number[]> = new Map();
+  private questResolutionTimers: Map<string, ReturnType<typeof setTimeout>[]> =
+    new Map();
 
   private getQuestHistoryByPlayerCount(playerCount: number) {
     const questSizeMap: Record<number, number[]> = {
@@ -52,6 +60,318 @@ export class AvalonEngine {
     }
 
     return currentIndex;
+  }
+
+  private clearQuestResolutionTimers(roomId: string) {
+    const timers = this.questResolutionTimers.get(roomId);
+    if (!timers) return;
+    timers.forEach((timer) => clearTimeout(timer));
+    this.questResolutionTimers.delete(roomId);
+  }
+
+  private scheduleQuestResolutionTimer(
+    roomId: string,
+    callback: () => void,
+    delayMs: number,
+  ) {
+    const timer = setTimeout(() => {
+      callback();
+      const timers = this.questResolutionTimers.get(roomId);
+      if (!timers) return;
+      const next = timers.filter((t) => t !== timer);
+      if (next.length === 0) {
+        this.questResolutionTimers.delete(roomId);
+      } else {
+        this.questResolutionTimers.set(roomId, next);
+      }
+    }, delayMs);
+
+    const existing = this.questResolutionTimers.get(roomId) ?? [];
+    existing.push(timer);
+    this.questResolutionTimers.set(roomId, existing);
+  }
+
+  private addSystemMessage(room: AvalonRoom, text: string) {
+    room.messages.push({
+      senderId: "system",
+      senderName: "Hệ thống",
+      text,
+      timestamp: Date.now(),
+    });
+    if (room.messages.length > 50) room.messages.shift();
+  }
+
+  private addPrivateNotice(room: AvalonRoom, userId: string, text: string) {
+    if (!room.privateNoticesByUserId) room.privateNoticesByUserId = {};
+    const list = room.privateNoticesByUserId[userId] ?? [];
+    list.push(text);
+    room.privateNoticesByUserId[userId] = list.slice(-5);
+  }
+
+  private ensureSkillUsageHistory(room: AvalonRoom) {
+    if (!room.skillUsageHistory) room.skillUsageHistory = [];
+  }
+
+  private recordSkillUsage(
+    room: AvalonRoom,
+    params: {
+      phase: "quest" | "preAssassination";
+      questNumber: number | null;
+      actorUserId: string;
+      skillType: AvalonSkillType;
+      targetUserId?: string | null;
+      detail?: string;
+    },
+  ) {
+    if (params.skillType === "none") return;
+
+    this.ensureSkillUsageHistory(room);
+
+    const actor = room.players.find((p) => p.userId === params.actorUserId);
+    const target = params.targetUserId
+      ? room.players.find((p) => p.userId === params.targetUserId)
+      : undefined;
+
+    room.skillUsageHistory!.push({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      phase: params.phase,
+      questNumber: params.questNumber,
+      actorUserId: params.actorUserId,
+      actorName: actor?.name ?? "Ẩn danh",
+      skillType: params.skillType,
+      targetUserId: target?.userId ?? null,
+      targetName: target?.name ?? null,
+      detail: params.detail,
+      createdAt: Date.now(),
+    });
+
+    if (room.skillUsageHistory!.length > 80) {
+      room.skillUsageHistory = room.skillUsageHistory!.slice(-80);
+    }
+  }
+
+  private getSkillTypeForRole(
+    role: AvalonRole | undefined,
+    advancedMode: boolean,
+  ): AvalonSkillType {
+    if (!advancedMode || !role) return "none";
+
+    switch (role) {
+      case "Merlin":
+        return "merlinEternalBond";
+      case "Assassin":
+        return "assassinInsight";
+      case "Morgana":
+        return "morganaSilence";
+      case "Mordred":
+        return "mordredForceFail";
+      case "Athena":
+        return "athenaFateFlip";
+      case "Percival":
+        return "percivalTrace";
+      case "Minion_Evil":
+      case "Minion_Good":
+        return "minionChaCha";
+      default:
+        return "none";
+    }
+  }
+
+  private getSkillTypeForPlayer(
+    room: AvalonRoom,
+    userId: string,
+  ): AvalonSkillType {
+    const player = room.players.find((p) => p.userId === userId);
+    return this.getSkillTypeForRole(player?.role, room.settings.advancedMode);
+  }
+
+  private skillRequiresTarget(skillType: AvalonSkillType): boolean {
+    return (
+      skillType === "assassinInsight" ||
+      skillType === "percivalTrace" ||
+      skillType === "mordredForceFail"
+    );
+  }
+
+  private isSkillReusableEachQuest(skillType: AvalonSkillType): boolean {
+    return skillType === "minionChaCha";
+  }
+
+  private getQuestSkillParticipantUserIds(room: AvalonRoom): string[] {
+    const participantSet = new Set(room.proposedTeam);
+    const mordred = room.players.find(
+      (p) => p.role === "Mordred" && !p.isSpectator && p.status === "connected",
+    );
+    if (mordred) {
+      participantSet.add(mordred.userId);
+    }
+    return Array.from(participantSet);
+  }
+
+  private canUseSkillInCurrentQuest(room: AvalonRoom, userId: string): boolean {
+    const skillType = this.getSkillTypeForPlayer(room, userId);
+    if (skillType === "none") return false;
+    if (skillType === "merlinEternalBond") return false;
+    if (this.isSkillReusableEachQuest(skillType)) return true;
+    return !Boolean(room.skillUsedByUserId?.[userId]);
+  }
+
+  private canUseMerlinPreAssassinationSkill(
+    room: AvalonRoom,
+    userId: string,
+  ): boolean {
+    const player = room.players.find((p) => p.userId === userId);
+    if (!player || player.isSpectator || player.role !== "Merlin") return false;
+    const skillType = this.getSkillTypeForPlayer(room, userId);
+    if (skillType !== "merlinEternalBond") return false;
+    return !Boolean(room.skillUsedByUserId?.[userId]);
+  }
+
+  private ensureSkillUsageMap(room: AvalonRoom) {
+    if (!room.skillUsedByUserId) room.skillUsedByUserId = {};
+    room.players
+      .filter((p) => !p.isSpectator)
+      .forEach((p) => {
+        if (
+          room.skillUsedByUserId &&
+          room.skillUsedByUserId[p.userId] == null
+        ) {
+          room.skillUsedByUserId[p.userId] = false;
+        }
+      });
+  }
+
+  private getPercivalFunctionVisibility(role: AvalonRole | undefined): boolean {
+    if (!role) return false;
+    return (
+      role !== "Minion_Evil" &&
+      role !== "Minion_Good" &&
+      role !== "Mordred" &&
+      role !== "Oberon"
+    );
+  }
+
+  private getRoleHasActiveFunction(role: AvalonRole | undefined): boolean {
+    if (!role) return false;
+    return (
+      role !== "Minion_Evil" &&
+      role !== "Minion_Good" &&
+      role !== "Mordred" &&
+      role !== "Oberon"
+    );
+  }
+
+  private revealRolePublicly(room: AvalonRoom, userId: string) {
+    if (!room.publicRevealedRoleUserIds) room.publicRevealedRoleUserIds = [];
+    if (!room.publicRevealedRoleUserIds.includes(userId)) {
+      room.publicRevealedRoleUserIds.push(userId);
+    }
+  }
+
+  private beginSkillDecisionPhase(room: AvalonRoom) {
+    const participantUserIds = this.getQuestSkillParticipantUserIds(room);
+
+    room.state = "SKILL_DECISION";
+    room.skillDecisionState = {
+      questNumber: room.currentQuestIndex + 1,
+      phase: "quest",
+      participantUserIds,
+      decisions: {},
+      submittedCount: 0,
+      publicAnnouncements: [],
+    };
+    room.players.forEach((p) => {
+      p.hasVoted = false;
+      delete p.questVote;
+    });
+
+    // Auto-confirm players with no usable skill in this quest (e.g., Merlin), so
+    // they are not forced to interact with a no-skill decision step.
+    room.skillDecisionState.participantUserIds.forEach((participantUserId) => {
+      const participant = room.players.find(
+        (p) => p.userId === participantUserId,
+      );
+      if (!participant || participant.isSpectator) {
+        room.skillDecisionState!.decisions[participantUserId] = {
+          userId: participantUserId,
+          skillType: "none",
+          useSkill: false,
+          targetUserId: null,
+          submittedAt: Date.now(),
+        };
+        if (participant) participant.hasVoted = true;
+        return;
+      }
+
+      const skillType = this.getSkillTypeForPlayer(room, participantUserId);
+      const canUseSkill = this.canUseSkillInCurrentQuest(
+        room,
+        participantUserId,
+      );
+
+      if (!canUseSkill) {
+        room.skillDecisionState!.decisions[participantUserId] = {
+          userId: participantUserId,
+          skillType,
+          useSkill: false,
+          targetUserId: null,
+          submittedAt: Date.now(),
+        };
+        participant.hasVoted = true;
+      }
+    });
+
+    room.skillDecisionState.submittedCount = Object.keys(
+      room.skillDecisionState.decisions,
+    ).length;
+  }
+
+  private beginMerlinPreAssassinationDecisionPhase(
+    room: AvalonRoom,
+  ): AvalonRoom["skillDecisionState"] {
+    const merlin = room.players.find(
+      (p) => p.role === "Merlin" && !p.isSpectator && p.status === "connected",
+    );
+
+    if (!room.settings.advancedMode || !merlin) {
+      room.state = "ASSASSINATION";
+      return room.skillDecisionState ?? null;
+    }
+
+    this.ensureSkillUsageMap(room);
+
+    room.state = "SKILL_DECISION";
+    room.skillDecisionState = {
+      questNumber: room.currentQuestIndex,
+      phase: "preAssassination",
+      participantUserIds: [merlin.userId],
+      decisions: {},
+      submittedCount: 0,
+      publicAnnouncements: [],
+    };
+
+    room.players.forEach((p) => {
+      p.hasVoted = false;
+      delete p.questVote;
+    });
+
+    const canUseSkill = this.canUseMerlinPreAssassinationSkill(
+      room,
+      merlin.userId,
+    );
+    if (!canUseSkill) {
+      room.skillDecisionState.decisions[merlin.userId] = {
+        userId: merlin.userId,
+        skillType: this.getSkillTypeForPlayer(room, merlin.userId),
+        useSkill: false,
+        targetUserId: null,
+        submittedAt: Date.now(),
+      };
+      merlin.hasVoted = true;
+      room.skillDecisionState.submittedCount = 1;
+    }
+
+    return room.skillDecisionState;
   }
 
   constructor(server: Server) {
@@ -153,6 +473,19 @@ export class AvalonEngine {
           this.voteQuest(socket.data.roomId, socket.data.userId, vote);
         }
       });
+
+      socket.on(
+        "submitSkillDecision",
+        (payload?: { useSkill?: boolean; targetUserId?: string | null }) => {
+          if (socket.data.roomId && socket.data.userId) {
+            this.submitSkillDecision(
+              socket.data.roomId,
+              socket.data.userId,
+              payload,
+            );
+          }
+        },
+      );
 
       socket.on("assassinate", (targetId: string) => {
         if (socket.data.roomId && socket.data.userId) {
@@ -265,6 +598,7 @@ export class AvalonEngine {
         players: [],
         state: "LOBBY",
         settings: {
+          advancedMode: false,
           merlin: true,
           percival: true,
           assassin: true,
@@ -283,6 +617,14 @@ export class AvalonEngine {
         leaderIndex: 0,
         votingResults: null,
         voteOutcome: null,
+        skillDecisionState: null,
+        skillUsedByUserId: {},
+        skillUsageHistory: [],
+        functionTagByViewerUserId: {},
+        merlinBondArmedUserId: null,
+        forcedFailState: null,
+        privateNoticesByUserId: {},
+        publicRevealedRoleUserIds: [],
       });
     }
   }
@@ -373,6 +715,7 @@ export class AvalonEngine {
       if (canRemove) {
         room.players.splice(pIndex, 1);
         if (room.players.length === 0) {
+          this.clearQuestResolutionTimers(roomId);
           this.rooms.delete(roomId);
         } else if (player.isHost) {
           // Shift host to first remaining connected non-spectator, or first player
@@ -451,8 +794,19 @@ export class AvalonEngine {
     room.voteTrack = 0;
     room.proposedTeam = [];
     room.votingResults = null;
+    room.skillDecisionState = null;
+    room.forcedFailState = null;
+    room.privateNoticesByUserId = {};
+    room.skillUsedByUserId = {};
+    room.skillUsageHistory = [];
+    room.publicRevealedRoleUserIds = [];
+    delete room.minionSoulmates;
+    this.clearQuestResolutionTimers(roomId);
     room.players.forEach((p) => {
       p.isHandRaised = false;
+      if (room.skillUsedByUserId) {
+        room.skillUsedByUserId[p.userId] = false;
+      }
     });
 
     // Determine counts based on standard Avalon rules
@@ -493,6 +847,12 @@ export class AvalonEngine {
       goodRoles.push("Merlin");
     if (settings.percival && goodRoles.length < goodLimit)
       goodRoles.push("Percival");
+    if (
+      settings.advancedMode &&
+      numPlayers >= 7 &&
+      goodRoles.length < goodLimit
+    )
+      goodRoles.push("Athena");
     while (goodRoles.length < goodLimit) {
       goodRoles.push("Minion_Good");
     }
@@ -631,8 +991,25 @@ export class AvalonEngine {
         });
 
         room.voteTrack = 0;
-        room.state = "QUEST";
-        room.players.forEach((p) => (p.hasVoted = false)); // reset for quest voting
+        if (room.settings.advancedMode) {
+          this.ensureSkillUsageMap(room);
+          this.beginSkillDecisionPhase(room);
+
+          const allAutoSubmitted =
+            !!room.skillDecisionState &&
+            room.skillDecisionState.submittedCount >=
+              room.skillDecisionState.participantUserIds.length;
+          if (allAutoSubmitted) {
+            this.resolveSkillDecisionPhase(roomId, room);
+            return;
+          }
+        } else {
+          room.state = "QUEST";
+          room.players.forEach((p) => {
+            p.hasVoted = false;
+            delete p.questVote;
+          });
+        }
       } else {
         // Team rejected
         const leader = room.players[room.leaderIndex];
@@ -662,6 +1039,320 @@ export class AvalonEngine {
     this.broadcastState(roomId);
   }
 
+  public submitSkillDecision(
+    roomId: string,
+    userId: string,
+    payload?: { useSkill?: boolean; targetUserId?: string | null },
+  ) {
+    const room = this.rooms.get(roomId);
+    if (!room || room.state !== "SKILL_DECISION" || !room.skillDecisionState)
+      return;
+    if (!room.skillDecisionState.participantUserIds.includes(userId)) return;
+
+    const player = room.players.find((p) => p.userId === userId);
+    if (!player || player.isSpectator || player.hasVoted) return;
+
+    this.ensureSkillUsageMap(room);
+
+    const skillType = this.getSkillTypeForPlayer(room, userId);
+    const canUseSkill =
+      room.skillDecisionState.phase === "preAssassination"
+        ? this.canUseMerlinPreAssassinationSkill(room, userId)
+        : this.canUseSkillInCurrentQuest(room, userId);
+
+    const requestedUse = Boolean(payload?.useSkill) && canUseSkill;
+    let targetUserId = payload?.targetUserId ?? null;
+
+    if (requestedUse && this.skillRequiresTarget(skillType)) {
+      const isValidTarget =
+        !!targetUserId &&
+        room.proposedTeam.includes(targetUserId) &&
+        targetUserId !== userId;
+      if (!isValidTarget) {
+        targetUserId = null;
+      }
+    } else {
+      targetUserId = null;
+    }
+
+    const useSkill =
+      requestedUse &&
+      (!this.skillRequiresTarget(skillType) || Boolean(targetUserId));
+
+    const decision: AvalonSkillDecision = {
+      userId,
+      skillType,
+      useSkill,
+      targetUserId,
+      submittedAt: Date.now(),
+    };
+
+    room.skillDecisionState.decisions[userId] = decision;
+    room.skillDecisionState.submittedCount = Object.keys(
+      room.skillDecisionState.decisions,
+    ).length;
+
+    player.hasVoted = true;
+
+    const allSubmitted =
+      room.skillDecisionState.submittedCount >=
+      room.skillDecisionState.participantUserIds.length;
+
+    if (allSubmitted) {
+      this.resolveSkillDecisionPhase(roomId, room);
+      return;
+    }
+
+    this.broadcastState(roomId);
+  }
+
+  private resolveSkillDecisionPhase(roomId: string, room: AvalonRoom) {
+    const skillState = room.skillDecisionState;
+    if (!skillState) return;
+
+    if (skillState.phase === "preAssassination") {
+      this.resolveMerlinPreAssassinationDecision(roomId, room);
+      return;
+    }
+
+    this.ensureSkillUsageMap(room);
+    const functionTagByViewerUserId =
+      room.functionTagByViewerUserId ?? (room.functionTagByViewerUserId = {});
+
+    const decisions = Object.values(skillState.decisions);
+    const playersById = new Map(room.players.map((p) => [p.userId, p]));
+
+    const morganaDecision = decisions.find(
+      (decision) =>
+        decision.useSkill && decision.skillType === "morganaSilence",
+    );
+
+    const morganaSilenced = Boolean(morganaDecision);
+    skillState.morganaSilenced = morganaSilenced;
+
+    if (morganaDecision && room.skillUsedByUserId) {
+      room.skillUsedByUserId[morganaDecision.userId] = true;
+      this.addPrivateNotice(
+        room,
+        morganaDecision.userId,
+        "Bạn đã kích hoạt Đêm Câm Lặng. Toàn bộ kỹ năng quest này bị khóa.",
+      );
+      this.recordSkillUsage(room, {
+        phase: "quest",
+        questNumber: skillState.questNumber,
+        actorUserId: morganaDecision.userId,
+        skillType: "morganaSilence",
+        detail: "Khóa toàn bộ kỹ năng trong phase này.",
+      });
+    }
+
+    let athenaActivatorUserId: string | undefined;
+    let mordredForceTargetUserId: string | undefined;
+
+    if (!morganaSilenced) {
+      decisions.forEach((decision) => {
+        if (!decision.useSkill || !room.skillUsedByUserId) return;
+
+        const actor = playersById.get(decision.userId);
+        if (!actor) return;
+
+        switch (decision.skillType) {
+          case "mordredForceFail": {
+            if (!decision.targetUserId) return;
+            const target = playersById.get(decision.targetUserId);
+            if (!target) return;
+            room.skillUsedByUserId[actor.userId] = true;
+            mordredForceTargetUserId = target.userId;
+            room.forcedFailState = {
+              questNumber: room.currentQuestIndex + 1,
+              targetUserId: target.userId,
+              sourceUserId: actor.userId,
+            };
+            skillState.mordredForceTargetUserId = target.userId;
+            this.addPrivateNotice(
+              room,
+              target.userId,
+              "Bạn đang bị nguyền: ở lượt vote nhiệm vụ này, phiếu của bạn sẽ bị ép thành FAIL.",
+            );
+            this.recordSkillUsage(room, {
+              phase: "quest",
+              questNumber: skillState.questNumber,
+              actorUserId: actor.userId,
+              skillType: "mordredForceFail",
+              targetUserId: target.userId,
+              detail: "Ép mục tiêu bỏ phiếu FAIL khi đi nhiệm vụ.",
+            });
+            break;
+          }
+
+          case "athenaFateFlip": {
+            athenaActivatorUserId = actor.userId;
+            skillState.athenaActivatorUserId = actor.userId;
+            room.skillUsedByUserId[actor.userId] = true;
+            this.revealRolePublicly(room, actor.userId);
+            const revealAnnouncement = `${actor.name} đã lộ diện với thân phận Athena.`;
+            skillState.publicAnnouncements.push(revealAnnouncement);
+            this.addSystemMessage(room, revealAnnouncement);
+            this.addPrivateNotice(
+              room,
+              actor.userId,
+              "Athena đã sẵn sàng đảo ngược số phận sau khi quest kết toán.",
+            );
+            this.recordSkillUsage(room, {
+              phase: "quest",
+              questNumber: skillState.questNumber,
+              actorUserId: actor.userId,
+              skillType: "athenaFateFlip",
+              detail: "Đảo ngược kết quả nhiệm vụ sau khi lật bài.",
+            });
+            break;
+          }
+
+          case "minionChaCha": {
+            // Do not announce in public chat to avoid exposing Minion identity
+            if (!skillState.successfulChaChaUserIds) {
+              skillState.successfulChaChaUserIds = [];
+            }
+            skillState.successfulChaChaUserIds.push(actor.userId);
+            this.recordSkillUsage(room, {
+              phase: "quest",
+              questNumber: skillState.questNumber,
+              actorUserId: actor.userId,
+              skillType: "minionChaCha",
+              detail: "Kích hoạt liên kết Minion.",
+            });
+            break;
+          }
+
+          case "assassinInsight": {
+            if (!decision.targetUserId) return;
+            const target = playersById.get(decision.targetUserId);
+            if (!target) return;
+            room.skillUsedByUserId[actor.userId] = true;
+            const hasFunction = this.getRoleHasActiveFunction(target.role);
+            const insightLine = `Soi ${target.name}: ${hasFunction ? "CÓ CHỨC NĂNG" : "KHÔNG CÓ CHỨC NĂNG"}.`;
+            const actorFunctionTags =
+              functionTagByViewerUserId[actor.userId] ??
+              (functionTagByViewerUserId[actor.userId] = {});
+            actorFunctionTags[target.userId] = hasFunction
+              ? "hasFunction"
+              : "noFunction";
+            this.addPrivateNotice(room, actor.userId, insightLine);
+            this.recordSkillUsage(room, {
+              phase: "quest",
+              questNumber: skillState.questNumber,
+              actorUserId: actor.userId,
+              skillType: "assassinInsight",
+              targetUserId: target.userId,
+              detail: hasFunction
+                ? "Kết quả soi: CÓ CHỨC NĂNG."
+                : "Kết quả soi: KHÔNG CÓ CHỨC NĂNG.",
+            });
+            break;
+          }
+
+          case "percivalTrace": {
+            if (!decision.targetUserId) return;
+            const target = playersById.get(decision.targetUserId);
+            if (!target) return;
+            room.skillUsedByUserId[actor.userId] = true;
+            const hasFunction = this.getPercivalFunctionVisibility(target.role);
+            const traceLine = `Truy vết ${target.name}: ${hasFunction ? "CÓ CHỨC NĂNG" : "KHÔNG CÓ CHỨC NĂNG"}.`;
+            const actorFunctionTags =
+              functionTagByViewerUserId[actor.userId] ??
+              (functionTagByViewerUserId[actor.userId] = {});
+            actorFunctionTags[target.userId] = hasFunction
+              ? "hasFunction"
+              : "noFunction";
+            this.addPrivateNotice(room, actor.userId, traceLine);
+            this.recordSkillUsage(room, {
+              phase: "quest",
+              questNumber: skillState.questNumber,
+              actorUserId: actor.userId,
+              skillType: "percivalTrace",
+              targetUserId: target.userId,
+              detail: hasFunction
+                ? "Kết quả truy vết: CÓ CHỨC NĂNG."
+                : "Kết quả truy vết: KHÔNG CÓ CHỨC NĂNG.",
+            });
+            break;
+          }
+
+          case "merlinEternalBond": {
+            break;
+          }
+
+          default:
+            break;
+        }
+      });
+    }
+
+    if (!mordredForceTargetUserId) {
+      room.forcedFailState = null;
+    }
+
+    if (!athenaActivatorUserId) {
+      skillState.athenaActivatorUserId = undefined;
+    }
+
+    room.state = "QUEST";
+    room.players.forEach((p) => {
+      p.hasVoted = false;
+      delete p.questVote;
+    });
+
+    this.broadcastState(roomId);
+  }
+
+  private resolveMerlinPreAssassinationDecision(
+    roomId: string,
+    room: AvalonRoom,
+  ) {
+    const skillState = room.skillDecisionState;
+    if (!skillState || skillState.phase !== "preAssassination") return;
+
+    this.ensureSkillUsageMap(room);
+
+    const merlinUserId = skillState.participantUserIds[0];
+    const merlinDecision = merlinUserId
+      ? skillState.decisions[merlinUserId]
+      : undefined;
+
+    if (
+      merlinUserId &&
+      merlinDecision?.useSkill &&
+      merlinDecision.skillType === "merlinEternalBond" &&
+      room.skillUsedByUserId
+    ) {
+      room.skillUsedByUserId[merlinUserId] = true;
+      room.merlinBondArmedUserId = merlinUserId;
+      this.addPrivateNotice(
+        room,
+        merlinUserId,
+        "Bạn đã kích hoạt Đồng Quy Vô Tận. Nếu bị ám sát trúng, trận đấu sẽ hòa.",
+      );
+      this.recordSkillUsage(room, {
+        phase: "preAssassination",
+        questNumber: null,
+        actorUserId: merlinUserId,
+        skillType: "merlinEternalBond",
+        detail: "Kích hoạt đồng quy trước phase ám sát.",
+      });
+    } else {
+      room.merlinBondArmedUserId = null;
+    }
+
+    room.skillDecisionState = null;
+    room.state = "ASSASSINATION";
+    room.players.forEach((p) => {
+      p.hasVoted = false;
+      delete p.questVote;
+    });
+
+    this.broadcastState(roomId);
+  }
+
   public voteQuest(roomId: string, userId: string, vote: "success" | "fail") {
     const room = this.rooms.get(roomId);
     if (!room || room.state !== "QUEST") return;
@@ -670,7 +1361,7 @@ export class AvalonEngine {
     if (!room.proposedTeam.includes(userId)) return;
 
     const player = room.players.find((p) => p.userId === userId);
-    if (!player || player.isSpectator) return;
+    if (!player || player.isSpectator || player.hasVoted) return;
 
     player.questVote = vote;
     player.hasVoted = true;
@@ -680,86 +1371,242 @@ export class AvalonEngine {
     );
     const allVoted = teamPlayers.every((p) => p.hasVoted);
 
-    if (allVoted) {
-      const votes = teamPlayers.map((p) => p.questVote!);
-      const failCount = votes.filter((v) => v === "fail").length;
-      const successCount = votes.length - failCount;
-      const requiredFails =
-        room.questHistory[room.currentQuestIndex].failsRequired;
-      const questNumber = room.currentQuestIndex + 1;
+    if (!allVoted) {
+      this.broadcastState(roomId);
+      return;
+    }
 
-      const currentQuest = room.questHistory[room.currentQuestIndex];
-      currentQuest.votes = votes;
-      room.questParticipantsHistory = [
-        ...room.questParticipantsHistory.filter(
-          (record) => record.questNumber !== questNumber,
-        ),
-        {
-          questNumber,
-          participantUserIds: [...room.proposedTeam],
-        },
-      ].sort((a, b) => a.questNumber - b.questNumber);
+    const questNumber = room.currentQuestIndex + 1;
+    const forcedTarget =
+      room.forcedFailState?.questNumber === questNumber
+        ? room.forcedFailState.targetUserId
+        : undefined;
 
-      if (failCount >= requiredFails) {
-        currentQuest.status = "fail";
-        this.setVoteOutcome(roomId, room, {
+    const votes = teamPlayers.map((p) =>
+      forcedTarget && p.userId === forcedTarget ? "fail" : p.questVote!,
+    );
+
+    const failCount = votes.filter((v) => v === "fail").length;
+    const successCount = votes.length - failCount;
+    const requiredFails =
+      room.questHistory[room.currentQuestIndex].failsRequired;
+    const rawResult = failCount >= requiredFails ? "fail" : "success";
+    const leaderUserId = room.players[room.leaderIndex]?.userId ?? userId;
+
+    const currentQuest = room.questHistory[room.currentQuestIndex];
+    currentQuest.votes = votes;
+    room.questParticipantsHistory = [
+      ...room.questParticipantsHistory.filter(
+        (record) => record.questNumber !== questNumber,
+      ),
+      {
+        questNumber,
+        participantUserIds: [...room.proposedTeam],
+      },
+    ].sort((a, b) => a.questNumber - b.questNumber);
+
+    const athenaActivatorUserId =
+      room.skillDecisionState?.athenaActivatorUserId;
+    const athenaFlipActive =
+      room.settings.advancedMode &&
+      Boolean(athenaActivatorUserId) &&
+      !Boolean(room.skillDecisionState?.morganaSilenced);
+
+    const finalResult = athenaFlipActive
+      ? rawResult === "success"
+        ? "fail"
+        : "success"
+      : rawResult;
+
+    room.players.forEach((p) => {
+      p.hasVoted = false;
+      delete p.questVote;
+    });
+
+    if (!athenaFlipActive) {
+      this.setVoteOutcome(roomId, room, {
+        kind: "quest",
+        result: finalResult,
+        leaderUserId,
+        revealDetailedCountsToLeader:
+          room.settings.leaderSeesDetailedVoteCounts,
+        failCount,
+        successCount,
+        totalVotes: votes.length,
+        questNumber,
+      });
+      this.finalizeQuestOutcome(roomId, room, finalResult);
+      return;
+    }
+
+    room.state = "QUEST_RESOLUTION";
+    this.clearQuestResolutionTimers(roomId);
+
+    const ATHENA_FLIP_REVEAL_DELAY_MS = 3000;
+    const ATHENA_CINEMATIC_DURATION_MS = 8000;
+
+    this.setVoteOutcome(roomId, room, {
+      kind: "quest",
+      result: rawResult,
+      leaderUserId,
+      revealDetailedCountsToLeader: room.settings.leaderSeesDetailedVoteCounts,
+      failCount,
+      successCount,
+      totalVotes: votes.length,
+      questNumber,
+      athenaFlip: true,
+      athenaStage: "raw",
+      athenaRawResult: rawResult,
+      athenaFinalResult: finalResult,
+    });
+
+    this.broadcastState(roomId);
+
+    this.scheduleQuestResolutionTimer(
+      roomId,
+      () => {
+        const liveRoom = this.rooms.get(roomId);
+        if (!liveRoom || liveRoom.currentQuestIndex + 1 !== questNumber) return;
+
+        const athena = liveRoom.players.find(
+          (p) => p.userId === athenaActivatorUserId,
+        );
+        if (athena) {
+          this.addSystemMessage(
+            liveRoom,
+            `${athena.name} đã kích hoạt Athena: số phận nhiệm vụ bị đảo ngược!`,
+          );
+        }
+
+        this.setVoteOutcome(roomId, liveRoom, {
           kind: "quest",
-          result: "fail",
-          leaderUserId: room.players[room.leaderIndex]?.userId ?? userId,
+          result: finalResult,
+          leaderUserId,
           revealDetailedCountsToLeader:
-            room.settings.leaderSeesDetailedVoteCounts,
+            liveRoom.settings.leaderSeesDetailedVoteCounts,
           failCount,
           successCount,
           totalVotes: votes.length,
           questNumber,
+          athenaFlip: true,
+          athenaStage: "flipped",
+          athenaRawResult: rawResult,
+          athenaFinalResult: finalResult,
+          announcement: "Athena đã đảo ngược số phận nhiệm vụ.",
         });
-      } else {
-        currentQuest.status = "success";
-        this.setVoteOutcome(roomId, room, {
-          kind: "quest",
-          result: "success",
-          leaderUserId: room.players[room.leaderIndex]?.userId ?? userId,
-          revealDetailedCountsToLeader:
-            room.settings.leaderSeesDetailedVoteCounts,
-          failCount,
-          successCount,
-          totalVotes: votes.length,
-          questNumber,
-        });
+
+        this.broadcastState(roomId);
+      },
+      ATHENA_FLIP_REVEAL_DELAY_MS,
+    );
+
+    this.scheduleQuestResolutionTimer(
+      roomId,
+      () => {
+        const liveRoom = this.rooms.get(roomId);
+        if (!liveRoom || liveRoom.currentQuestIndex + 1 !== questNumber) return;
+        this.finalizeQuestOutcome(roomId, liveRoom, finalResult);
+      },
+      ATHENA_FLIP_REVEAL_DELAY_MS + ATHENA_CINEMATIC_DURATION_MS,
+    );
+  }
+
+  private finalizeQuestOutcome(
+    roomId: string,
+    room: AvalonRoom,
+    finalResult: "success" | "fail",
+  ) {
+    const currentQuest = room.questHistory[room.currentQuestIndex];
+    if (currentQuest) {
+      currentQuest.status = finalResult;
+    }
+
+    room.proposedTeam = [];
+    room.leaderIndex = this.getNextLeaderIndex(room, room.leaderIndex);
+    room.currentQuestIndex++;
+    room.skillDecisionState = null;
+    room.forcedFailState = null;
+
+    // Evaluate Minion connection
+    if (!room.minionSoulmates) {
+      const minions = room.players.filter(p => !p.isSpectator && (p.role === "Minion_Good" || p.role === "Minion_Evil"));
+      const eligibleMinions = new Set<string>();
+
+      for (let i = 0; i < minions.length; i++) {
+        for (let j = i + 1; j < minions.length; j++) {
+          const m1 = minions[i];
+          const m2 = minions[j];
+          let sharedQuests = 0;
+          let sharedSuccesses = 0;
+          
+          room.questParticipantsHistory.forEach(record => {
+            const inTeam = record.participantUserIds.includes(m1.userId) && record.participantUserIds.includes(m2.userId);
+            if (inTeam) {
+              sharedQuests++;
+              const questStatus = room.questHistory[record.questNumber - 1]?.status;
+              if (questStatus === "success") {
+                sharedSuccesses++;
+              }
+            }
+          });
+
+          if (sharedQuests >= 3 && sharedSuccesses >= 2) {
+            eligibleMinions.add(m1.userId);
+            eligibleMinions.add(m2.userId);
+          }
+        }
       }
 
-      // Reset for next
-      room.players.forEach((p) => {
-        p.hasVoted = false;
-        delete p.questVote;
-      });
-      room.proposedTeam = [];
-      room.leaderIndex = this.getNextLeaderIndex(room, room.leaderIndex);
-
-      room.currentQuestIndex++;
-
-      // Check game over
-      const successes = room.questHistory.filter(
-        (q) => q.status === "success",
-      ).length;
-      const fails = room.questHistory.filter((q) => q.status === "fail").length;
-
-      if (successes >= 3) {
-        // Good won quests -> Assassin phase if Assassin exists
-        const assassinExists = room.players.some((p) => p.role === "Assassin");
-        if (assassinExists) {
-          room.state = "ASSASSINATION";
-        } else {
-          room.state = "GAME_OVER";
-          room.winner = "Good";
+      const eligibleArray = Array.from(eligibleMinions);
+      if (eligibleArray.length >= 2) {
+        // Shuffle to pick random 2
+        for (let i = eligibleArray.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [eligibleArray[i], eligibleArray[j]] = [eligibleArray[j], eligibleArray[i]];
         }
-      } else if (fails >= 3) {
-        room.state = "GAME_OVER";
-        room.winner = "Evil";
-      } else {
-        room.state = "TEAM_BUILDING";
+        room.minionSoulmates = [eligibleArray[0], eligibleArray[1]];
+        
+        const name1 = room.players.find(p => p.userId === eligibleArray[0])?.name || "Đồng đội";
+        const name2 = room.players.find(p => p.userId === eligibleArray[1])?.name || "Đồng đội";
+        
+        this.addPrivateNotice(room, eligibleArray[0], `Tín hiệu siêu linh: Bạn đã nhận ra đồng phạm Minion của mình là ${name2}!`);
+        this.addPrivateNotice(room, eligibleArray[1], `Tín hiệu siêu linh: Bạn đã nhận ra đồng phạm Minion của mình là ${name1}!`);
       }
     }
+
+    const successes = room.questHistory.filter(
+      (q) => q.status === "success",
+    ).length;
+    const fails = room.questHistory.filter((q) => q.status === "fail").length;
+
+    if (successes >= 3) {
+      const assassinExists = room.players.some((p) => p.role === "Assassin");
+      if (assassinExists) {
+        const decisionState = this.beginMerlinPreAssassinationDecisionPhase(room);
+
+        const decisionSubmittedCount = decisionState?.submittedCount ?? 0;
+        const decisionParticipantCount =
+          decisionState?.participantUserIds.length ?? 0;
+        const merlinDecisionAutoCompleted =
+          room.state === "SKILL_DECISION" &&
+          decisionParticipantCount > 0 &&
+          decisionSubmittedCount >= decisionParticipantCount;
+
+        if (merlinDecisionAutoCompleted) {
+          this.resolveSkillDecisionPhase(roomId, room);
+          return;
+        }
+      } else {
+        room.state = "GAME_OVER";
+        room.winner = "Good";
+      }
+    } else if (fails >= 3) {
+      room.state = "GAME_OVER";
+      room.winner = "Evil";
+    } else {
+      room.state = "TEAM_BUILDING";
+    }
+
     this.broadcastState(roomId);
   }
 
@@ -778,7 +1625,8 @@ export class AvalonEngine {
     room.state = "GAME_OVER";
 
     if (target.role === "Merlin") {
-      room.winner = "Evil"; // Assassin got Merlin!
+      room.winner =
+        room.merlinBondArmedUserId === target.userId ? "Abandoned" : "Evil";
     } else {
       room.winner = "Good"; // Assassin missed
     }
@@ -819,11 +1667,22 @@ export class AvalonEngine {
     room.proposedTeam = [];
     room.votingResults = null;
     room.voteOutcome = null;
+    room.skillDecisionState = null;
+    room.skillUsedByUserId = {};
+    room.skillUsageHistory = [];
+    room.functionTagByViewerUserId = {};
+    room.privateFunctionTagByTargetUserId = {};
+    room.merlinBondArmedUserId = null;
+    room.forcedFailState = null;
+    room.privateNoticesByUserId = {};
+    room.publicRevealedRoleUserIds = [];
     delete room.winner;
     delete room.assassinationTarget;
     delete room.assassinationSuggestions;
+    delete room.minionSoulmates;
 
     this.clearVoteOutcomeTimer(roomId);
+    this.clearQuestResolutionTimers(roomId);
 
     // Promote spectators to regular players, reset all game fields
     room.players.forEach((p) => {
@@ -988,14 +1847,52 @@ export class AvalonEngine {
   }
 
   private getSafeStateForPlayer(room: AvalonRoom, userId: string) {
-    // In Lobby, Assassination phase, and Game Over, all roles are public!
-    if (room.state === "LOBBY" || room.state === "ASSASSINATION" || room.state === "GAME_OVER") return room;
-
-
     const clone = JSON.parse(JSON.stringify(room)) as AvalonRoom;
     const me = clone.players.find((p) => p.userId === userId);
 
     if (!me) return clone;
+
+    clone.privateNotices = clone.privateNoticesByUserId?.[userId] ?? [];
+    delete clone.privateNoticesByUserId;
+
+    clone.privateFunctionTagByTargetUserId =
+      clone.functionTagByViewerUserId?.[userId] ?? {};
+    delete clone.functionTagByViewerUserId;
+
+    if (
+      clone.forcedFailState &&
+      clone.forcedFailState.targetUserId !== me.userId
+    ) {
+      delete clone.forcedFailState;
+    }
+
+    if (clone.skillDecisionState) {
+      const myDecision = clone.skillDecisionState.decisions[me.userId];
+      clone.skillDecisionState.decisions = myDecision
+        ? { [me.userId]: myDecision }
+        : {};
+    }
+
+    if (clone.state !== "GAME_OVER") {
+      delete clone.skillUsageHistory;
+    }
+
+    if (clone.state === "SKILL_DECISION") {
+      clone.players.forEach((p) => {
+        if (p.userId !== me.userId) {
+          delete p.hasVoted;
+        }
+      });
+    }
+
+    // In Lobby, Assassination phase, and Game Over, roles are public for table UX.
+    if (
+      clone.state === "LOBBY" ||
+      clone.state === "ASSASSINATION" ||
+      clone.state === "GAME_OVER"
+    ) {
+      return clone;
+    }
 
     if (clone.voteOutcome) {
       const canSeeDetailedCounts =
@@ -1016,17 +1913,28 @@ export class AvalonEngine {
     }
 
     // Obfuscate secret roles for security
+    const revealedRoleUserIds = new Set(clone.publicRevealedRoleUserIds ?? []);
     clone.players.forEach((p) => {
       if (p.userId !== me.userId) {
-        let seeAsSpecificEvil = false;
+        let seeAsSpecificRole = false;
         let seeAsGenericEvil = false;
         let seeAsMerlinLike = false; // Seen by Percival
+
+        if (revealedRoleUserIds.has(p.userId)) {
+          delete p.questVote;
+          return;
+        }
 
         // Evil sees other Evil (except Oberon)
         if (me.team === "Evil" && me.role !== "Oberon") {
           if (p.team === "Evil" && p.role !== "Oberon") {
-            seeAsSpecificEvil = true;
+            seeAsSpecificRole = true;
           }
+        }
+
+        // Athena sees Merlin directly
+        if (me.role === "Athena" && p.role === "Merlin") {
+          seeAsSpecificRole = true;
         }
 
         // Merlin sees Evil (except Mordred)
@@ -1036,7 +1944,7 @@ export class AvalonEngine {
           }
         }
 
-        // Percival sees Merlin and Morgana as targets
+        // Percival always sees Merlin and Morgana as the same "Merlin-like" signal.
         if (me.role === "Percival") {
           if (p.role === "Merlin" || p.role === "Morgana") {
             seeAsMerlinLike = true;
@@ -1047,11 +1955,16 @@ export class AvalonEngine {
         // but we shouldn't send individual questVotes.
         delete p.questVote;
 
+        // Soulmate Minion vision 
+        if (clone.minionSoulmates && clone.minionSoulmates.includes(me.userId) && clone.minionSoulmates.includes(p.userId)) {
+          seeAsSpecificRole = true;
+        }
+
         // Apply obfuscation
-        if (!seeAsSpecificEvil && !seeAsGenericEvil && !seeAsMerlinLike) {
+        if (!seeAsSpecificRole && !seeAsGenericEvil && !seeAsMerlinLike) {
           delete p.role;
           delete p.team;
-        } else if (seeAsSpecificEvil) {
+        } else if (seeAsSpecificRole) {
           // The user wants Evil companions to see EACH OTHER's exact roles
           // So we do not delete p.role, we leave it intact.
         } else if (seeAsGenericEvil) {
