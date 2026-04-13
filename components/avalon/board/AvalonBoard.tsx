@@ -19,9 +19,12 @@ import { AlertTriangle, X, Moon, Edit2 } from "lucide-react";
 
 import { useAvalonAudio } from "@/hooks/useAvalonAudio";
 import AvalonEntryScreen from "./AvalonEntryScreen";
-// import AvalonTopBar from "./AvalonTopBar";
 import AvalonLobby from "./AvalonLobby";
-import AvalonSidebar from "./AvalonSidebar";
+// import AvalonSidebar from "./AvalonSidebar";
+import AvalonAssetPreloader from "../AvalonAssetPreloader";
+import PhaseTransitionOverlay from "./PhaseTransitionOverlay";
+import { AnimatePresence, motion } from "framer-motion";
+import AvalonTopBar from "./AvalonTopBar";
 
 export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -173,6 +176,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   if (!hasJoined) {
     return (
       <>
+        <AvalonAssetPreloader />
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
         <AvalonEntryScreen
           playerName={playerName}
@@ -204,29 +208,22 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     );
   }
 
-  // Helper variables
+  // Helper variables (Derived from gameState to keep Topbar/Modals instantly snappy)
   const userId = sessionStorage.getItem("avalon_userId")!;
-  const me = gameState.players.find((p: AvalonPlayer) => p.userId === userId);
+  const me = gameState?.players.find((p: AvalonPlayer) => p.userId === userId);
   const isSpectator = Boolean(me?.isSpectator);
   const isHandRaised = Boolean(me?.isHandRaised);
   const isHost = me?.isHost ?? false;
-  const isLobby = gameState.state === "LOBBY";
-  const isGameOver = gameState.state === "GAME_OVER";
-  const boardShellClass = isLobby
-    ? "h-full min-h-0 overflow-y-auto overflow-x-hidden"
-    : "h-full min-h-0 overflow-hidden";
+  const isLobby = gameState?.state === "LOBBY";
+  const isGameOver = gameState?.state === "GAME_OVER";
 
   const handleBackButton = () => {
     if (isLobby || isGameOver) {
       router.push("/avalon");
       return;
     }
-    // Mid-game: host resets everyone to lobby; non-host leaves
-    if (isHost) {
-      setShowResetConfirm(true);
-    } else {
-      router.push("/avalon");
-    }
+    // Mid-game: confirm before doing anything
+    setShowResetConfirm(true);
   };
 
   const handleToggleRaiseHand = () => {
@@ -243,7 +240,10 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   };
 
   return (
-    <div className={`avalon-theme ${boardShellClass} flex flex-col w-full relative z-0`}>
+    <div className={`avalon-theme h-dvh min-h-0 overflow-hidden flex flex-col w-full relative z-0`}>
+      <AvalonAssetPreloader />
+      {gameState && <PhaseTransitionOverlay gameState={gameState} />}
+
       {/* Background */}
       <div
         className="fixed inset-0 z-0 pointer-events-none"
@@ -257,7 +257,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         <div className="absolute inset-0 bg-surface-dim-avalon/70 backdrop-blur-[2px]"></div>
       </div>
 
-      <AvalonSidebar
+      <AvalonTopBar
         me={me}
         socket={socket}
         isHost={isHost}
@@ -285,99 +285,119 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
           <EarlyEndOverlay gameState={gameState} userId={userId} socket={socket} />
         )}
 
-      {/* Phases Routing */}
-      {gameState.state === "LOBBY" && (
-        <AvalonLobby
-          gameState={gameState}
-          me={me}
-          socket={socket}
-          roomId={roomId}
-          playerPings={playerPings}
-          setPlayerPings={setPlayerPings}
-        />
-      )}
-
-      {gameState.state === "ROLE_REVEAL" ? (
-        me && me.role && !me.isSpectator ? (
-          <RoleReveal
-            gameState={gameState}
-            me={me}
-            onReady={() => socket?.emit("playerReady")}
-            roomId={roomId}
+      {/* Phases Routing with Cinematic Black Crossfade Transition */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={gameState.state}
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 1 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="flex-1 flex flex-col w-full relative min-h-0 overflow-y-auto overflow-x-hidden"
+        >
+          {/* The Black Cinematic Curtain */}
+          <motion.div
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 1 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="fixed inset-0 z-199 bg-[#03060a] pointer-events-none"
           />
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center gap-6 relative z-10 w-full h-full px-4 text-center">
-            <div className="w-24 h-24 rounded-full bg-(--surface-container-high)/50 border border-(--primary)/30 flex items-center justify-center shadow-[0_0_30px_rgba(131,195,163,0.15)] relative">
-              <Moon className="w-10 h-10 text-(--primary) animate-pulse relative z-10" />
-              <div className="absolute inset-0 rounded-full border border-(--primary)/10 scale-[1.2]"></div>
-              <div className="absolute inset-0 rounded-full border border-(--primary)/5 scale-[1.4]"></div>
-            </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-white tracking-widest uppercase shadow-black drop-shadow-lg">
-              Mọi người đang ngủ...
-            </h1>
-            <p className="text-xs sm:text-sm font-medium text-(--on-surface-variant)/70 uppercase tracking-[0.25em]">
-              Góc nhìn Khán Giả
-            </p>
-          </div>
-        )
-      ) : null}
 
-      {/* Fallback Error Phase */}
-      {!me && gameState.state !== "LOBBY" && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-6 z-10 text-center px-6">
-          <div className="w-16 h-16 rounded-full border border-(--primary)/30 flex items-center justify-center">
-            <span className="text-3xl animate-pulse">⚔️</span>
-          </div>
-          <div className="space-y-2">
-            <h2 className="font-headline text-2xl text-(--primary) uppercase tracking-widest">
-              Phiên Bản Lỗi
-            </h2>
-            <p className="text-(--on-surface-variant) text-sm italic max-w-sm">
-              Không tìm thấy dữ liệu người chơi của bạn. Hãy thử tải lại trang.
-            </p>
-          </div>
-          <button
-            onClick={() => router.push("/avalon")}
-            className="px-6 py-2.5 rounded-xl bg-(--primary)/10 border border-(--primary)/30 text-(--primary) font-headline text-sm uppercase tracking-widest hover:bg-(--primary)/20 transition-colors cursor-pointer"
-          >
-            Nhập Mã Phòng Khác
-          </button>
-        </div>
-      )}
-
-      {/* Main Game Interface */}
-      {gameState.state !== "LOBBY" &&
-        gameState.state !== "ROLE_REVEAL" &&
-        gameState.state !== "GAME_OVER" &&
-        gameState.state !== "ASSASSINATION" &&
-        me && (
-          <>
-            <RoundTable
+          {gameState.state === "LOBBY" && (
+            <AvalonLobby
               gameState={gameState}
               me={me}
               socket={socket}
               roomId={roomId}
-              isRoleHidden={isRoleHidden}
-              isReadOnly={isSpectator}
               playerPings={playerPings}
+              setPlayerPings={setPlayerPings}
             />
-            <VotingCards gameState={gameState} me={me} socket={socket} isReadOnly={isSpectator} />
-          </>
-        )}
+          )}
 
-      {gameState.state === "ASSASSINATION" && me && (
-        <AssassinationUI gameState={gameState} me={me} socket={socket} />
-      )}
+          {gameState.state === "ROLE_REVEAL" ? (
+            me && me.role && !me.isSpectator ? (
+              <RoleReveal
+                gameState={gameState}
+                me={me}
+                onReady={() => socket?.emit("playerReady")}
+                roomId={roomId}
+              />
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center gap-6 relative z-10 w-full h-full px-4 text-center">
+                <div className="w-24 h-24 rounded-full bg-(--surface-container-high)/50 border border-(--primary)/30 flex items-center justify-center shadow-[0_0_30px_rgba(131,195,163,0.15)] relative">
+                  <Moon className="w-10 h-10 text-(--primary) animate-pulse relative z-10" />
+                  <div className="absolute inset-0 rounded-full border border-(--primary)/10 scale-[1.2]"></div>
+                  <div className="absolute inset-0 rounded-full border border-(--primary)/5 scale-[1.4]"></div>
+                </div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-white tracking-widest uppercase shadow-black drop-shadow-lg">
+                  Mọi người đang ngủ...
+                </h1>
+                <p className="text-xs sm:text-sm font-medium text-(--on-surface-variant)/70 uppercase tracking-[0.25em]">
+                  Góc nhìn Khán Giả
+                </p>
+              </div>
+            )
+          ) : null}
 
-      {gameState.state === "GAME_OVER" && me && (
-        <GameOver
-          gameState={gameState}
-          me={me}
-          socket={socket}
-          winAudioRef={winAudioRef}
-          loseAudioRef={loseAudioRef}
-        />
-      )}
+          {/* Fallback Error Phase */}
+          {!me && gameState.state !== "LOBBY" && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-6 z-10 text-center px-6">
+              <div className="w-16 h-16 rounded-full border border-(--primary)/30 flex items-center justify-center">
+                <span className="text-3xl animate-pulse">⚔️</span>
+              </div>
+              <div className="space-y-2">
+                <h2 className="font-headline text-2xl text-(--primary) uppercase tracking-widest">
+                  Phiên Bản Lỗi
+                </h2>
+                <p className="text-(--on-surface-variant) text-sm italic max-w-sm">
+                  Không tìm thấy dữ liệu người chơi của bạn. Hãy thử tải lại trang.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push("/avalon")}
+                className="px-6 py-2.5 rounded-xl bg-(--primary)/10 border border-(--primary)/30 text-(--primary) font-headline text-sm uppercase tracking-widest hover:bg-(--primary)/20 transition-colors cursor-pointer"
+              >
+                Nhập Mã Phòng Khác
+              </button>
+            </div>
+          )}
+
+          {/* Main Game Interface */}
+          {gameState.state !== "LOBBY" &&
+            gameState.state !== "ROLE_REVEAL" &&
+            gameState.state !== "GAME_OVER" &&
+            gameState.state !== "ASSASSINATION" &&
+            me && (
+              <>
+                <RoundTable
+                  gameState={gameState}
+                  me={me}
+                  socket={socket}
+                  roomId={roomId}
+                  isRoleHidden={isRoleHidden}
+                  isReadOnly={isSpectator}
+                  playerPings={playerPings}
+                />
+                <VotingCards gameState={gameState} me={me} socket={socket} isReadOnly={isSpectator} />
+              </>
+            )}
+
+          {gameState.state === "ASSASSINATION" && me && (
+            <AssassinationUI gameState={gameState} me={me} socket={socket} />
+          )}
+
+          {gameState.state === "GAME_OVER" && me && (
+            <GameOver
+              gameState={gameState}
+              me={me}
+              socket={socket}
+              winAudioRef={winAudioRef}
+              loseAudioRef={loseAudioRef}
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {me &&
         gameState.state !== "ASSASSINATION" &&
@@ -465,9 +485,15 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
               <AlertTriangle className="w-5 h-5 text-amber-500" /> Cảnh báo
             </h3>
             <p className="text-(--on-surface-variant) text-sm sm:text-base leading-relaxed text-center sm:text-left">
-              Bạn là trưởng phòng. Nếu quay về,{" "}
-              <strong className="text-amber-500">ván chơi đang diễn ra sẽ bị huỷ</strong> và đưa
-              tất cả mọi người trở lại sảnh chờ.
+              {isHost ? (
+                <>
+                  Bạn là trưởng phòng. Nếu quay về,{" "}
+                  <strong className="text-amber-500">ván chơi đang diễn ra sẽ bị huỷ</strong> và đưa
+                  tất cả mọi người trở lại sảnh chờ.
+                </>
+              ) : (
+                <>Bạn có chắc chắn muốn rời khỏi phòng không?</>
+              )}
               <br />
               <br />
               Bạn có chắc chắn muốn tiếp tục?
@@ -481,7 +507,11 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
               </button>
               <button
                 onClick={() => {
-                  socket?.emit("returnToLobby");
+                  if (isHost) {
+                    socket?.emit("returnToLobby");
+                  } else {
+                    router.push("/avalon");
+                  }
                   setShowResetConfirm(false);
                 }}
                 className="flex-1 py-3 rounded-xl font-headline font-extrabold text-sm uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-400 transition-colors shadow-lg cursor-pointer"

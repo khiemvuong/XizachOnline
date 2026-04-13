@@ -4,6 +4,29 @@ import { AvalonPlayer } from "@/server/game/AvalonTypes";
 import { getRoleImageSrcForViewer } from "../roleImage";
 import { Skull } from "lucide-react";
 
+// Priority order for display: key roles first, then minions
+const ROLE_SORT_PRIORITY: Record<string, number> = {
+  Merlin: 0,
+  Percival: 1,
+  Arthur: 2,
+  "Good Lancelot": 3,
+  "Evil Lancelot": 4,
+  Assassin: 5,
+  Morgana: 6,
+  Mordred: 7,
+  Oberon: 8,
+  Minion_Good: 9,
+  Minion_Evil: 10,
+};
+
+function sortPlayers(players: AvalonPlayer[]): AvalonPlayer[] {
+  return [...players].sort((a, b) => {
+    const pa = ROLE_SORT_PRIORITY[a.role ?? ""] ?? 99;
+    const pb = ROLE_SORT_PRIORITY[b.role ?? ""] ?? 99;
+    return pa - pb;
+  });
+}
+
 export default function FactionPanel({
   label,
   resultTag,
@@ -27,6 +50,8 @@ export default function FactionPanel({
   muted?: boolean;
   compact?: boolean;
 }) {
+  const sorted = sortPlayers(players);
+
   return (
     <div
       className={`rounded-xl border backdrop-blur-md bg-surface-container-low/60 ${compact ? "p-3" : "p-4"} ${borderClass} ${muted ? "opacity-75" : ""}`}
@@ -50,45 +75,88 @@ export default function FactionPanel({
         </span>
       </div>
 
-      {/* Player rows */}
+      {/* Player rows — sorted by role priority */}
       <div
-        className={`grid ${compact ? "grid-cols-1 gap-1.5" : "grid-cols-2 gap-2"}`}
+        className={`grid ${compact ? "grid-cols-1 gap-2" : "grid-cols-2 gap-3"}`}
       >
-        {players.map((player) => {
+        {sorted.map((player) => {
           const isTarget = player.userId === assassinationTarget;
           const isSelf = player.userId === me.userId;
           return (
             <div
               key={player.userId}
-              className={`flex items-center gap-2 rounded-lg border border-outline-variant/20 bg-surface-container-lowest/40 ${compact ? "p-2" : "p-2.5"}`}
+              className={`relative flex items-center gap-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest/40 overflow-hidden ${compact ? "p-2.5" : "p-3"}`}
             >
+              {/* Role image avatar */}
               <div
-                className={`relative ${compact ? "h-7 w-7" : "h-9 w-9"} overflow-hidden rounded-full border border-outline-variant/30 bg-surface-container-low shrink-0`}
+                className={`relative ${compact ? "h-10 w-10" : "h-12 w-12"} overflow-hidden rounded-full border shrink-0 ${
+                  isTarget
+                    ? "border-red-600/70 ring-1 ring-red-600/40"
+                    : "border-outline-variant/30 text-shadow-sm shadow-black/50"
+                } bg-surface-container shadow-inner`}
               >
                 <Image
                   src={getRoleImageSrcForViewer(player, me)}
                   alt={player.name}
                   fill
-                  sizes="36px"
-                  className="object-cover"
+                  sizes="48px"
+                  className={`object-cover ${isTarget ? "grayscale brightness-50" : ""}`}
                 />
               </div>
+
+              {/* Name + role */}
               <div className="min-w-0 flex-1">
                 <p
-                  className={`truncate ${compact ? "text-xs" : "text-sm"} font-bold text-on-surface leading-tight`}
+                  className={`truncate ${compact ? "text-sm" : "text-base"} font-black tracking-wide leading-tight mb-0.5 ${
+                    isTarget ? "text-red-500/80 line-through decoration-2 decoration-red-600" : "text-on-surface"
+                  }`}
+                  style={{ textShadow: isTarget ? "none" : "0 2px 4px rgba(0,0,0,0.3)" }}
                 >
                   {player.name}
-                  {isSelf ? " (Bạn)" : ""}
+                  {isSelf && <span className="text-secondary/80 font-normal ml-1">(Bạn)</span>}
                 </p>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`text-[9px] uppercase tracking-[0.14em] ${muted ? "text-on-surface-variant/70" : accentClass}`}
-                  >
-                    {player.role ? player.role.replace("_", " ") : "Unknown"}
-                  </span>
-                  {isTarget && <Skull className="h-3 w-3 text-tertiary" />}
-                </div>
+                <span
+                  className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.16em] ${muted ? "text-on-surface-variant/70" : accentClass}`}
+                >
+                  {player.role ? player.role.replace("_", " ") : "Unknown"}
+                </span>
               </div>
+
+              {/* Blood-red assassinated overlay — diagonal slash */}
+              {isTarget && (
+                <>
+                  {/* Full-width diagonal red line */}
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    aria-hidden="true"
+                  >
+                    <svg
+                      className="absolute inset-0 w-full h-full"
+                      preserveAspectRatio="none"
+                    >
+                      <line
+                        x1="0" y1="0"
+                        x2="100%" y2="100%"
+                        stroke="rgba(185,28,28,0.65)"
+                        strokeWidth="3.5"
+                      />
+                      <line
+                        x1="100%" y1="0"
+                        x2="0" y2="100%"
+                        stroke="rgba(185,28,28,0.45)"
+                        strokeWidth="3.5"
+                      />
+                    </svg>
+                    {/* Blood red tint overlay */}
+                    <div className="absolute inset-0 bg-red-950/25 rounded-lg" />
+                  </div>
+
+                  {/* Eliminated badge top-right */}
+                  <div className="absolute top-1 right-1.5 text-[8px] font-black uppercase tracking-[0.12em] text-red-500/80">
+                    <Skull className="h-3 w-3 text-tertiary" />
+                  </div>
+                </>
+              )}
             </div>
           );
         })}

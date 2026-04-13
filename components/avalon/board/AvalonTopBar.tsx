@@ -9,13 +9,13 @@ import {
   VenetianMask,
   EyeOff,
   Eye,
-  AlertTriangle,
+  // AlertTriangle,
   Hand,
 } from "lucide-react";
 
 export default function AvalonTopBar({
   me,
-  socket,
+  // socket,
   isHost,
   isSpectator,
   isLobby,
@@ -129,8 +129,8 @@ export default function AvalonTopBar({
         </button>
       )}
 
-      {/* Early end — in-game only */}
-      {!isLobby && !isGameOver && !isSpectator && (
+      {/* Early end — in-game only (Temporarily Disabled) */}
+      {/* {!isLobby && !isGameOver && !isSpectator && (
         <button
           onClick={() => socket?.emit("voteEarlyEnd", true)}
           className="p-2 bg-black/40 backdrop-blur-md border border-(--tertiary)/30 rounded-full hover:bg-(--tertiary)/10 text-(--tertiary) hover:text-white transition-colors shadow-lg cursor-pointer"
@@ -138,7 +138,7 @@ export default function AvalonTopBar({
         >
           <AlertTriangle className="w-5 h-5" />
         </button>
-      )}
+      )} */}
 
       {/* Raise hand */}
       {!isLobby && !isGameOver && me && (

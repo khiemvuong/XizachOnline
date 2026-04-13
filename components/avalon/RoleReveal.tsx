@@ -1,18 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
-import { useScrollFitScale } from '@/hooks/useScrollFitScale';
+import { useSceneScale } from '@/hooks/useSceneScale';
 import { AvalonPlayer, AvalonRoom } from '@/server/game/AvalonTypes';
-import { Fingerprint, CheckCircle2, Eye, AlertTriangle, Swords } from 'lucide-react';
+import { Fingerprint, CheckCircle2, Eye, AlertTriangle, Swords, Crown } from 'lucide-react';
 import { getRoleImageSrcForViewer, getVisibleRoleLabelForViewer } from './roleImage';
+
+const SCENE_W = 1040;
+const SCENE_H = 600;
 
 export default function RoleReveal({ gameState, me, onReady, roomId }: { gameState: AvalonRoom, me: AvalonPlayer, onReady: () => void, roomId: string }) {
   const [isRevealing, setIsRevealing] = useState(false);
-  const leftViewportRef = useRef<HTMLElement | null>(null);
-  const leftContentRef = useRef<HTMLDivElement | null>(null);
-  const rightViewportRef = useRef<HTMLElement | null>(null);
-  const rightContentRef = useRef<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  
+  const scale = useSceneScale({
+    viewportRef,
+    sceneWidth: SCENE_W,
+    sceneHeight: SCENE_H,
+    padding: 16,
+    minScale: 0.25,
+  });
+
+  const isHost = me.isHost;
   const isEvil = me.team === 'Evil';
   const colorTheme = isEvil ? 'tertiary' : 'primary';
   const factionName = isEvil ? 'Thế Lực Hắc Ám' : 'Hiệp Sĩ Bàn Tròn';
@@ -38,55 +48,11 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
 
   const roleDetails = getRoleDetails(me.role);
   const roleImageSrc = getRoleImageSrcForViewer(me, me);
-  const maskedRoleLabel = 'Danh tính đang được phong ấn';
-  const maskedRoleDesc = 'Giữ ở khung bên phải để tạm mở danh tính của bạn.';
-
-  const [isCompact, setIsCompact] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia('(pointer: coarse) and (orientation: landscape) and (max-width: 1100px)');
-    
-    // Defer initial check to avoid synchronous setState warning during effect initialization
-    const frameId = requestAnimationFrame(() => setIsCompact(media.matches));
-
-    const listener = (e: MediaQueryListEvent) => setIsCompact(e.matches);
-    media.addEventListener('change', listener);
-    
-    return () => {
-       cancelAnimationFrame(frameId);
-       media.removeEventListener('change', listener);
-    };
-  }, []);
-
-  const leftScale = useScrollFitScale({
-    containerRef: leftViewportRef,
-    contentRef: leftContentRef,
-    minScale: 0.62,
-    active: isCompact,
-    dependencies: [gameState, me.role, me.isReady, isRevealing]
-  });
-
-  const rightScale = useScrollFitScale({
-    containerRef: rightViewportRef,
-    contentRef: rightContentRef,
-    minScale: 0.55,
-    active: isCompact,
-    dependencies: [gameState, me.role, me.isReady, isRevealing]
-  });
-
-  const autoFitLeft = isCompact;
-  const autoFitRight = isCompact;
-
-  const leftScaleStyle = autoFitLeft && leftScale < 0.999
-    ? { transform: `scale(${leftScale})`, transformOrigin: 'top left', width: `${100 / leftScale}%` }
-    : undefined;
-
-  const rightScaleStyle = autoFitRight && rightScale < 0.999
-    ? { transform: `scale(${rightScale})`, transformOrigin: 'top left', width: `${100 / rightScale}%` }
-    : undefined;
+  const maskedRoleLabel = 'Ai mà biết được trời';
+  const maskedRoleDesc = 'Giữ ở khung bên phải để coi danh tính đi.';
 
   return (
-    <div className="flex-1 w-full max-w-6xl mx-auto relative px-2 sm:px-4 py-3 z-0 h-full min-h-0 overflow-hidden">
+    <div ref={viewportRef} className="flex-1 w-full h-full relative flex items-center justify-center overflow-hidden z-0">
       
       {/* Faction Ambient Spotlight (Background) */}
       <div 
@@ -94,34 +60,42 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
         style={{ backgroundColor: `var(--color-${colorTheme}-avalon, var(--${colorTheme}))`, opacity: isRevealing ? 0.1 : 0 }}
       ></div>
 
-      <div className="avalon-role-reveal-grid grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-10 h-full items-stretch">
-        <section
-          ref={leftViewportRef}
-          className={`avalon-role-reveal-left min-h-0 lg:pr-4 pr-1 ${autoFitLeft ? 'overflow-hidden' : 'overflow-y-auto custom-avalon-scrollbar'}`}
-        >
-          <div
-            ref={leftContentRef}
-            className="avalon-role-reveal-left-content space-y-4 lg:space-y-6"
-            style={leftScaleStyle}
-          >
-          <div className="avalon-role-reveal-intro text-left space-y-2">
-            <div className="flex items-center justify-between">
-              <span className={`${isRevealing ? `text-(--${colorTheme})` : 'text-(--on-surface-variant)/60'} font-headline tracking-[0.3em] text-[10px] uppercase block transition-colors duration-500`}>
-                Màn Đêm Buông Xuống
-              </span>
-              <span className="text-[10px] font-headline text-(--secondary)/50 tracking-wider">#{roomId.substring(0,6)}</span>
+      <div 
+        className="relative flex flex-col shrink-0"
+        style={{
+          width: `${100 / scale}%`,
+          height: SCENE_H,
+          transform: `scale(${scale})`,
+          transformOrigin: 'center center'
+        }}
+      >
+        <div className="flex-1 grid grid-cols-2 gap-16 min-h-0 items-stretch px-8 sm:px-16 w-full max-w-[1400px] mx-auto">
+          <section className="flex flex-col space-y-6 pr-8 py-2 w-full h-full justify-center">
+            <div className="avalon-role-reveal-intro text-left space-y-2">
+              <div className="flex items-center justify-between w-full">
+                <span className={`${isRevealing ? `text-(--${colorTheme})` : 'text-(--on-surface-variant)/60'} font-headline tracking-[0.3em] text-[12px] uppercase block transition-colors duration-500`}>
+                  Màn Đêm Buông Xuống
+                </span>
+                <div className="flex items-center gap-2 text-[10px] font-headline tracking-wider">
+                  {isHost && (
+                    <div title="Bạn là Chủ Phòng" className="bg-amber-500/20 p-1 rounded-full border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                      <Crown className="w-3.5 h-3.5 text-amber-400" />
+                    </div>
+                  )}
+                  <span className='font-headline text-(--on-surface-variant)/60 text-[12px]'>#{roomId.substring(0,6)}</span>
+                </div>
+              </div>
+              <h2 className={`avalon-role-reveal-title text-5xl font-headline font-bold text-(--on-surface) tracking-tight transition-all duration-500 ${isRevealing ? (isEvil ? 'avalon-title-glow-tertiary text-(--tertiary)' : 'avalon-title-glow-primary') : 'avalon-title-glow-neutral'}`}>Danh Tính Bí Mật</h2>
+              <p className="text-(--on-surface-variant) font-body text-sm italic opacity-85">
+                &quot;Giữ lấy sự thật trong bóng tối của Camelot.&quot;
+              </p>
             </div>
-            <h2 className={`avalon-role-reveal-title text-3xl lg:text-5xl font-headline font-bold text-(--on-surface) tracking-tight transition-all duration-500 ${isRevealing ? (isEvil ? 'avalon-title-glow-tertiary text-(--tertiary)' : 'avalon-title-glow-primary') : 'avalon-title-glow-neutral'}`}>Danh Tính Bí Mật</h2>
-            <p className="text-(--on-surface-variant) font-body text-xs lg:text-sm italic opacity-85">
-              &quot;Giữ lấy sự thật trong bóng tối của Camelot.&quot;
-            </p>
-          </div>
 
-          <div className="avalon-role-reveal-summary rounded-xl border border-(--outline-variant)/40 bg-(--surface-container-low)/70 p-4 lg:p-5 backdrop-blur-md">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-(--on-surface-variant)">Vai trò của bạn</p>
-            <p className={`mt-1 text-xl lg:text-2xl font-headline uppercase tracking-widest transition-colors duration-500 ${isRevealing ? `text-(--${colorTheme})` : 'text-(--on-surface-variant)/60'}`}>
-              {isRevealing ? (me.role?.replace('_', ' ') ?? 'Unknown') : maskedRoleLabel}
-            </p>
+            <div className="avalon-role-reveal-summary rounded-xl border border-(--outline-variant)/40 bg-(--surface-container-low)/70 p-5 backdrop-blur-md">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-(--on-surface-variant)">Vai trò của bạn</p>
+              <p className={`mt-1 text-2xl font-headline uppercase tracking-widest transition-colors duration-500 ${isRevealing ? `text-(--${colorTheme})` : 'text-(--on-surface-variant)/60'}`}>
+                {isRevealing ? (me.role?.replace('_', ' ') ?? 'Unknown') : maskedRoleLabel}
+              </p>
             <p className="mt-2 text-sm text-(--on-surface-variant)">
               {isRevealing ? roleDetails.desc : maskedRoleDesc}
             </p>
@@ -139,17 +113,15 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
                 onClick={onReady}
                 disabled={isRevealing}
               >
-                {isRevealing ? 'Buông Tay Bổn Tọa...' : 'Nắm Rõ Bí Mật'}
+                {isRevealing ? 'Buông Tay Bổn Tọa...' : 'Oke let\'s go'}
               </button>
             )}
           </div>
-          </div>
         </section>
 
-        {/* Interactive Reveal Area */}
+        {/* RIGHT COLUMN: The Interactive Card */}
         <section
-          ref={rightViewportRef}
-          className="relative group w-full select-none touch-none min-h-0 overflow-hidden"
+          className="relative group w-full select-none touch-none flex flex-col justify-center h-full"
           onPointerUp={() => setIsRevealing(false)} 
           onPointerLeave={() => setIsRevealing(false)}
           onPointerCancel={() => setIsRevealing(false)}
@@ -158,17 +130,15 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
 
         {/* The Card Layer */}
         <div 
-          ref={rightContentRef}
-          className={`bg-(--surface-container-low) backdrop-blur-xl rounded-xl p-6 lg:p-8 border flex flex-col items-center text-center transition-all duration-300 w-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] ${isRevealing ? '' : 'blur-md opacity-40 scale-95'}`}
+          className={`bg-(--surface-container-low) backdrop-blur-xl rounded-2xl p-8 border flex flex-col items-center text-center transition-all duration-300 w-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] h-full justify-center ${isRevealing ? '' : 'blur-md opacity-40 scale-95'}`}
           style={{ 
-            borderColor: `color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 20%, transparent)`,
-            ...rightScaleStyle
+            borderColor: `color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 20%, transparent)`
           }}
         >
           {/* Fallback when role is not assigned */}
           {!me.role && (
             <div className="flex flex-col items-center gap-5 py-6 w-full">
-              <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-2xl border-2 border-slate-700/60 overflow-hidden bg-slate-900/80 shadow-2xl flex items-center justify-center">
+              <div className="relative w-36 h-36 rounded-2xl border-2 border-slate-700/60 overflow-hidden bg-slate-900/80 shadow-2xl flex items-center justify-center">
                 <span className="text-5xl select-none">?</span>
                 <div className="absolute inset-0 shadow-[inset_0_0_24px_rgba(0,0,0,0.7)] pointer-events-none rounded-2xl" />
               </div>
@@ -186,7 +156,7 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
               {/* Role Avatar/Image */}
               <div className="relative mt-2">
                 <div 
-                  className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 rounded-2xl border-2 flex items-center justify-center relative overflow-hidden shadow-2xl"
+                  className="w-48 h-48 rounded-2xl border-2 flex items-center justify-center relative overflow-hidden shadow-2xl"
                   style={{ 
                     borderColor: `color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 40%, transparent)`,
                     background: `linear-gradient(to bottom, color-mix(in srgb, var(--color-${colorTheme}-avalon, var(--${colorTheme})) 20%, transparent), var(--surface-container-high))`
@@ -364,6 +334,7 @@ export default function RoleReveal({ gameState, me, onReady, roomId }: { gameSta
           </div>
         )}
         </section>
+        </div>
       </div>
     </div>
   );

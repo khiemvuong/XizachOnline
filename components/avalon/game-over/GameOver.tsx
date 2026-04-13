@@ -211,7 +211,7 @@ export default function GameOver({
     <button
       className={`inline-flex items-center gap-3 rounded-xl px-8 py-3.5 text-sm font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg ${
         personalCase === "evil-win" || personalCase === "good-lose"
-          ? "bg-tertiary text-white shadow-[0_0_20px_rgba(255,49,49,0.4)]"
+          ? "bg-[#ff3131] text-white shadow-[0_0_20px_rgba(255,49,49,0.4)]"
           : "bg-primary text-on-primary shadow-[0_0_30px_rgba(186,200,220,0.3)] ring-2 ring-primary/50"
       }`}
       onClick={() => socket?.emit("restartAvalonGame")}
