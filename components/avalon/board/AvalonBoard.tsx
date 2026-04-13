@@ -7,7 +7,7 @@ import { io, Socket } from "socket.io-client";
 import RoleReveal from "../RoleReveal";
 import RoundTable from "../RoundTable";
 import VotingCards from "../VotingCards";
-import AssassinationUI from "../AssassinationUI";
+import AssassinationUI from "../assassination/AssassinationUI";
 import GameOver from "../game-over/GameOver";
 import EarlyEndOverlay from "../EarlyEndOverlay";
 import VoteOutcomeOverlay from "../VoteOutcomeOverlay";

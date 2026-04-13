@@ -68,6 +68,7 @@ export interface AvalonRoom {
   votingResults: Record<string, 'approve' | 'reject'> | null; // userId -> vote
   winner?: 'Good' | 'Evil' | 'Abandoned';
   assassinationTarget?: string;
+  assassinationSuggestions?: Record<string, string | null>; // userId (Evil) -> suggested targetId
   earlyEndVotes?: string[]; // userIds of players who have voted to end game early
   voteOutcome?: AvalonVoteOutcome | null;
   questParticipantsHistory: AvalonQuestParticipantsRecord[];
