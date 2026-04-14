@@ -1190,9 +1190,6 @@ export class AvalonEngine {
             skillState.athenaActivatorUserId = actor.userId;
             room.skillUsedByUserId[actor.userId] = true;
             this.revealRolePublicly(room, actor.userId);
-            const revealAnnouncement = `${actor.name} đã lộ diện với thân phận Athena.`;
-            skillState.publicAnnouncements.push(revealAnnouncement);
-            this.addSystemMessage(room, revealAnnouncement);
             this.addPrivateNotice(
               room,
               actor.userId,

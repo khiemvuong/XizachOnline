@@ -68,6 +68,9 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
          ref={stageRef}
          className="avalon-table-stage flex-1 min-h-0 w-full relative flex flex-col items-center justify-center py-2 md:py-4 px-1 sm:px-2 overflow-hidden bg-transparent"
       >
+         {/* Hidden priority images to warm Next.js image optimizer cache for mission splashes */}
+         <Image src="/Image/mission_success.png" alt="" fill priority sizes="1px" className="opacity-0 pointer-events-none absolute w-px h-px" aria-hidden="true" unoptimized={false} />
+         <Image src="/Image/mission_failed.png" alt="" fill priority sizes="1px" className="opacity-0 pointer-events-none absolute w-px h-px" aria-hidden="true" unoptimized={false} />
          <div className="absolute left-2 top-2 z-40 pointer-events-none flex flex-col items-start gap-2">
             <div className="flex items-center gap-2 pointer-events-auto">
                {showQuestParticipantsBoard && (

@@ -27,8 +27,8 @@ const ASSETS_TO_PRELOAD = [
   "/Image/assasin_background.png",
   "/Image/atmospheric-bg.png",
   "/Image/castle-bg.png",
-  "/Image/mission_success.png",
-  "/Image/mission_failed.png",
+  // NOTE: mission_success.png & mission_failed.png are preloaded via Next.js <Image priority>
+  // in RoundTable.tsx — raw new Image() doesn't warm the /_next/image optimizer cache.
 ];
 
 export default function AvalonAssetPreloader() {
