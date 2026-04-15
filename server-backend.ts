@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 import { GameEngine } from "./server/game/GameEngine";
 import { AvalonEngine } from "./server/game/AvalonEngine";
+import { DeceptionEngine } from "./server/game/DeceptionEngine";
 
 const port = parseInt(process.env.PORT || "3000", 10);
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || "*")
@@ -29,6 +30,7 @@ const io = new Server(httpServer, {
 
 const gameEngine = new GameEngine(io);
 new AvalonEngine(io);
+new DeceptionEngine(io);
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
