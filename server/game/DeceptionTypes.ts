@@ -22,6 +22,7 @@ export interface MeansCard {
   english: string;
   vietnamese: string;
   description: string;
+  imageUrl?: string;
 }
 
 export interface ClueCard {
@@ -29,6 +30,7 @@ export interface ClueCard {
   english: string;
   vietnamese: string;
   description: string;
+  imageUrl?: string;
 }
 
 export interface SceneTileOption {
@@ -54,6 +56,13 @@ export interface SolvingAttempt {
   selectedMeansId: number;
   selectedClueId: number;
   result: "pending" | "correct" | "incorrect";
+  timestamp: number;
+}
+
+export interface SolvingResolutionNotice {
+  result: "correct" | "incorrect";
+  investigatorName: string;
+  accusedName: string;
   timestamp: number;
 }
 
@@ -107,6 +116,7 @@ export interface DeceptionRoom {
   activeSceneTiles: SceneTile[];
   scenePool: SceneTile[];
   replacedTileIndex: number | null;
+  awaitingReplacementChoice: boolean;
 
   // Rounds
   currentRound: number;
@@ -118,6 +128,7 @@ export interface DeceptionRoom {
   // Solving
   solvingAttempts: SolvingAttempt[];
   activeSolvingAttempt: SolvingAttempt | null;
+  solvingResolutionNotice: SolvingResolutionNotice | null;
 
   // Results
   winner?: "Investigator" | "Murderer" | "Abandoned";

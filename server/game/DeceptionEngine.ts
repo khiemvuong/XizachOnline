@@ -4,14 +4,8 @@ import type {
   DeceptionPlayer,
   DeceptionRole,
   DeceptionTeam,
-  DeceptionGameState,
   DeceptionSettings,
-  DeceptionChatMessage,
-  MurderSelection,
   SolvingAttempt,
-  SceneTile,
-  MeansCard,
-  ClueCard,
 } from "./DeceptionTypes";
 import {
   MEANS_CARDS,
@@ -19,12 +13,20 @@ import {
   shuffle,
   generateSceneTiles,
 } from "./DeceptionData";
+import {
+  type DeceptionVoicePolicyReason,
+  removeDeceptionVoiceRoom,
+  upsertDeceptionVoiceRoom,
+} from "./DeceptionVoiceRegistry";
 
 export class DeceptionEngine {
   private rooms: Map<string, DeceptionRoom> = new Map();
   private io: Namespace;
   private chatRateLimits: Map<string, number[]> = new Map();
   private discussionTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private solvingNoticeTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private emptyRoomCleanupTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private voicePolicyNoticeCooldown: Map<string, number> = new Map();
 
   constructor(server: Server) {
     this.io = server.of("/deception");
@@ -67,6 +69,53 @@ export class DeceptionEngine {
     }
   }
 
+  private clearSolvingNoticeTimer(roomId: string) {
+    const timer = this.solvingNoticeTimers.get(roomId);
+    if (!timer) return;
+    clearTimeout(timer);
+    this.solvingNoticeTimers.delete(roomId);
+  }
+
+  private clearEmptyRoomCleanup(roomId: string) {
+    const timer = this.emptyRoomCleanupTimers.get(roomId);
+    if (!timer) return;
+    clearTimeout(timer);
+    this.emptyRoomCleanupTimers.delete(roomId);
+  }
+
+  private scheduleEmptyRoomCleanup(roomId: string) {
+    this.clearEmptyRoomCleanup(roomId);
+
+    const timer = setTimeout(() => {
+      const room = this.rooms.get(roomId);
+      this.emptyRoomCleanupTimers.delete(roomId);
+      if (!room) return;
+
+      const hasConnectedPlayer = room.players.some((player) => player.status === "connected");
+      if (hasConnectedPlayer) return;
+
+      this.clearDiscussionTimer(roomId);
+      this.clearSolvingNoticeTimer(roomId);
+      this.rooms.delete(roomId);
+      removeDeceptionVoiceRoom(roomId);
+    }, 15000);
+
+    this.emptyRoomCleanupTimers.set(roomId, timer);
+  }
+
+  private syncVoiceAccess(room: DeceptionRoom) {
+    upsertDeceptionVoiceRoom({
+      roomId: room.id,
+      state: room.state,
+      players: room.players.map((player) => ({
+        userId: player.userId,
+        role: player.role,
+        status: player.status,
+        isSpectator: Boolean(player.isSpectator),
+      })),
+    });
+  }
+
   // ─── Role Assignment ───
 
   private getRoleCounts(numPlayers: number, settings: DeceptionSettings) {
@@ -103,7 +152,7 @@ export class DeceptionEngine {
       p.role = roles[i];
       p.team = roleToTeam(roles[i]);
       p.isReady = false;
-      p.hasBadge = roles[i] === "Investigator"; // Only investigators get badges
+      p.hasBadge = roles[i] !== "ForensicScientist"; // Everyone except forensic gets a badge
     });
   }
 
@@ -221,6 +270,12 @@ export class DeceptionEngine {
         }
       });
 
+      socket.on("chooseReplacementTile", (tileId: string) => {
+        if (socket.data.roomId && socket.data.userId && typeof tileId === "string") {
+          this.chooseReplacementTile(socket.data.roomId, socket.data.userId, tileId);
+        }
+      });
+
       socket.on("confirmSceneSetup", () => {
         if (socket.data.roomId && socket.data.userId) {
           this.confirmSceneSetup(socket.data.roomId, socket.data.userId);
@@ -244,10 +299,10 @@ export class DeceptionEngine {
         },
       );
 
-      // Forensic confirms solving result
-      socket.on("resolveSolving", (result: "correct" | "incorrect") => {
+      // Forensic confirms solving result (server computes correct/incorrect)
+      socket.on("resolveSolving", () => {
         if (socket.data.roomId && socket.data.userId) {
-          this.resolveSolving(socket.data.roomId, socket.data.userId, result);
+          this.resolveSolving(socket.data.roomId, socket.data.userId);
         }
       });
 
@@ -274,6 +329,16 @@ export class DeceptionEngine {
       socket.on("transferHost", (targetUserId: string) => {
         if (socket.data.roomId && socket.data.userId) {
           this.transferHost(socket.data.roomId, socket.data.userId, targetUserId);
+        }
+      });
+
+      socket.on("voicePolicyDenied", (payload: { reason?: string }) => {
+        if (socket.data.roomId && socket.data.userId) {
+          this.reportVoicePolicyDenied(
+            socket.data.roomId,
+            socket.data.userId,
+            payload?.reason,
+          );
         }
       });
 
@@ -313,12 +378,16 @@ export class DeceptionEngine {
       activeSceneTiles: [],
       scenePool: [],
       replacedTileIndex: null,
+      awaitingReplacementChoice: false,
       currentRound: 1,
       timerEndAt: null,
       timerPausedRemaining: null,
       solvingAttempts: [],
       activeSolvingAttempt: null,
+      solvingResolutionNotice: null,
     });
+
+    this.syncVoiceAccess(this.rooms.get(roomId)!);
   }
 
   public joinRoom(
@@ -332,6 +401,7 @@ export class DeceptionEngine {
     }
 
     const room = this.rooms.get(roomId)!;
+  this.clearEmptyRoomCleanup(roomId);
     const existing = room.players.find((p) => p.userId === pData.userId);
 
     if (existing) {
@@ -380,8 +450,7 @@ export class DeceptionEngine {
     if (canRemove) {
       room.players.splice(pIndex, 1);
       if (room.players.length === 0) {
-        this.clearDiscussionTimer(roomId);
-        this.rooms.delete(roomId);
+        this.scheduleEmptyRoomCleanup(roomId);
         return;
       }
       if (player.isHost) {
@@ -463,11 +532,13 @@ export class DeceptionEngine {
     room.activeSceneTiles = [];
     room.scenePool = [];
     room.replacedTileIndex = null;
+    room.awaitingReplacementChoice = false;
     room.currentRound = 1;
     room.timerEndAt = null;
     room.timerPausedRemaining = null;
     room.solvingAttempts = [];
     room.activeSolvingAttempt = null;
+    room.solvingResolutionNotice = null;
     room.winner = undefined;
     room.witnessHuntTarget = undefined;
     room.witnessHuntResult = undefined;
@@ -547,6 +618,7 @@ export class DeceptionEngine {
 
     const player = this.findPlayer(room, userId);
     if (!player || player.role !== "ForensicScientist") return;
+    if (room.awaitingReplacementChoice) return;
 
     const tile = room.activeSceneTiles.find((t) => t.id === payload.tileId);
     if (!tile) return;
@@ -556,12 +628,38 @@ export class DeceptionEngine {
     this.broadcastState(roomId);
   }
 
+  public chooseReplacementTile(roomId: string, userId: string, tileId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room || room.state !== "SCENE_SETUP") return;
+
+    const player = this.findPlayer(room, userId);
+    if (!player || player.role !== "ForensicScientist") return;
+    if (!room.awaitingReplacementChoice) return;
+    if (room.scenePool.length === 0) return;
+
+    const replaceTarget = room.activeSceneTiles
+      .map((tile, index) => ({ tile, index }))
+      .find((entry) => entry.tile.id === tileId && entry.tile.type === "evidence_brown");
+
+    if (!replaceTarget) return;
+
+    const newTile = room.scenePool.shift()!;
+    newTile.markerIndex = null;
+    room.activeSceneTiles[replaceTarget.index] = newTile;
+    room.replacedTileIndex = replaceTarget.index;
+    room.awaitingReplacementChoice = false;
+
+    this.addSystemMessage(room, `Pháp y đã thay gợi ý: ${replaceTarget.tile.nameVi}. Hãy đặt dấu cho ô mới.`);
+    this.broadcastState(roomId);
+  }
+
   public confirmSceneSetup(roomId: string, userId: string) {
     const room = this.rooms.get(roomId);
     if (!room || room.state !== "SCENE_SETUP") return;
 
     const player = this.findPlayer(room, userId);
     if (!player || player.role !== "ForensicScientist") return;
+    if (room.awaitingReplacementChoice) return;
 
     // Verify all tiles have markers
     const allMarked = room.activeSceneTiles.every((t) => t.markerIndex !== null);
@@ -588,6 +686,7 @@ export class DeceptionEngine {
     room.timerEndAt = Date.now() + durationMs;
 
     this.clearDiscussionTimer(roomId);
+    this.clearSolvingNoticeTimer(roomId);
     this.discussionTimers.set(
       roomId,
       setTimeout(() => this.onDiscussionTimeout(roomId), durationMs),
@@ -618,38 +717,37 @@ export class DeceptionEngine {
   private advanceRound(roomId: string, room: DeceptionRoom) {
     room.currentRound++;
     room.timerEndAt = null;
+    room.replacedTileIndex = null;
 
-    // Replace one evidence tile (not purple/green mandatory)
+    // For rounds 2+ the forensic must choose which yellow clue to replace.
     const replaceableIndices = room.activeSceneTiles
       .map((t, i) => ({ tile: t, index: i }))
       .filter((x) => x.tile.type === "evidence_brown");
 
-    if (replaceableIndices.length > 0 && room.scenePool.length > 0) {
-      const replaceTarget = replaceableIndices[Math.floor(Math.random() * replaceableIndices.length)];
-      const newTile = room.scenePool.shift()!;
-      newTile.markerIndex = null; // FS needs to place new marker
-      room.activeSceneTiles[replaceTarget.index] = newTile;
-      room.replacedTileIndex = replaceTarget.index;
-    }
+    room.awaitingReplacementChoice = replaceableIndices.length > 0 && room.scenePool.length > 0;
 
-    // Back to SCENE_SETUP so FS can place marker on new tile
-    // But actually FS only needs to set the new tile's marker, others stay
     room.state = "SCENE_SETUP";
-    this.addSystemMessage(room, `Round ${room.currentRound} — Pháp y, hãy đặt dấu trên ô mới.`);
+    if (room.awaitingReplacementChoice) {
+      this.addSystemMessage(
+        room,
+        `Round ${room.currentRound} — Pháp y, hãy chọn 1 gợi ý vàng để bỏ rồi thay ô mới.`,
+      );
+    } else {
+      this.addSystemMessage(room, `Round ${room.currentRound} — Pháp y, hãy đặt dấu trên hiện trường.`);
+    }
     this.broadcastState(roomId);
   }
 
   private endGameByTimeout(roomId: string, room: DeceptionRoom) {
-    // Check if witness exists → witness hunt
-    const witness = this.findPlayerByRole(room, "Witness");
-    if (witness) {
-      room.state = "WITNESS_HUNT";
-      this.addSystemMessage(room, "Hết giờ! Kẻ sát nhân có cơ hội chọn nhân chứng.");
-    } else {
-      room.state = "GAME_OVER";
-      room.winner = "Murderer";
-      this.addSystemMessage(room, "Hết giờ! Phe sát nhân thắng — không ai phá được án.");
-    }
+    this.clearSolvingNoticeTimer(roomId);
+    room.state = "GAME_OVER";
+    room.winner = "Murderer";
+    room.timerEndAt = null;
+    room.timerPausedRemaining = null;
+    room.solvingResolutionNotice = null;
+    room.witnessHuntTarget = undefined;
+    room.witnessHuntResult = undefined;
+    this.addSystemMessage(room, "Hết giờ! Phe sát nhân thắng — không ai phá được án.");
     this.broadcastState(roomId);
   }
 
@@ -677,6 +775,14 @@ export class DeceptionEngine {
     const hasAccusedClue = accused.clueCards.some((c) => c.id === payload.clueId);
     if (!hasAccusedMeans || !hasAccusedClue) return;
 
+    const expectedResult: "correct" | "incorrect" =
+      Boolean(room.murderSelection) &&
+      accused.role === "Murderer" &&
+      payload.meansId === room.murderSelection!.meansId &&
+      payload.clueId === room.murderSelection!.clueId
+        ? "correct"
+        : "incorrect";
+
     const attempt: SolvingAttempt = {
       id: this.uid(),
       investigatorUserId: userId,
@@ -685,12 +791,14 @@ export class DeceptionEngine {
       accusedName: accused.name,
       selectedMeansId: payload.meansId,
       selectedClueId: payload.clueId,
-      result: "pending",
+      result: expectedResult,
       timestamp: Date.now(),
     };
 
     room.activeSolvingAttempt = attempt;
     room.state = "SOLVING_ATTEMPT";
+    room.solvingResolutionNotice = null;
+    this.clearSolvingNoticeTimer(roomId);
 
     // Pause timer
     if (room.timerEndAt) {
@@ -706,7 +814,7 @@ export class DeceptionEngine {
     this.broadcastState(roomId);
   }
 
-  public resolveSolving(roomId: string, userId: string, result: "correct" | "incorrect") {
+  public resolveSolving(roomId: string, userId: string) {
     const room = this.rooms.get(roomId);
     if (!room || room.state !== "SOLVING_ATTEMPT" || !room.activeSolvingAttempt) return;
 
@@ -714,44 +822,98 @@ export class DeceptionEngine {
     if (!player || player.role !== "ForensicScientist") return;
 
     const attempt = room.activeSolvingAttempt;
+    const accused = this.findPlayer(room, attempt.accusedUserId);
+    const result: "correct" | "incorrect" =
+      attempt.result === "correct" || attempt.result === "incorrect"
+        ? attempt.result
+        : Boolean(room.murderSelection) &&
+            accused?.role === "Murderer" &&
+            attempt.selectedMeansId === room.murderSelection!.meansId &&
+            attempt.selectedClueId === room.murderSelection!.clueId
+          ? "correct"
+          : "incorrect";
+
     attempt.result = result;
     room.solvingAttempts.push(attempt);
     room.activeSolvingAttempt = null;
 
-    // Revoke badge from the investigator who attempted
-    const investigator = this.findPlayer(room, attempt.investigatorUserId);
-    if (investigator) investigator.hasBadge = false;
+    // Revoke badge from the player who attempted
+    const solver = this.findPlayer(room, attempt.investigatorUserId);
+    if (solver) solver.hasBadge = false;
 
     if (result === "correct") {
-      room.state = "GAME_OVER";
-      room.winner = "Investigator";
-      this.addSystemMessage(room, `${attempt.investigatorName} đã phá án thành công! Phe Điều tra thắng!`);
+      const witness = this.findPlayerByRole(room, "Witness");
+      room.timerEndAt = null;
+      room.timerPausedRemaining = null;
+      room.solvingResolutionNotice = null;
+      this.clearSolvingNoticeTimer(roomId);
+
+      if (witness) {
+        room.state = "WITNESS_HUNT";
+        room.winner = undefined;
+        room.witnessHuntTarget = undefined;
+        room.witnessHuntResult = undefined;
+        this.addSystemMessage(
+          room,
+          `${attempt.investigatorName} đã phá án đúng! Kẻ sát nhân có cơ hội cuối cùng: săn nhân chứng.`,
+        );
+      } else {
+        room.state = "GAME_OVER";
+        room.winner = "Investigator";
+        room.witnessHuntTarget = undefined;
+        room.witnessHuntResult = undefined;
+        this.addSystemMessage(room, `${attempt.investigatorName} đã phá án thành công! Phe Điều tra thắng!`);
+      }
     } else {
       this.addSystemMessage(room, `${attempt.investigatorName} phá án SAI. Huy hiệu bị thu hồi.`);
 
-      // Check if any investigator still has a badge
+      room.solvingResolutionNotice = {
+        result: "incorrect",
+        investigatorName: attempt.investigatorName,
+        accusedName: attempt.accusedName,
+        timestamp: Date.now(),
+      };
+      this.clearSolvingNoticeTimer(roomId);
+
+      // Check if any non-forensic player still has a badge
       const anyBadgeLeft = room.players.some(
-        (p) => p.hasBadge && p.role === "Investigator" && !p.isSpectator,
+        (p) => p.hasBadge && p.role !== "ForensicScientist" && !p.isSpectator,
       );
 
       if (!anyBadgeLeft) {
         // No badges left → same as timeout
         this.endGameByTimeout(roomId, room);
+        return;
       } else {
-        // Resume discussion
+        // Resume discussion after showing incorrect-result popup to everyone.
         room.state = "DISCUSSION";
-        if (room.timerPausedRemaining && room.timerPausedRemaining > 0) {
-          room.timerEndAt = Date.now() + room.timerPausedRemaining;
-          room.timerPausedRemaining = null;
-          this.clearDiscussionTimer(roomId);
-          this.discussionTimers.set(
-            roomId,
-            setTimeout(
-              () => this.onDiscussionTimeout(roomId),
-              Math.max(0, room.timerEndAt - Date.now()),
-            ),
-          );
-        }
+        this.solvingNoticeTimers.set(
+          roomId,
+          setTimeout(() => {
+            this.solvingNoticeTimers.delete(roomId);
+
+            const latestRoom = this.rooms.get(roomId);
+            if (!latestRoom) return;
+            if (latestRoom.state !== "DISCUSSION" || latestRoom.activeSolvingAttempt) return;
+
+            latestRoom.solvingResolutionNotice = null;
+
+            if (latestRoom.timerPausedRemaining && latestRoom.timerPausedRemaining > 0) {
+              latestRoom.timerEndAt = Date.now() + latestRoom.timerPausedRemaining;
+              latestRoom.timerPausedRemaining = null;
+              this.clearDiscussionTimer(roomId);
+              this.discussionTimers.set(
+                roomId,
+                setTimeout(
+                  () => this.onDiscussionTimeout(roomId),
+                  Math.max(0, latestRoom.timerEndAt - Date.now()),
+                ),
+              );
+            }
+
+            this.broadcastState(roomId);
+          }, 2200),
+        );
       }
     }
 
@@ -772,13 +934,16 @@ export class DeceptionEngine {
 
     room.witnessHuntTarget = targetUserId;
     room.witnessHuntResult = target.role === "Witness" ? "correct" : "incorrect";
-    room.winner = "Murderer"; // Evil wins either way, but witness survival differs
     room.state = "GAME_OVER";
+    room.solvingResolutionNotice = null;
+    this.clearSolvingNoticeTimer(roomId);
 
     if (room.witnessHuntResult === "correct") {
+      room.winner = "Murderer";
       this.addSystemMessage(room, `Kẻ sát nhân đã tìm ra nhân chứng ${target.name}! Evil hoàn thắng!`);
     } else {
-      this.addSystemMessage(room, `Kẻ sát nhân chọn sai! ${target.name} không phải nhân chứng. Nhân chứng sống sót!`);
+      room.winner = "Investigator";
+      this.addSystemMessage(room, `Kẻ sát nhân chọn sai! ${target.name} không phải nhân chứng. Phe Điều tra giữ được chiến thắng!`);
     }
 
     this.broadcastState(roomId);
@@ -840,11 +1005,13 @@ export class DeceptionEngine {
     room.activeSceneTiles = [];
     room.scenePool = [];
     room.replacedTileIndex = null;
+    room.awaitingReplacementChoice = false;
     room.currentRound = 1;
     room.timerEndAt = null;
     room.timerPausedRemaining = null;
     room.solvingAttempts = [];
     room.activeSolvingAttempt = null;
+    room.solvingResolutionNotice = null;
     room.winner = undefined;
     room.witnessHuntTarget = undefined;
     room.witnessHuntResult = undefined;
@@ -865,11 +1032,51 @@ export class DeceptionEngine {
     this.broadcastState(roomId);
   }
 
+  private reportVoicePolicyDenied(
+    roomId: string,
+    userId: string,
+    reasonRaw?: string,
+  ) {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    const player = this.findPlayer(room, userId);
+    if (!player) return;
+
+    const reason = (reasonRaw ?? "unknown-user") as DeceptionVoicePolicyReason;
+    const noticeKey = `${roomId}:${userId}:${reason}`;
+    const now = Date.now();
+    const lastAt = this.voicePolicyNoticeCooldown.get(noticeKey) ?? 0;
+
+    // Avoid flooding game log when client reconnects/retries token repeatedly.
+    if (now - lastAt < 15000) return;
+    this.voicePolicyNoticeCooldown.set(noticeKey, now);
+
+    let text = `${player.name}: quyền voice bị giới hạn bởi hệ thống.`;
+    if (reason === "forensic-muted") {
+      text = `${player.name}: Pháp y không được bật mic trong giai đoạn thảo luận.`;
+    } else if (reason === "spectator") {
+      text = `${player.name}: Spectator chỉ có thể nghe, không thể nói.`;
+    } else if (reason === "disconnected") {
+      text = `${player.name}: Mất kết nối, không thể bật voice publish.`;
+    } else if (reason === "unknown-user") {
+      text = `${player.name}: Phiên voice chưa hợp lệ với phòng hiện tại.`;
+    }
+
+    this.addSystemMessage(room, text);
+    this.broadcastState(roomId);
+  }
+
   // ─── Broadcast (role-based information hiding) ───
 
   private broadcastState(roomId: string) {
     const room = this.rooms.get(roomId);
-    if (!room) return;
+    if (!room) {
+      removeDeceptionVoiceRoom(roomId);
+      return;
+    }
+
+    this.syncVoiceAccess(room);
 
     const sockets = this.io.in(roomId);
 
@@ -965,6 +1172,11 @@ export class DeceptionEngine {
     // ─── Hide other players' cards details during active game (optional — cards are public) ───
     // In Deception, everyone can see each other's cards (they're face up on the table)
     // So we do NOT hide cards — this is by design
+
+    // ─── Keep auto-scored solving result private to forensic until confirmation ───
+    if (clone.activeSolvingAttempt && me?.role !== "ForensicScientist") {
+      clone.activeSolvingAttempt.result = "pending";
+    }
 
     return clone;
   }
