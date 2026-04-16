@@ -1,5 +1,6 @@
 import { AccessToken } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { getDeceptionVoiceAccessPolicy } from '@/server/game/DeceptionVoiceRegistry';
 
 const API_KEY = process.env.LIVEKIT_API_KEY;
 const API_SECRET = process.env.LIVEKIT_API_SECRET;
@@ -23,14 +24,20 @@ export async function GET(req: NextRequest) {
         ttl: '4h',
     });
 
+    const voicePolicy = getDeceptionVoiceAccessPolicy(room, userId);
+
     at.addGrant({
         roomJoin: true,
         room,
-        canPublish: true,
+        canPublish: voicePolicy.canPublish,
         canSubscribe: true,
         canPublishData: true,
     });
 
     const token = await at.toJwt();
-    return NextResponse.json({ token });
+    return NextResponse.json({
+        token,
+        canPublish: voicePolicy.canPublish,
+        policyReason: voicePolicy.reason,
+    });
 }
