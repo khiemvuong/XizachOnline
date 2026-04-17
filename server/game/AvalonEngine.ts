@@ -1524,8 +1524,8 @@ export class AvalonEngine {
     room.skillDecisionState = null;
     room.forcedFailState = null;
 
-    // Evaluate Minion connection
-    if (!room.minionSoulmates) {
+    // Evaluate Minion connection (advanced mode only)
+    if (room.settings.advancedMode && !room.minionSoulmates) {
       const minions = room.players.filter(p => !p.isSpectator && (p.role === "Minion_Good" || p.role === "Minion_Evil"));
       const eligibleMinions = new Set<string>();
 

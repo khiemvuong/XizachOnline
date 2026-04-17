@@ -82,7 +82,9 @@ export default function RoundTable({ gameState, me, socket, roomId, isRoleHidden
                      Lịch sử
                   </button>
                )}
-               <Crown className="w-5 h-5 text-yellow-400 drop-shadow-[0_0_10px_rgba(252,211,77,0.7)]" />
+               {me.isHost && (
+                  <Crown className="w-5 h-5 text-yellow-400 drop-shadow-[0_0_10px_rgba(252,211,77,0.7)]" />
+               )}
                <div className="rounded-lg border border-(--outline-variant)/45 bg-surface-container-low/85 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-(--secondary)/80 shadow-[0_8px_24px_rgba(0,0,0,0.35)] flex items-center">
                   #{roomId.substring(0, 6)}
                </div>
