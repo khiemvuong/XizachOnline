@@ -3,7 +3,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { AlertTriangle, Delete, LogIn } from "lucide-react";
+import { AlertTriangle, Delete, LogIn, ArrowLeft } from "lucide-react";
 import { io } from "socket.io-client";
 
 function generateRoomId(): string {
@@ -78,6 +78,16 @@ export default function DeceptionHome() {
   return (
     <div className="deception-theme deception-home deception-home-shell relative h-dvh w-full overflow-hidden bg-(--deception-bg)">
       <div className="deception-entry-pattern pointer-events-none absolute inset-0 opacity-70" />
+
+      {/* Back to home */}
+      <button
+        onClick={() => router.push("/")}
+        className="pointer-events-auto absolute left-4 top-4 z-50 flex items-center gap-1.5 border border-(--deception-border) bg-(--deception-surface)/90 px-3 py-2 text-xs font-bold uppercase tracking-widest text-(--on-surface-variant) transition-all hover:bg-(--deception-surface) hover:text-(--on-surface) active:scale-95"
+        aria-label="Quay về trang chủ"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Home
+      </button>
 
       <main className="deception-entry-stage relative z-10 flex h-full items-center justify-center px-0 pb-20 pt-6 sm:px-6 sm:pb-24 sm:pt-8 md:px-12 md:pb-12 md:pt-24">
         <div className="pointer-events-none absolute inset-0 z-0 opacity-10">

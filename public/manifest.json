@@ -1,8 +1,8 @@
 {
-  "name": "Avalon – The Resistance",
-  "short_name": "Avalon",
-  "description": "Trò chơi nhập vai chiến lược nhiều người chơi: The Resistance Avalon",
-  "start_url": "/avalon",
+  "name": "Board Games",
+  "short_name": "Board Games",
+  "description": "Nền tảng chơi board game trực tuyến: Avalon, Deception và nhiều hơn nữa",
+  "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
   "orientation": "landscape",

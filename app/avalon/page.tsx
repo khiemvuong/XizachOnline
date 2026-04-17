@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Delete, Play } from 'lucide-react';
+import { Delete, Play, ArrowLeft } from 'lucide-react';
 import { io } from 'socket.io-client';
 
 function generateRoomId(): string {
@@ -61,6 +61,16 @@ export default function AvalonHome() {
 
   return (
     <div className="avalon-home-shell avalon-theme flex h-dvh items-center justify-center overflow-hidden p-4">
+
+      {/* Back to home */}
+      <button
+        onClick={() => router.push("/")}
+        className="absolute left-4 top-4 z-50 flex items-center gap-1.5 rounded-xl border border-(--outline-variant) bg-(--surface-container) px-3 py-2 text-xs font-semibold text-(--on-surface-variant) transition-all hover:bg-(--surface-container-high) hover:text-(--on-surface) active:scale-95"
+        aria-label="Quay về trang chủ"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Trang chủ
+      </button>
       <div 
         className="avalon-home-card avalon-glass mx-auto flex w-full max-w-md flex-col items-center justify-center gap-8 overflow-y-auto border border-(--outline-variant) p-6 text-center shadow-2xl landscape:max-w-4xl landscape:flex-row landscape:p-8 lg:max-w-5xl lg:flex-row lg:gap-16 lg:p-12"
         style={{ borderRadius: '24px' }}
