@@ -354,6 +354,12 @@ export class DeceptionEngine {
           if (typeof callback === "function") callback(timestamp);
         },
       );
+
+      socket.on("updatePing", (userId: string, ping: number) => {
+        if (socket.data.roomId && userId) {
+          socket.to(socket.data.roomId).emit("playerPing", userId, ping);
+        }
+      });
     });
   }
 
@@ -1136,6 +1142,14 @@ export class DeceptionEngine {
           // Witness sees Murderer + Accomplice identities
           if (myRole === "Witness" && (p.role === "Murderer" || p.role === "Accomplice")) {
             // Keep role visible — witness knows who they are
+            return;
+          }
+
+          // Forensic sees all critical hidden identities
+          if (
+            myRole === "ForensicScientist" &&
+            (p.role === "Murderer" || p.role === "Accomplice" || p.role === "Witness")
+          ) {
             return;
           }
 

@@ -22,6 +22,7 @@ export interface MeansCard {
   english: string;
   vietnamese: string;
   description: string;
+  group?: string;
   imageUrl?: string;
 }
 
@@ -30,6 +31,7 @@ export interface ClueCard {
   english: string;
   vietnamese: string;
   description: string;
+  group?: string;
   imageUrl?: string;
 }
 

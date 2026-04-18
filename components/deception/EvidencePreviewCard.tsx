@@ -1,0 +1,124 @@
+import Image from "next/image";
+import type { ClueCard, MeansCard } from "@/server/game/DeceptionTypes";
+
+type EvidenceCard = MeansCard | ClueCard;
+
+interface EvidencePreviewCardProps {
+  card: EvidenceCard;
+  tone: "means" | "clue";
+  highlighted: boolean;
+  rotationClass: string;
+  evidenceNum: string;
+  imageUrl: string;
+}
+
+export default function EvidencePreviewCard({
+  card,
+  tone,
+  highlighted,
+  rotationClass,
+  evidenceNum,
+  imageUrl,
+}: EvidencePreviewCardProps) {
+  const isMeans = tone === "means";
+  const englishTitle = card.english?.trim();
+  const vietnameseTitle = card.vietnamese?.trim();
+  const title = englishTitle
+    ? vietnameseTitle &&
+      vietnameseTitle.toLowerCase() !== englishTitle.toLowerCase()
+      ? `${englishTitle} (${vietnameseTitle})`
+      : englishTitle
+    : vietnameseTitle || "Unknown";
+
+  const tonePlaceholder =
+    tone === "means"
+      ? "bg-[radial-gradient(circle_at_20%_18%,rgba(255,184,0,0.22),transparent_50%),linear-gradient(180deg,#27303a,#1b212a)]"
+      : "bg-[radial-gradient(circle_at_20%_18%,rgba(0,212,255,0.22),transparent_50%),linear-gradient(180deg,#27303a,#1b212a)]";
+  const tonePaperClass = isMeans
+    ? "bg-[#e2e2e5]"
+    : "bg-[#efe5bf] deception-paper-texture";
+  const toneTagClass = isMeans
+    ? "bg-[#f2a4ad] text-[#5f1f29]"
+    : "bg-[#97e8ff] text-[#03384a]";
+  const toneBadgeClass = isMeans
+    ? "bg-[#392b17] text-[#ffcf7a]"
+    : "bg-[#0a3948] text-[#9deeff]";
+  const pinOuterClass = isMeans ? "bg-slate-300" : "bg-cyan-200";
+  const pinInnerClass = isMeans ? "bg-slate-600" : "bg-cyan-700";
+  const imageFilterClass = isMeans
+    ? "object-cover grayscale-28 opacity-90 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100"
+    : "object-cover opacity-95 saturate-110 contrast-105 transition-all duration-300 group-hover:saturate-125 group-hover:contrast-110";
+
+  return (
+    <div
+      className={`group relative h-full min-h-0 overflow-visible rounded-sm border p-1.5 shadow-[5px_5px_14px_rgba(0,0,0,0.45)] transition-transform duration-200 origin-top ${rotationClass} ${
+        highlighted
+          ? tone === "means"
+            ? "border-(--deception-amber) bg-[rgba(255,184,0,0.12)] shadow-[0_0_0_1px_rgba(255,184,0,0.24),5px_5px_16px_rgba(0,0,0,0.5)]"
+            : "border-(--deception-cyan) bg-[rgba(0,212,255,0.12)] shadow-[0_0_0_1px_rgba(0,212,255,0.22),5px_5px_16px_rgba(0,0,0,0.5)]"
+          : "border-(--deception-border) bg-[rgba(10,14,22,0.5)]"
+      }`}
+    >
+      <div
+        className={`absolute left-1/2 top-1 z-10 flex h-4 w-4 -translate-x-1/2 items-center justify-center rounded-full shadow-inner ${pinOuterClass}`}
+      >
+        <div className={`h-1 w-1 rounded-full ${pinInnerClass}`} />
+      </div>
+
+      <div
+        className={`grid h-full min-h-0 grid-rows-[5fr_auto] rounded-sm p-1 ${tonePaperClass}`}
+      >
+        <div className="relative mt-1 min-h-0 overflow-hidden rounded-sm border border-slate-900/15">
+          <div
+            className={`pointer-events-none absolute left-1 top-1 z-20 rounded px-1.5 py-0.5 text-[7px] font-black uppercase tracking-widest ${toneBadgeClass}`}
+          >
+            {isMeans ? "Means" : "Clue"}
+          </div>
+
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={englishTitle || vietnameseTitle || "Evidence"}
+              fill
+              unoptimized
+              sizes="160px"
+              className={imageFilterClass}
+            />
+          ) : (
+            <div
+              className={`flex h-full w-full items-center justify-center px-1 ${tonePlaceholder}`}
+            >
+              <div className="h-6 w-6 rounded-full border border-slate-300/45 bg-slate-100/12" />
+            </div>
+          )}
+        </div>
+
+        <div className="min-h-0 px-1 pb-0.5 pt-1 text-slate-900">
+          <p
+            className="w-full line-clamp-2 text-left text-[15px] font-semibold italic leading-tight text-slate-800"
+            style={{
+              fontFamily: "var(--font-cormorant), var(--font-headline), serif",
+            }}
+            title={title}
+          >
+            {title}
+          </p>
+        </div>
+      </div>
+
+      <div
+        className={`pointer-events-none absolute -bottom-2 -right-2 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${toneTagClass}`}
+      >
+        {isMeans ? "Means" : "Clue"} #{evidenceNum}
+      </div>
+
+      {highlighted && (
+        <>
+          <div className="pointer-events-none absolute inset-0 rounded-sm ring-1 ring-inset ring-white/18" />
+          <div className="pointer-events-none absolute left-0 top-1/2 h-5 w-full -translate-y-1/2 -rotate-12 scale-x-125 bg-[linear-gradient(90deg,rgba(255,61,96,0),rgba(255,61,96,0.32),rgba(255,61,96,0.58),rgba(255,61,96,0.32),rgba(255,61,96,0))] blur-[1.4px]" />
+          <div className="pointer-events-none absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 -rotate-12 scale-x-125 bg-[#ff516e] shadow-[0_0_10px_rgba(255,81,110,0.55)]" />
+        </>
+      )}
+    </div>
+  );
+}

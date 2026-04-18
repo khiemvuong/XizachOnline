@@ -7,7 +7,6 @@ import {
   CookingPot,
   EyeOff,
   Fingerprint,
-  History,
   Microscope,
 } from "lucide-react";
 import type { DeceptionPlayer, DeceptionRoom } from "@/server/game/DeceptionTypes";
@@ -69,6 +68,9 @@ export default function ForensicPanel({
     gameState.murderSelection &&
     allCards.clues.find((card) => card.id === gameState.murderSelection?.clueId);
 
+  const canConfirmSceneSetup = gameState.state === "SCENE_SETUP";
+  const canStartDiscussion = gameState.state === "DISCUSSION" && !gameState.timerEndAt;
+
   const requestReplacementConfirmation = (tileId: string) => {
     setPendingReplacementTileId(tileId);
   };
@@ -87,67 +89,85 @@ export default function ForensicPanel({
     <div className="deception-room-bg deception-theme deception-phase-shell relative flex h-dvh flex-col overflow-hidden">
       <button
         onClick={onExit}
-        className="deception-icon-btn absolute right-4 top-4 z-25"
+        className="deception-icon-btn absolute right-3 top-3 z-25 md:right-4 md:top-4"
         title="Thoát về sảnh"
       >
         <ArrowLeft className="h-4 w-4" />
       </button>
 
-      <main className="deception-phase-main deception-forensic-template-main relative min-h-0 flex-1 overflow-auto px-3 pb-3 pt-8 sm:px-5 sm:pb-5 sm:pt-12">
+      <main className={`deception-phase-main deception-forensic-template-main relative min-h-0 flex-1 ${
+        isForensic
+          ? "overflow-y-auto overflow-x-hidden px-2 pb-3 pt-8 sm:px-4 sm:pb-4 sm:pt-11"
+          : "overflow-hidden px-2 pb-2 pt-7 sm:px-3 sm:pb-3 sm:pt-10"
+      }`}>
         <div className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_12%_14%,rgba(255,81,103,0.28),transparent_35%),radial-gradient(circle_at_82%_12%,rgba(157,106,255,0.2),transparent_30%),radial-gradient(circle_at_80%_82%,rgba(0,212,255,0.18),transparent_34%)]" />
 
-        <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col">
+        <div className={`relative z-10 mx-auto flex w-full max-w-7xl flex-col ${isForensic ? "gap-2.5 pb-3 sm:gap-3 sm:pb-4" : "h-full"}`}>
           {isForensic ? (
             <>
-              <section className="deception-card deception-forensic-summary rounded-xl border-l-4 border-(--deception-red) bg-[rgba(14,16,23,0.84)] p-4 sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-(--deception-cyan)">
+              <section className="deception-card deception-forensic-summary rounded-xl border-l-4 border-(--deception-red) bg-[rgba(14,16,23,0.9)] p-2.5 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-(--deception-cyan) sm:gap-2 sm:text-sm sm:tracking-[0.18em]">
                     <Microscope className="h-4 w-4" />
                     Forensic Scientist Panel
                   </div>
+                </div>
 
-                  <div className="hidden items-center gap-6 border-l-4 border-(--deception-red) bg-[rgba(255,81,103,0.1)] px-4 py-2 lg:flex">
-                    <span className="text-xs font-bold uppercase tracking-[0.16em] text-(--deception-red-soft)">
+                <div className="mt-2.5 rounded-lg border border-(--deception-border) bg-[rgba(255,81,103,0.1)] p-2.5 sm:mt-3 sm:p-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--deception-red-soft) sm:text-[11px]">
                       Solution
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <div className="inline-flex items-center gap-2">
-                        <CookingPot className="h-4 w-4 text-(--deception-amber)" />
-                        <span className="text-sm font-bold uppercase tracking-[0.08em] text-(--on-surface)">
+                    </p>
+
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5 sm:gap-x-4 sm:gap-y-2">
+                      <div className="inline-flex min-w-0 items-center gap-1.5 sm:gap-2">
+                        <CookingPot className="h-4 w-4 shrink-0 text-(--deception-amber)" />
+                        <span className="truncate text-sm font-bold uppercase tracking-[0.06em] text-(--on-surface) sm:tracking-[0.08em]">
                           {selectedMeans ? selectedMeans.vietnamese : "Đang chờ"}
                         </span>
                       </div>
+
                       <span className="text-(--on-surface-variant)">+</span>
-                      <div className="inline-flex items-center gap-2">
-                        <Fingerprint className="h-4 w-4 text-(--deception-cyan)" />
-                        <span className="text-sm font-bold uppercase tracking-[0.08em] text-(--on-surface)">
+
+                      <div className="inline-flex min-w-0 items-center gap-1.5 sm:gap-2">
+                        <Fingerprint className="h-4 w-4 shrink-0 text-(--deception-cyan)" />
+                        <span className="truncate text-sm font-bold uppercase tracking-[0.06em] text-(--on-surface) sm:tracking-[0.08em]">
                           {selectedClue ? selectedClue.vietnamese : "Đang chờ"}
                         </span>
                       </div>
                     </div>
+
+                    {canConfirmSceneSetup && (
+                      <button
+                        disabled={awaitingReplacementChoice || !allMarked}
+                        onClick={() => socket?.emit("confirmSceneSetup")}
+                        className="deception-btn-red deception-primary-action ml-auto px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] shadow-[0_8px_24px_rgba(255,81,103,0.3)] disabled:cursor-not-allowed disabled:opacity-45 xl:hidden"
+                      >
+                        Xác nhận
+                      </button>
+                    )}
+
+                    {canStartDiscussion && (
+                      <button
+                        onClick={() => socket?.emit("startDiscussion")}
+                        className="deception-btn-cyan deception-primary-action ml-auto px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] xl:hidden"
+                      >
+                        Bắt đầu
+                      </button>
+                    )}
                   </div>
 
-                  <div className="inline-flex items-center gap-3 text-(--on-surface-variant)">
-                    <History className="h-4 w-4" />
+                  <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-(--on-surface-variant) sm:mt-2.5 sm:text-[11px]">
+                    {awaitingReplacementChoice
+                      ? "Đang chờ chọn gợi ý thay"
+                      : "Đánh dấu đủ 6 thẻ để xác nhận"}
                   </div>
-                </div>
-
-                <div className="mt-3 rounded-lg border border-(--deception-border) bg-[rgba(255,81,103,0.1)] p-3 lg:hidden">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-(--deception-red-soft)">
-                    Solution
-                  </p>
-                  <p className="mt-2 text-sm font-bold uppercase tracking-[0.08em] text-(--on-surface)">
-                    {selectedMeans ? selectedMeans.vietnamese : "Đang chờ"}
-                  </p>
-                  <p className="mt-1 text-sm font-bold uppercase tracking-[0.08em] text-(--on-surface)">
-                    {selectedClue ? selectedClue.vietnamese : "Đang chờ"}
-                  </p>
                 </div>
               </section>
 
-              <section className="deception-card deception-forensic-scene mt-4 min-h-0 flex-1 overflow-auto rounded-xl border border-(--deception-border) bg-[rgba(7,11,18,0.78)] p-2.5 sm:p-3.5">
+              <section className="deception-card deception-forensic-scene rounded-xl border border-(--deception-border) bg-[rgba(7,11,18,0.78)] p-2 sm:p-3">
                 <SceneBoard
-                  variant="template4"
+                  variant="forensicNotes"
                   tiles={gameState.activeSceneTiles}
                   readOnly={!isForensic || awaitingReplacementChoice}
                   replacedTileIndex={gameState.replacedTileIndex}
@@ -161,8 +181,8 @@ export default function ForensicPanel({
                 />
               </section>
 
-              <section className="deception-forensic-actions mt-7 flex justify-center">
-                {gameState.state === "SCENE_SETUP" && (
+              <section className="deception-forensic-actions hidden justify-center pt-1 xl:flex">
+                {canConfirmSceneSetup && (
                   <button
                     disabled={awaitingReplacementChoice || !allMarked}
                     onClick={() => socket?.emit("confirmSceneSetup")}
@@ -172,7 +192,7 @@ export default function ForensicPanel({
                   </button>
                 )}
 
-                {gameState.state === "DISCUSSION" && !gameState.timerEndAt && (
+                {canStartDiscussion && (
                   <button
                     onClick={() => socket?.emit("startDiscussion")}
                     className="deception-btn-cyan deception-primary-action px-8 py-4 text-sm font-black uppercase tracking-[0.2em]"
@@ -184,17 +204,14 @@ export default function ForensicPanel({
             </>
           ) : (
             <>
-              <section className="deception-card deception-forensic-summary rounded-xl border border-(--deception-border) bg-[rgba(14,16,23,0.84)] p-3 sm:p-5">
-                <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-(--on-surface-variant) sm:gap-2 sm:text-sm sm:tracking-[0.14em]">
+              <section className="deception-card deception-forensic-summary rounded-xl border border-(--deception-border) bg-[rgba(14,16,23,0.84)]">
+                <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant) sm:gap-2 sm:text-[11px]">
                   <EyeOff className="h-3.5 w-3.5 text-(--deception-cyan) sm:h-4 sm:w-4" />
                   Pháp y đang điều khiển hiện trường
                 </div>
-                <p className="mt-1 text-xs text-(--on-surface-variant) sm:mt-2 sm:text-sm">
-                  Bạn quan sát trực tiếp 6 gợi ý mà pháp y đang chọn theo thời gian thực.
-                </p>
               </section>
 
-              <section className="mt-2 min-h-0 flex-1 overflow-hidden sm:mt-4">
+              <section className="min-h-0 flex-1 overflow-hidden">
                 <ForensicClueBoard
                   tiles={gameState.activeSceneTiles}
                 />

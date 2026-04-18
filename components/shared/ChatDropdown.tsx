@@ -32,6 +32,9 @@ interface ChatDropdownProps {
     onCloseChat: () => void;
     onChatTextChange: (value: string) => void;
     onSendChat: (event: FormEvent) => void;
+    canSend?: boolean;
+    sendBlockedMessage?: string;
+    inputPlaceholder?: string;
     // Optional peek features (board only)
     peekRequests?: ChatPeekRequest[];
     showPeekNotifications?: boolean;
@@ -51,6 +54,9 @@ export default function ChatDropdown({
     onCloseChat,
     onChatTextChange,
     onSendChat,
+    canSend = true,
+    sendBlockedMessage = "Bạn không được phép chat trong giai đoạn này.",
+    inputPlaceholder = "Nhập tin nhắn...",
     peekRequests,
     showPeekNotifications,
     onTogglePeekNotifications,
@@ -70,6 +76,12 @@ export default function ChatDropdown({
 
     const handleFormSubmit = (e: FormEvent) => {
         e.preventDefault();
+
+        if (!canSend) {
+            setRateLimitError(sendBlockedMessage);
+            setTimeout(() => setRateLimitError(""), 3000);
+            return;
+        }
 
         if (chatText.length > 500) {
             setRateLimitError("Tin nhắn quá dài (tối đa 500 ký tự)");
@@ -212,27 +224,40 @@ export default function ChatDropdown({
                                 {rateLimitError}
                             </div>
                         )}
-                        <form
-                            onSubmit={handleFormSubmit}
-                            className="flex items-center gap-2 p-2"
-                        >
-                            <input
-                                value={chatText}
-                                onChange={(e) => onChatTextChange(e.target.value)}
-                                placeholder="Nhập tin nhắn..."
-                                maxLength={500}
-                                className="flex-1 rounded-xl border bg-black/20 px-3 py-2 text-sm outline-none placeholder:opacity-50"
-                                style={{ borderColor: theme.border, color: theme.textPrimary }}
-                            />
-                        <button
-                            type="submit"
-                            disabled={!chatText.trim()}
-                            className="rounded-xl p-2 text-white transition disabled:opacity-40 cursor-pointer"
-                            style={{ backgroundColor: theme.accent }}
-                        >
-                                <Send className="h-4 w-4" />
-                            </button>
-                        </form>
+                        {canSend ? (
+                            <form
+                                onSubmit={handleFormSubmit}
+                                className="flex items-center gap-2 p-2"
+                            >
+                                <input
+                                    value={chatText}
+                                    onChange={(e) => onChatTextChange(e.target.value)}
+                                    placeholder={inputPlaceholder}
+                                    maxLength={500}
+                                    className="flex-1 rounded-xl border bg-black/20 px-3 py-2 text-sm outline-none placeholder:opacity-50"
+                                    style={{ borderColor: theme.border, color: theme.textPrimary }}
+                                />
+                            <button
+                                type="submit"
+                                disabled={!chatText.trim()}
+                                className="rounded-xl p-2 text-white transition disabled:opacity-40 cursor-pointer"
+                                style={{ backgroundColor: theme.accent }}
+                            >
+                                    <Send className="h-4 w-4" />
+                                </button>
+                            </form>
+                        ) : (
+                            <div
+                                className="m-2 rounded-xl border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em]"
+                                style={{
+                                    borderColor: theme.border,
+                                    color: theme.textMuted,
+                                    backgroundColor: "rgba(255,255,255,0.04)",
+                                }}
+                            >
+                                {sendBlockedMessage}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

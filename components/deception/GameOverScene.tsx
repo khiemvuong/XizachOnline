@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Socket } from "socket.io-client";
 import { ArrowLeft, Crown, RotateCcw } from "lucide-react";
 import type { ClueCard, DeceptionPlayer, DeceptionRoom, MeansCard } from "@/server/game/DeceptionTypes";
 
@@ -31,13 +30,15 @@ function winnerLabel(room: DeceptionRoom) {
 export default function GameOverScene({
   gameState,
   me,
-  socket,
   onExit,
+  onReturnToLobby,
+  canReturnToLobby = false,
 }: {
   gameState: DeceptionRoom;
   me?: DeceptionPlayer;
-  socket: Socket | null;
   onExit: () => void;
+  onReturnToLobby?: () => void;
+  canReturnToLobby?: boolean;
 }) {
   const allMeans = useMemo(() => {
     const map = new Map<number, MeansCard>();
@@ -68,6 +69,8 @@ export default function GameOverScene({
     ? gameState.players.find((player) => player.userId === gameState.witnessHuntTarget)
     : undefined;
   const hasWitnessHunt = Boolean(gameState.witnessHuntTarget || gameState.witnessHuntResult);
+  const primaryReturnAction = canReturnToLobby && onReturnToLobby ? onReturnToLobby : onExit;
+  const primaryReturnLabel = canReturnToLobby ? "Quay về lobby" : "Về sảnh Deception";
 
   const sortedByTeam = [...gameState.players].sort((a, b) => {
     const score = (player: DeceptionPlayer) => {
@@ -86,9 +89,15 @@ export default function GameOverScene({
           <span className="deception-logo-dot" />
           <span className="deception-brand-text">Game Over</span>
         </div>
-        <button onClick={onExit} className="deception-icon-btn" title="Thoát về sảnh">
-          <ArrowLeft className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={primaryReturnAction}
+            className="deception-icon-btn"
+            title={canReturnToLobby ? "Quay về lobby" : "Thoát về sảnh"}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       <main className="min-h-0 flex-1 overflow-auto p-4 sm:p-5">
@@ -210,14 +219,14 @@ export default function GameOverScene({
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <button
-              onClick={onExit}
+              onClick={primaryReturnAction}
               className="deception-btn-outline px-4 py-2 text-xs uppercase tracking-[0.16em]"
             >
-              Về sảnh Deception
+              {primaryReturnLabel}
             </button>
-            {me?.isHost && (
+            {canReturnToLobby && onReturnToLobby && (
               <button
-                onClick={() => socket?.emit("returnToLobby")}
+                onClick={onReturnToLobby}
                 className="deception-btn-red px-4 py-2 text-xs uppercase tracking-[0.16em]"
               >
                 <span className="inline-flex items-center gap-1.5">

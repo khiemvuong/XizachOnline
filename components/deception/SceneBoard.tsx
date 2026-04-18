@@ -2,7 +2,7 @@
 
 import type { SceneTile } from "@/server/game/DeceptionTypes";
 
-type SceneBoardVariant = "default" | "template4";
+type SceneBoardVariant = "default" | "forensicNotes";
 
 type SceneBoardProps = {
   tiles: SceneTile[];
@@ -76,9 +76,9 @@ export default function SceneBoard({
     );
   }
 
-  if (variant === "template4") {
+  if (variant === "forensicNotes") {
     return (
-      <div className="grid grid-cols-2 items-start gap-4 xl:grid-cols-3">
+      <div className="deception-scene-grid-forensic-notes grid grid-cols-2 items-start gap-2.5 sm:grid-cols-3 sm:gap-3 lg:gap-4">
         {tiles.map((tile, tileIndex) => {
           const theme = tileTheme(tile);
           const rotation = NOTE_ROTATIONS[tileIndex % NOTE_ROTATIONS.length];
@@ -87,7 +87,7 @@ export default function SceneBoard({
           return (
             <article
               key={tile.id}
-              className={`deception-paper-texture relative min-h-0 border-t-4 p-3 shadow-2xl sm:p-4 ${rotation}`}
+              className={`deception-paper-texture deception-scene-forensic-note-tile relative min-h-0 border-t-4 p-2.5 shadow-2xl sm:p-3 lg:p-4 ${rotation}`}
               style={{
                 backgroundColor: theme.paperBg,
                 borderTopColor: theme.paperBorder,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
 import { ArrowLeft, Loader2, ShieldAlert } from "lucide-react";
@@ -10,6 +10,7 @@ import NightPhase from "@/components/deception/NightPhase";
 import DiscussionBoard from "@/components/deception/DiscussionBoard";
 import WitnessHunt from "@/components/deception/WitnessHunt";
 import GameOverScene from "@/components/deception/GameOverScene";
+import ReturnConfirmModal from "@/components/deception/ReturnConfirmModal";
 import DeceptionLobby from "./DeceptionLobby";
 import ForensicPanel from "../ForensicPanel";
 
@@ -17,10 +18,6 @@ function generateUserId() {
   return Math.random().toString(36).slice(2, 11);
 }
 
-function generateDisplayName() {
-  const suffix = Math.floor(100 + Math.random() * 900);
-  return `AGENT_${suffix}`;
-}
 
 function getStateLabel(state: DeceptionRoom["state"]) {
   switch (state) {
@@ -41,6 +38,8 @@ function getStateLabel(state: DeceptionRoom["state"]) {
   }
 }
 
+type ReturnIntent = "home" | "lobby";
+
 export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const router = useRouter();
 
@@ -55,6 +54,10 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<DeceptionRoom | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [roleMaskEnabled, setRoleMaskEnabled] = useState(false);
+  const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
+  const [showReturnConfirm, setShowReturnConfirm] = useState(false);
+  const [returnIntent, setReturnIntent] = useState<ReturnIntent>("home");
 
   const initialized = useRef(false);
 
@@ -79,7 +82,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       return {
         userId: storedUserId,
         storedName: storedPlayerName,
-        suggestedName: storedPlayerName || generateDisplayName(),
+        suggestedName: storedPlayerName || "",
       };
     },
     [hydrated],
@@ -109,6 +112,10 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       setGameState(state);
     });
 
+    socketio.on("playerPing", (pingUserId: string, ping: number) => {
+      setPlayerPings((prev) => ({ ...prev, [pingUserId]: ping }));
+    });
+
     socketio.on("deceptionError", (msg: string) => {
       setErrorMsg(msg || "Không thể vào phòng.");
     });
@@ -127,6 +134,54 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
     if (!gameState || !userId) return undefined;
     return gameState.players.find((p) => p.userId === userId);
   }, [gameState, userId]);
+
+  const hostCanReturnLobby = Boolean(
+    me?.isHost && gameState && gameState.state !== "LOBBY",
+  );
+
+  const requestReturn = (intent?: ReturnIntent) => {
+    const nextIntent = intent ?? (hostCanReturnLobby ? "lobby" : "home");
+    setReturnIntent(nextIntent);
+    setShowReturnConfirm(true);
+  };
+
+  const closeReturnConfirm = () => {
+    setShowReturnConfirm(false);
+  };
+
+  const confirmReturn = () => {
+    setShowReturnConfirm(false);
+
+    if (returnIntent === "lobby" && hostCanReturnLobby && socket) {
+      socket.emit("returnToLobby");
+      return;
+    }
+
+    router.push("/deception");
+  };
+
+  const returnConfirmTitle =
+    returnIntent === "lobby" ? "Quay về lobby?" : "Về sảnh Deception?";
+  const returnConfirmDescription =
+    returnIntent === "lobby"
+      ? "Bạn là chủ phòng. Hành động này sẽ đưa toàn bộ người chơi trở về phòng chờ."
+      : "Bạn có chắc muốn rời phòng hiện tại và quay về sảnh Deception không?";
+  const returnConfirmLabel = returnIntent === "lobby" ? "Về lobby" : "Về sảnh";
+
+  const withReturnConfirm = (content: ReactNode) => (
+    <>
+      {content}
+      <ReturnConfirmModal
+        open={showReturnConfirm}
+        title={returnConfirmTitle}
+        description={returnConfirmDescription}
+        confirmLabel={returnConfirmLabel}
+        confirmTone={returnIntent === "lobby" ? "red" : "cyan"}
+        onCancel={closeReturnConfirm}
+        onConfirm={confirmReturn}
+      />
+    </>
+  );
 
   if (!hydrated) {
     return (
@@ -159,7 +214,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
 
           <button
             onClick={() => {
-              const finalName = playerName.trim() || generateDisplayName();
+              const finalName = playerName.trim();
               sessionStorage.setItem("deception_playerName", finalName);
               setJoinedName(finalName);
               setNameDraft(finalName);
@@ -197,73 +252,79 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         me={me}
         socket={socket}
         roomId={roomId}
+        playerPings={playerPings}
+        setPlayerPings={setPlayerPings}
         onBackHome={() => router.push("/deception")}
       />
     );
   }
 
   if (gameState.state === "ROLE_REVEAL") {
-    return (
+    return withReturnConfirm(
       <RoleReveal
         gameState={gameState}
         me={me}
         onReady={() => socket?.emit("playerReady")}
-        onExit={() => router.push("/deception")}
+        onExit={() => requestReturn()}
       />
     );
   }
 
   if (gameState.state === "NIGHT_PHASE") {
-    return (
+    return withReturnConfirm(
       <NightPhase
         gameState={gameState}
         me={me}
         socket={socket}
-        onExit={() => router.push("/deception")}
+        onExit={() => requestReturn()}
       />
     );
   }
 
   if (gameState.state === "SCENE_SETUP") {
-    return (
+    return withReturnConfirm(
       <ForensicPanel
         gameState={gameState}
         me={me}
         socket={socket}
-        onExit={() => router.push("/deception")}
+        onExit={() => requestReturn()}
       />
     );
   }
 
   if (gameState.state === "DISCUSSION" || gameState.state === "SOLVING_ATTEMPT") {
-    return (
+    return withReturnConfirm(
       <DiscussionBoard
         gameState={gameState}
         me={me}
         socket={socket}
-        onExit={() => router.push("/deception")}
+        playerPings={playerPings}
+        roleMaskEnabled={roleMaskEnabled}
+        onToggleRoleMask={() => setRoleMaskEnabled((prev) => !prev)}
+        onExit={() => requestReturn()}
       />
     );
   }
 
   if (gameState.state === "WITNESS_HUNT") {
-    return (
+    return withReturnConfirm(
       <WitnessHunt
         gameState={gameState}
         me={me}
         socket={socket}
-        onExit={() => router.push("/deception")}
+        onExit={() => requestReturn()}
       />
     );
   }
 
   if (gameState.state === "GAME_OVER") {
-    return (
+    return withReturnConfirm(
       <GameOverScene
         gameState={gameState}
         me={me}
-        socket={socket}
-        onExit={() => router.push("/deception")}
+        onExit={() => requestReturn()}
+        canReturnToLobby={hostCanReturnLobby}
+        onReturnToLobby={() => requestReturn("lobby")}
       />
     );
   }
@@ -283,7 +344,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         </p>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <button onClick={() => router.push("/deception")} className="deception-btn-outline px-4 py-2 text-xs uppercase tracking-[0.2em]">
+          <button onClick={() => requestReturn()} className="deception-btn-outline px-4 py-2 text-xs uppercase tracking-[0.2em]">
             <span className="inline-flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
               Về sảnh Deception
@@ -291,7 +352,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
           </button>
           {me?.isHost && (
             <button
-              onClick={() => socket?.emit("returnToLobby")}
+              onClick={() => requestReturn("lobby")}
               className="deception-btn-red px-4 py-2 text-xs uppercase tracking-[0.2em]"
             >
               Quay lại lobby
@@ -301,6 +362,16 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
 
         {errorMsg && <p className="mt-4 text-sm text-(--deception-red-soft)">{errorMsg}</p>}
       </div>
+
+      <ReturnConfirmModal
+        open={showReturnConfirm}
+        title={returnConfirmTitle}
+        description={returnConfirmDescription}
+        confirmLabel={returnConfirmLabel}
+        confirmTone={returnIntent === "lobby" ? "red" : "cyan"}
+        onCancel={closeReturnConfirm}
+        onConfirm={confirmReturn}
+      />
     </div>
   );
 }

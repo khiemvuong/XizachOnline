@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { Socket } from "socket.io-client";
 import type { DeceptionPlayer, DeceptionRoom } from "@/server/game/DeceptionTypes";
+import PingIndicator from "./PingIndicator";
 import {
   ArrowLeft,
   Camera,
@@ -34,12 +35,16 @@ export default function DeceptionLobby({
   me,
   socket,
   roomId,
+  playerPings,
+  setPlayerPings,
   onBackHome,
 }: {
   gameState: DeceptionRoom;
   me?: DeceptionPlayer;
   socket: Socket | null;
   roomId: string;
+  playerPings: Record<string, number>;
+  setPlayerPings: Dispatch<SetStateAction<Record<string, number>>>;
   onBackHome: () => void;
 }) {
   const [nameInput, setNameInput] = useState(me?.name || "");
@@ -55,6 +60,11 @@ export default function DeceptionLobby({
   const sortedPlayers = useMemo(
     () => [...gameState.players].sort((a, b) => Number(Boolean(b.isHost)) - Number(Boolean(a.isHost))),
     [gameState.players],
+  );
+
+  const visibleChatMessages = useMemo(
+    () => gameState.messages.filter((message) => message.senderId !== "system"),
+    [gameState.messages],
   );
 
   const openSlots = Math.min(4, Math.max(0, 12 - gameState.players.length));
@@ -89,6 +99,9 @@ export default function DeceptionLobby({
           <button onClick={copyRoomCode} className="deception-icon-btn h-8 w-8" title="Chia sẻ mã phòng">
             <Share2 className="h-4 w-4" />
           </button>
+          <div className="ml-1">
+            <PingIndicator socket={socket} userId={me?.userId} setPlayerPings={setPlayerPings} />
+          </div>
         </div>
 
         <div className="deception-topbar-actions flex items-center gap-2">
@@ -158,6 +171,17 @@ export default function DeceptionLobby({
                         <p className="truncate text-xs font-bold uppercase tracking-[0.08em] text-(--on-surface) sm:text-sm">
                           {player.name}
                           {player.userId === me?.userId ? " (Bạn)" : ""}
+                          {playerPings[player.userId] !== undefined && (
+                            <span className={`ml-1 text-[10px] font-black font-mono tracking-tighter ${
+                              playerPings[player.userId] < 150
+                                ? "text-emerald-400"
+                                : playerPings[player.userId] < 350
+                                  ? "text-amber-400"
+                                  : "text-red-500"
+                            }`}>
+                              {Math.min(999, playerPings[player.userId])}ms
+                            </span>
+                          )}
                         </p>
                         <p className="text-[10px] uppercase tracking-[0.15em] text-(--on-surface-variant)">
                           {player.status === "connected" ? "Connected" : "Disconnected"}
@@ -232,10 +256,10 @@ export default function DeceptionLobby({
               </div>
 
               <div className="deception-lobby-chat-list min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                {gameState.messages.length === 0 ? (
+                {visibleChatMessages.length === 0 ? (
                   <p className="text-sm text-(--on-surface-variant)">Chưa có tin nhắn.</p>
                 ) : (
-                  gameState.messages.slice(-20).map((message, index) => {
+                  visibleChatMessages.slice(-20).map((message, index) => {
                     const isMyMessage = message.senderId === me?.userId;
                     return (
                       <div
