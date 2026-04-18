@@ -572,7 +572,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                                 </div>
                                 <button
                                     onClick={() => setHasJoinedVoice(true)}
-                                    className="px-5 py-2.5 bg-(--primary) text-black font-bold text-[11px] uppercase tracking-wider rounded-xl hover:scale-105 active:scale-95 transition-all cursor-pointer mt-2"
+                                    className="px-5 py-2.5 bg-(--primary) text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-[0_10px_20px_rgba(0,0,0,0.28)] hover:scale-105 active:scale-95 transition-all cursor-pointer mt-2"
                                 >
                                     Tham Gia Ngay
                                 </button>

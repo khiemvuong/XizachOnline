@@ -11,8 +11,20 @@ import DiscussionBoard from "@/components/deception/DiscussionBoard";
 import WitnessHunt from "@/components/deception/WitnessHunt";
 import GameOverScene from "@/components/deception/GameOverScene";
 import ReturnConfirmModal from "@/components/deception/ReturnConfirmModal";
+import VoiceChatPanel from "@/components/avalon/VoiceChatPanel";
 import DeceptionLobby from "./DeceptionLobby";
 import ForensicPanel from "../ForensicPanel";
+
+const DECEPTION_BGM_SOURCE = "/deception_audio/deception_bg_audio.opt.ogg";
+const DECEPTION_BGM_DEFAULT_VOLUME = 0.38;
+
+const DECEPTION_BGM_STATES: Array<DeceptionRoom["state"]> = [
+  "SCENE_SETUP",
+  "DISCUSSION",
+  "SOLVING_ATTEMPT",
+  "WITNESS_HUNT",
+  "GAME_OVER",
+];
 
 function generateUserId() {
   return Math.random().toString(36).slice(2, 11);
@@ -42,6 +54,7 @@ type ReturnIntent = "home" | "lobby";
 
 export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const router = useRouter();
+  const bgmAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const hydrated = useSyncExternalStore(
     () => () => {},
@@ -55,6 +68,10 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const [gameState, setGameState] = useState<DeceptionRoom | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [roleMaskEnabled, setRoleMaskEnabled] = useState(false);
+  const [isDiscussionBgmMuted, setIsDiscussionBgmMuted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return sessionStorage.getItem("deception_bgm_muted") === "1";
+  });
   const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
   const [showReturnConfirm, setShowReturnConfirm] = useState(false);
   const [returnIntent, setReturnIntent] = useState<ReturnIntent>("home");
@@ -135,6 +152,72 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
     return gameState.players.find((p) => p.userId === userId);
   }, [gameState, userId]);
 
+  const connectedVoicePlayers = useMemo(
+    () =>
+      gameState?.players
+        .filter((player) => player.status === "connected")
+        .map((player) => ({
+          userId: player.userId,
+          name: player.name,
+        })) ?? [],
+    [gameState?.players],
+  );
+
+  useEffect(() => {
+    if (!hydrated || !hasJoined || typeof window === "undefined") return;
+
+    if (!bgmAudioRef.current) {
+      const audio = new window.Audio();
+
+      audio.src = DECEPTION_BGM_SOURCE;
+      audio.preload = "auto";
+      audio.loop = true;
+      audio.volume = DECEPTION_BGM_DEFAULT_VOLUME;
+      audio.muted = isDiscussionBgmMuted;
+      bgmAudioRef.current = audio;
+    }
+
+    const bgmAudio = bgmAudioRef.current;
+    if (!bgmAudio) return;
+    bgmAudio.volume = DECEPTION_BGM_DEFAULT_VOLUME;
+    bgmAudio.muted = isDiscussionBgmMuted;
+
+    const shouldPlayBgm = Boolean(
+      gameState?.state && DECEPTION_BGM_STATES.includes(gameState.state),
+    );
+
+    if (shouldPlayBgm) {
+      void bgmAudio.play().catch(() => undefined);
+      return;
+    }
+
+    bgmAudio.pause();
+    bgmAudio.currentTime = 0;
+  }, [gameState?.state, hasJoined, hydrated, isDiscussionBgmMuted]);
+
+  useEffect(() => {
+    if (!hydrated || typeof window === "undefined") return;
+
+    sessionStorage.setItem(
+      "deception_bgm_muted",
+      isDiscussionBgmMuted ? "1" : "0",
+    );
+
+    if (!bgmAudioRef.current) return;
+    bgmAudioRef.current.muted = isDiscussionBgmMuted;
+    bgmAudioRef.current.volume = DECEPTION_BGM_DEFAULT_VOLUME;
+  }, [hydrated, isDiscussionBgmMuted]);
+
+  useEffect(() => {
+    return () => {
+      const bgmAudio = bgmAudioRef.current;
+      if (!bgmAudio) return;
+      bgmAudio.pause();
+      bgmAudio.currentTime = 0;
+      bgmAudioRef.current = null;
+    };
+  }, []);
+
   const hostCanReturnLobby = Boolean(
     me?.isHost && gameState && gameState.state !== "LOBBY",
   );
@@ -171,6 +254,14 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const withReturnConfirm = (content: ReactNode) => (
     <>
       {content}
+      {me && (
+        <VoiceChatPanel
+          roomId={gameState?.id ?? roomId}
+          userId={me.userId}
+          playerName={me.name}
+          players={connectedVoicePlayers}
+        />
+      )}
       <ReturnConfirmModal
         open={showReturnConfirm}
         title={returnConfirmTitle}
@@ -247,15 +338,25 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
 
   if (gameState.state === "LOBBY") {
     return (
-      <DeceptionLobby
-        gameState={gameState}
-        me={me}
-        socket={socket}
-        roomId={roomId}
-        playerPings={playerPings}
-        setPlayerPings={setPlayerPings}
-        onBackHome={() => router.push("/deception")}
-      />
+      <>
+        <DeceptionLobby
+          gameState={gameState}
+          me={me}
+          socket={socket}
+          roomId={roomId}
+          playerPings={playerPings}
+          setPlayerPings={setPlayerPings}
+          onBackHome={() => router.push("/deception")}
+        />
+        {me && (
+          <VoiceChatPanel
+            roomId={gameState.id}
+            userId={me.userId}
+            playerName={me.name}
+            players={connectedVoicePlayers}
+          />
+        )}
+      </>
     );
   }
 
@@ -300,7 +401,9 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         socket={socket}
         playerPings={playerPings}
         roleMaskEnabled={roleMaskEnabled}
+        bgmMuted={isDiscussionBgmMuted}
         onToggleRoleMask={() => setRoleMaskEnabled((prev) => !prev)}
+        onToggleBgm={() => setIsDiscussionBgmMuted((prev) => !prev)}
         onExit={() => requestReturn()}
       />
     );

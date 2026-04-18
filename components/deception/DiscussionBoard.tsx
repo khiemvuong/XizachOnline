@@ -10,6 +10,8 @@ import {
   FileText,
   Fingerprint,
   History,
+  Volume2,
+  VolumeX,
   Lock,
   Search,
   ShieldAlert,
@@ -26,7 +28,6 @@ import SolvingAttemptModal from "@/components/deception/SolvingAttemptModal";
 import SolvingWizard from "@/components/deception/SolvingWizard";
 import EvidencePreviewCard from "@/components/deception/EvidencePreviewCard";
 import TimerBar from "@/components/deception/TimerBar";
-import DeceptionVoiceChatPanel from "@/components/deception/DeceptionVoiceChatPanel";
 import SharedChatDropdown, { type ChatTheme } from "@/components/shared/ChatDropdown";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import { usePreloadCardImages } from "@/hooks/usePreloadCardImages";
@@ -188,7 +189,9 @@ export default function DiscussionBoard({
   socket,
   playerPings,
   roleMaskEnabled,
+  bgmMuted,
   onToggleRoleMask,
+  onToggleBgm,
   onExit,
 }: {
   gameState: DeceptionRoom;
@@ -196,7 +199,9 @@ export default function DiscussionBoard({
   socket: Socket | null;
   playerPings: Record<string, number>;
   roleMaskEnabled: boolean;
+  bgmMuted: boolean;
   onToggleRoleMask: () => void;
+  onToggleBgm: () => void;
   onExit: () => void;
 }) {
   const [showChat, setShowChat] = useState(false);
@@ -251,17 +256,6 @@ export default function DiscussionBoard({
       activePlayers.filter(
         (player) => player.role !== "ForensicScientist",
       ),
-    [activePlayers],
-  );
-
-  const connectedVoicePlayers = useMemo(
-    () =>
-      activePlayers
-        .filter((player) => player.status === "connected")
-        .map((player) => ({
-          userId: player.userId,
-          name: player.name,
-        })),
     [activePlayers],
   );
 
@@ -457,6 +451,7 @@ export default function DiscussionBoard({
     !isForensic && viewportWidth > 0 && viewportWidth <= 1200;
   const isCompactViewport = viewportWidth > 0 && viewportWidth <= 1200;
   const isDesktopWideViewport = viewportWidth > 1200;
+  const canToggleDiscussionAudio = gameState.state === "DISCUSSION";
   const nonForensicSceneWidth = isCompactViewport
     ? COMPACT_NON_FORENSIC_SCENE_WIDTH
     : NON_FORENSIC_SCENE_WIDTH;
@@ -541,6 +536,24 @@ export default function DiscussionBoard({
                   />
                   {hideRolesUi ? "Hiện Role" : "Ẩn Role"}
                 </button>
+
+                {canToggleDiscussionAudio && (
+                  <button
+                    onClick={onToggleBgm}
+                    className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
+                        ? "px-2 py-1.5 text-[10px]"
+                        : "px-3 py-2 text-[11px]"
+                      }`}
+                    title={bgmMuted ? "Bật nhạc nền" : "Tắt nhạc nền"}
+                  >
+                    {bgmMuted ? (
+                      <VolumeX className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                    ) : (
+                      <Volume2 className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                    )}
+                    {bgmMuted ? "Bật Nhạc" : "Tắt Nhạc"}
+                  </button>
+                )}
               </div>
 
               <div className="flex min-w-0 items-center gap-1.5">
@@ -608,6 +621,20 @@ export default function DiscussionBoard({
                     >
                       <EyeOff className="h-4 w-4" />
                     </button>
+
+                    {canToggleDiscussionAudio && (
+                      <button
+                        onClick={onToggleBgm}
+                        className="deception-icon-btn"
+                        title={bgmMuted ? "Bật nhạc nền" : "Tắt nhạc nền"}
+                      >
+                        {bgmMuted ? (
+                          <VolumeX className="h-4 w-4" />
+                        ) : (
+                          <Volume2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
 
                     <button
                       onClick={onExit}
@@ -1264,18 +1291,6 @@ export default function DiscussionBoard({
             />
           </div>
         </div>
-      )}
-
-      {me && (
-        <DeceptionVoiceChatPanel
-          roomId={gameState.id}
-          userId={me.userId}
-          playerName={me.name}
-          players={connectedVoicePlayers}
-          micAllowed={!isForensic}
-          hideLauncher={isForensic && isCompactViewport}
-          socket={socket}
-        />
       )}
 
       {me && (
