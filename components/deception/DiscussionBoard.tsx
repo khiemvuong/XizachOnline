@@ -2,18 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Socket } from "socket.io-client";
-import Image from "next/image";
 import {
   ArrowLeft,
+  BadgeCheck,
   CookingPot,
+  EyeOff,
   FileText,
   Fingerprint,
   History,
-  MessageSquareText,
+  Volume2,
+  VolumeX,
+  Lock,
   Search,
-  SendHorizontal,
   ShieldAlert,
-  X,
 } from "lucide-react";
 import type {
   ClueCard,
@@ -23,10 +24,17 @@ import type {
 } from "@/server/game/DeceptionTypes";
 import SceneBoard from "@/components/deception/SceneBoard";
 import ForensicClueBoard from "@/components/deception/ForensicClueBoard";
+import SolvingAttemptModal from "@/components/deception/SolvingAttemptModal";
 import SolvingWizard from "@/components/deception/SolvingWizard";
+import EvidencePreviewCard from "@/components/deception/EvidencePreviewCard";
 import TimerBar from "@/components/deception/TimerBar";
-import DeceptionVoiceChatPanel from "@/components/deception/DeceptionVoiceChatPanel";
+import SharedChatDropdown, { type ChatTheme } from "@/components/shared/ChatDropdown";
 import { useSceneScale } from "@/hooks/useSceneScale";
+import { usePreloadCardImages } from "@/hooks/usePreloadCardImages";
+import {
+  getResolvedClueImageUrl,
+  getResolvedMeansImageUrl,
+} from "@/utils/deceptionAssets";
 
 const NON_FORENSIC_SCENE_WIDTH = 1820;
 const NON_FORENSIC_SCENE_HEIGHT = 860;
@@ -39,6 +47,14 @@ const CARD_TILT_CLASSES = [
   "rotate-2",
 ] as const;
 
+const DECEPTION_CHAT_THEME: ChatTheme = {
+  surface: "rgba(10,12,18,0.96)",
+  border: "color-mix(in srgb, var(--deception-cyan) 22%, transparent)",
+  accent: "var(--deception-cyan)",
+  textPrimary: "var(--on-surface)",
+  textMuted: "var(--on-surface-variant)",
+};
+
 function cardTiltClass(index: number) {
   return CARD_TILT_CLASSES[index % CARD_TILT_CLASSES.length];
 }
@@ -47,123 +63,6 @@ function clampPlayerName(name: string, maxLength: number) {
   const normalized = name.trim();
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, Math.max(1, maxLength - 1))}…`;
-}
-
-type EvidenceCard = MeansCard | ClueCard;
-
-function EvidencePreviewCard({
-  card,
-  tone,
-  highlighted,
-  rotationClass,
-  evidenceNum,
-}: {
-  card: EvidenceCard;
-  tone: "means" | "clue";
-  highlighted: boolean;
-  rotationClass: string;
-  evidenceNum: string;
-}) {
-  const isMeans = tone === "means";
-  const englishTitle = card.english?.trim();
-  const vietnameseTitle = card.vietnamese?.trim();
-  const title = englishTitle
-    ? vietnameseTitle &&
-      vietnameseTitle.toLowerCase() !== englishTitle.toLowerCase()
-      ? `${englishTitle} (${vietnameseTitle})`
-      : englishTitle
-    : vietnameseTitle || "Unknown";
-
-  const tonePlaceholder =
-    tone === "means"
-      ? "bg-[radial-gradient(circle_at_20%_18%,rgba(255,184,0,0.22),transparent_50%),linear-gradient(180deg,#27303a,#1b212a)]"
-      : "bg-[radial-gradient(circle_at_20%_18%,rgba(0,212,255,0.22),transparent_50%),linear-gradient(180deg,#27303a,#1b212a)]";
-  const tonePaperClass = isMeans
-    ? "bg-[#e2e2e5]"
-    : "bg-[#efe5bf] deception-paper-texture";
-  const toneTagClass = isMeans
-    ? "bg-[#f2a4ad] text-[#5f1f29]"
-    : "bg-[#97e8ff] text-[#03384a]";
-  const toneBadgeClass = isMeans
-    ? "bg-[#392b17] text-[#ffcf7a]"
-    : "bg-[#0a3948] text-[#9deeff]";
-  const pinOuterClass = isMeans ? "bg-slate-300" : "bg-cyan-200";
-  const pinInnerClass = isMeans ? "bg-slate-600" : "bg-cyan-700";
-  const imageFilterClass = isMeans
-    ? "object-cover grayscale-28 opacity-90 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100"
-    : "object-cover opacity-95 saturate-110 contrast-105 transition-all duration-300 group-hover:saturate-125 group-hover:contrast-110";
-
-  return (
-    <div
-      className={`group relative h-full min-h-0 overflow-visible rounded-sm border p-1.5 shadow-[5px_5px_14px_rgba(0,0,0,0.45)] transition-transform duration-200 origin-top ${rotationClass} ${highlighted
-          ? tone === "means"
-            ? "border-(--deception-amber) bg-[rgba(255,184,0,0.12)] shadow-[0_0_0_1px_rgba(255,184,0,0.24),5px_5px_16px_rgba(0,0,0,0.5)]"
-            : "border-(--deception-cyan) bg-[rgba(0,212,255,0.12)] shadow-[0_0_0_1px_rgba(0,212,255,0.22),5px_5px_16px_rgba(0,0,0,0.5)]"
-          : "border-(--deception-border) bg-[rgba(10,14,22,0.5)]"
-        }`}
-    >
-      <div
-        className={`absolute left-1/2 top-1 z-10 flex h-4 w-4 -translate-x-1/2 items-center justify-center rounded-full shadow-inner ${pinOuterClass}`}
-      >
-        <div className={`h-1 w-1 rounded-full ${pinInnerClass}`} />
-      </div>
-
-      <div
-        className={`grid h-full min-h-0 grid-rows-[5fr_auto] rounded-sm p-1 ${tonePaperClass}`}
-      >
-        <div className="relative mt-1 min-h-0 overflow-hidden rounded-sm border border-slate-900/15">
-          <div
-            className={`pointer-events-none absolute left-1 top-1 z-20 rounded px-1.5 py-0.5 text-[7px] font-black uppercase tracking-widest ${toneBadgeClass}`}
-          >
-            {isMeans ? "Means" : "Clue"}
-          </div>
-
-          {card.imageUrl ? (
-            <Image
-              src={card.imageUrl}
-              alt={englishTitle || vietnameseTitle || "Evidence"}
-              fill
-              unoptimized
-              sizes="160px"
-              className={imageFilterClass}
-            />
-          ) : (
-            <div
-              className={`flex h-full w-full items-center justify-center px-1 ${tonePlaceholder}`}
-            >
-              <div className="h-6 w-6 rounded-full border border-slate-300/45 bg-slate-100/12" />
-            </div>
-          )}
-        </div>
-
-        <div className="min-h-0 px-1 pb-0.5 pt-1 text-slate-900">
-          <p
-            className="w-full line-clamp-2 text-left text-[15px] font-semibold italic leading-tight text-slate-800"
-            style={{
-              fontFamily: "var(--font-cormorant), var(--font-headline), serif",
-            }}
-            title={title}
-          >
-            {title}
-          </p>
-        </div>
-      </div>
-
-      <div
-        className={`pointer-events-none absolute -bottom-2 -right-2 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${toneTagClass}`}
-      >
-        {isMeans ? "Means" : "Clue"} #{evidenceNum}
-      </div>
-
-      {highlighted && (
-        <>
-          <div className="pointer-events-none absolute inset-0 rounded-sm ring-1 ring-inset ring-white/18" />
-          <div className="pointer-events-none absolute left-0 top-1/2 h-5 w-full -translate-y-1/2 -rotate-12 scale-x-125 bg-[linear-gradient(90deg,rgba(255,61,96,0),rgba(255,61,96,0.32),rgba(255,61,96,0.58),rgba(255,61,96,0.32),rgba(255,61,96,0))] blur-[1.4px]" />
-          <div className="pointer-events-none absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 -rotate-12 scale-x-125 bg-[#ff516e] shadow-[0_0_10px_rgba(255,81,110,0.55)]" />
-        </>
-      )}
-    </div>
-  );
 }
 
 function roleLabel(player: DeceptionPlayer | undefined) {
@@ -264,29 +163,56 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined): RoleTone {
   }
 }
 
+function accusationBadgeTone(hasBadge: boolean) {
+  if (hasBadge) {
+    return {
+      label: "Tố cáo",
+      title: "Người chơi còn lượt tố cáo",
+      chipClass:
+        "border-amber-300/80 bg-[radial-gradient(circle_at_30%_28%,rgba(255,226,140,0.35),rgba(132,84,14,0.62))] text-amber-50 shadow-[0_0_12px_rgba(255,199,85,0.3)]",
+      iconClass: "text-amber-200",
+    };
+  }
+
+  return {
+    label: "Tố cáo",
+    title: "Người chơi đã mất lượt tố cáo",
+    chipClass:
+      "border-slate-600/70 bg-[rgba(55,63,80,0.32)] text-slate-300 opacity-80",
+    iconClass: "text-slate-400",
+  };
+}
+
 export default function DiscussionBoard({
   gameState,
   me,
   socket,
+  playerPings,
+  roleMaskEnabled,
+  bgmMuted,
+  onToggleRoleMask,
+  onToggleBgm,
   onExit,
 }: {
   gameState: DeceptionRoom;
   me?: DeceptionPlayer;
   socket: Socket | null;
+  playerPings: Record<string, number>;
+  roleMaskEnabled: boolean;
+  bgmMuted: boolean;
+  onToggleRoleMask: () => void;
+  onToggleBgm: () => void;
   onExit: () => void;
 }) {
   const [showChat, setShowChat] = useState(false);
   const [chatText, setChatText] = useState("");
   const [focusedPlayerUserId, setFocusedPlayerUserId] = useState("");
   const [showSolvingWizard, setShowSolvingWizard] = useState(false);
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showForensicClueBoard, setShowForensicClueBoard] = useState(false);
   const [solvingWizardVersion, setSolvingWizardVersion] = useState(0);
   const [viewportWidth, setViewportWidth] = useState(0);
   const [forensicTab, setForensicTab] = useState<"hints" | "players">("hints");
-  const [forensicHintsAsideHeight, setForensicHintsAsideHeight] = useState(0);
   const nonForensicViewportRef = useRef<HTMLDivElement | null>(null);
-  const forensicHintsAsideRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const updateViewport = () => setViewportWidth(window.innerWidth);
@@ -297,49 +223,48 @@ export default function DiscussionBoard({
 
   const isForensic = me?.role === "ForensicScientist";
   const canChat = !isForensic;
+  const {
+    ready: playerCardsReady,
+    priorityReady: selfCardsReady,
+    playerReadyMap,
+  } = usePreloadCardImages(gameState.players, {
+    priorityUserId: me?.userId,
+  });
   const canOpenSolve = Boolean(
     me &&
     !isForensic &&
     me.hasBadge &&
+    selfCardsReady &&
     gameState.state === "DISCUSSION" &&
     !gameState.activeSolvingAttempt,
   );
 
-  useEffect(() => {
-    if (isForensic) return;
-    const asideElement = forensicHintsAsideRef.current;
-    if (!asideElement) return;
+  const activePlayers = useMemo(() => {
+    const players = gameState.players.filter((player) => !player.isSpectator);
+    const forensicIndex = players.findIndex(
+      (player) => player.role === "ForensicScientist",
+    );
 
-    const updateHeight = () => {
-      setForensicHintsAsideHeight(asideElement.clientHeight);
-    };
+    if (forensicIndex <= 0) return players;
 
-    updateHeight();
+    const [forensicPlayer] = players.splice(forensicIndex, 1);
+    return [forensicPlayer, ...players];
+  }, [gameState.players]);
 
-    if (typeof ResizeObserver === "undefined") return;
-
-    const observer = new ResizeObserver(() => {
-      updateHeight();
-    });
-
-    observer.observe(asideElement);
-    return () => observer.disconnect();
-  }, [isForensic, viewportWidth]);
-
-  const activePlayers = useMemo(
-    () => gameState.players.filter((player) => !player.isSpectator),
-    [gameState.players],
+  const selectableEvidencePlayers = useMemo(
+    () =>
+      activePlayers.filter(
+        (player) => player.role !== "ForensicScientist",
+      ),
+    [activePlayers],
   );
 
-  const connectedVoicePlayers = useMemo(
+  const visibleChatMessages = useMemo(
     () =>
-      activePlayers
-        .filter((player) => player.status === "connected")
-        .map((player) => ({
-          userId: player.userId,
-          name: player.name,
-        })),
-    [activePlayers],
+      gameState.messages.filter(
+        (message) => message.senderId !== "system",
+      ),
+    [gameState.messages],
   );
 
   const allMeans = useMemo(() => {
@@ -378,11 +303,12 @@ export default function DiscussionBoard({
         : null;
   const solvingResolutionNotice = gameState.solvingResolutionNotice;
   const showIncorrectSolvingPopup = solvingResolutionNotice?.result === "incorrect";
+  const hideRolesUi = roleMaskEnabled;
 
-  const selectedMeansForensic = gameState.murderSelection
+  const selectedMeansForensic = !hideRolesUi && gameState.murderSelection
     ? allMeans.get(gameState.murderSelection.meansId)
     : undefined;
-  const selectedClueForensic = gameState.murderSelection
+  const selectedClueForensic = !hideRolesUi && gameState.murderSelection
     ? allClues.get(gameState.murderSelection.clueId)
     : undefined;
 
@@ -394,40 +320,82 @@ export default function DiscussionBoard({
   const resolvedFocusedPlayerUserId = useMemo(() => {
     if (
       focusedPlayerUserId &&
-      activePlayers.some((player) => player.userId === focusedPlayerUserId)
+      selectableEvidencePlayers.some(
+        (player) => player.userId === focusedPlayerUserId,
+      )
     ) {
       return focusedPlayerUserId;
     }
 
     return (
       (isForensic
-        ? activePlayers.find((player) => player.role !== "ForensicScientist")
-          ?.userId
-        : activePlayers.find((player) => player.userId === me?.userId)
+        ? selectableEvidencePlayers[0]?.userId
+        : selectableEvidencePlayers.find((player) => player.userId === me?.userId)
           ?.userId) ||
-      activePlayers[0]?.userId ||
+      selectableEvidencePlayers[0]?.userId ||
       ""
     );
-  }, [activePlayers, focusedPlayerUserId, isForensic, me?.userId]);
+  }, [focusedPlayerUserId, isForensic, me?.userId, selectableEvidencePlayers]);
+  const playerEvidenceViews = useMemo(() => {
+    const views = new Map<
+      string,
+      {
+        player: DeceptionPlayer;
+        means: Array<{
+          card: MeansCard;
+          imageUrl: string;
+          rotationClass: string;
+        }>;
+        clues: Array<{
+          card: ClueCard;
+          imageUrl: string;
+          rotationClass: string;
+        }>;
+        cardCount: number;
+      }
+    >();
 
-  const focusedPlayer = useMemo(
+    activePlayers.forEach((player) => {
+      const means = player.meansCards.map((card, index) => ({
+        card,
+        imageUrl: getResolvedMeansImageUrl(card.id),
+        rotationClass: cardTiltClass(index),
+      }));
+
+      const clues = player.clueCards.map((card, index) => ({
+        card,
+        imageUrl: getResolvedClueImageUrl(card.id),
+        rotationClass: cardTiltClass(index + 4),
+      }));
+
+      views.set(player.userId, {
+        player,
+        means,
+        clues,
+        cardCount: means.length + clues.length,
+      });
+    });
+
+    return views;
+  }, [activePlayers]);
+  const warmedPlayersCount = useMemo(
     () =>
-      activePlayers.find(
-        (player) => player.userId === resolvedFocusedPlayerUserId,
+      activePlayers.reduce(
+        (count, player) => count + (playerReadyMap[player.userId] ? 1 : 0),
+        0,
       ),
-    [activePlayers, resolvedFocusedPlayerUserId],
+    [activePlayers, playerReadyMap],
   );
+  const warmProgressLabel = `${warmedPlayersCount}/${activePlayers.length}`;
 
   const canSeeMurderSelection =
-    me?.role === "Murderer" || me?.role === "Accomplice";
+    !hideRolesUi && (me?.role === "Murderer" || me?.role === "Accomplice");
   const knownMurderer = useMemo(
-    () => activePlayers.find((player) => player.role === "Murderer"),
-    [activePlayers],
-  );
-  const focusedIsKnownMurderer = Boolean(
-    focusedPlayer &&
-    knownMurderer &&
-    focusedPlayer.userId === knownMurderer.userId,
+    () =>
+      hideRolesUi
+        ? undefined
+        : activePlayers.find((player) => player.role === "Murderer"),
+    [activePlayers, hideRolesUi],
   );
   const revealedMurderSelection = canSeeMurderSelection
     ? gameState.murderSelection
@@ -435,32 +403,45 @@ export default function DiscussionBoard({
 
   const forensicHints = useMemo(
     () =>
-      gameState.activeSceneTiles.slice(0, 6).map((tile) => {
+      gameState.activeSceneTiles.slice(0, 6).map((tile, index) => {
         const selectedOption =
           tile.markerIndex === null ? null : tile.options[tile.markerIndex];
 
-        let cardClass =
-          "border-[rgba(177,139,99,0.48)] bg-[linear-gradient(135deg,rgba(123,89,51,0.30),rgba(67,44,26,0.26))]";
-        let titleClass = "text-[#f2d2a9]";
+        let accentColor = "rgba(182,141,95,0.78)";
+        let cardSurface =
+          "linear-gradient(160deg,rgba(60,44,31,0.88),rgba(34,26,20,0.94))";
+        let titleColor = "#f3debe";
+        let pickedColor = "#f6eee2";
+        let dossierInk = "rgba(236,205,160,0.86)";
 
         if (tile.type === "mandatory_purple") {
-          cardClass =
-            "border-[rgba(169,140,255,0.58)] bg-[linear-gradient(135deg,rgba(110,77,194,0.34),rgba(56,34,102,0.30))]";
-          titleClass = "text-[#decbff]";
+          accentColor = "rgba(157,132,205,0.82)";
+          cardSurface =
+            "linear-gradient(160deg,rgba(55,43,76,0.9),rgba(34,28,47,0.95))";
+          titleColor = "#e2d6f8";
+          pickedColor = "#f1eafa";
+          dossierInk = "rgba(201,187,231,0.88)";
         } else if (tile.type === "mandatory_green") {
-          cardClass =
-            "border-[rgba(127,214,173,0.56)] bg-[linear-gradient(135deg,rgba(59,128,95,0.35),rgba(28,77,53,0.30))]";
-          titleClass = "text-[#caf8df]";
+          accentColor = "rgba(125,172,139,0.82)";
+          cardSurface =
+            "linear-gradient(160deg,rgba(37,68,52,0.9),rgba(24,46,36,0.95))";
+          titleColor = "#d2ebdc";
+          pickedColor = "#ebf7ef";
+          dossierInk = "rgba(187,215,197,0.88)";
         }
 
         return {
           id: tile.id,
+          side: index % 2 === 0 ? "left" : "right",
           title: tile.nameVi || tile.name,
           picked: selectedOption
             ? selectedOption.textVi || selectedOption.text
             : "Chưa có dấu",
-          cardClass,
-          titleClass,
+          accentColor,
+          cardSurface,
+          titleColor,
+          pickedColor,
+          dossierInk,
         };
       }),
     [gameState.activeSceneTiles],
@@ -469,6 +450,8 @@ export default function DiscussionBoard({
   const shouldScaleNonForensicLayout =
     !isForensic && viewportWidth > 0 && viewportWidth <= 1200;
   const isCompactViewport = viewportWidth > 0 && viewportWidth <= 1200;
+  const isDesktopWideViewport = viewportWidth > 1200;
+  const canToggleDiscussionAudio = gameState.state === "DISCUSSION";
   const nonForensicSceneWidth = isCompactViewport
     ? COMPACT_NON_FORENSIC_SCENE_WIDTH
     : NON_FORENSIC_SCENE_WIDTH;
@@ -488,45 +471,12 @@ export default function DiscussionBoard({
     active: shouldScaleNonForensicLayout,
   });
 
-  const forensicHintSizing = useMemo(() => {
-    const hintCount = Math.max(1, forensicHints.length);
-    const panelHeight =
-      forensicHintsAsideHeight || (isCompactViewport ? 460 : 560);
-    const gap = Math.max(4, Math.min(10, Math.floor(panelHeight / 105)));
-
-    const availableHeight = Math.max(
-      240,
-      panelHeight - (isCompactViewport ? 44 : 52) - gap * (hintCount - 1),
-    );
-
-    const rowHeight = Math.max(
-      isCompactViewport ? 48 : 58,
-      Math.floor(availableHeight / hintCount),
-    );
-    const titleSize = Math.max(9, Math.min(12, Math.round(rowHeight * 0.17)));
-    const pickedSize = Math.max(12, Math.min(19, Math.round(rowHeight * 0.34)));
-    const cardPaddingY = Math.max(
-      5,
-      Math.min(10, Math.round(rowHeight * 0.14)),
-    );
-    const cardPaddingX = Math.max(8, Math.min(14, Math.round(rowHeight * 0.2)));
-
-    return {
-      gap,
-      titleSize,
-      pickedSize,
-      cardPaddingY,
-      cardPaddingX,
-    };
-  }, [forensicHints.length, forensicHintsAsideHeight, isCompactViewport]);
-
-  const requestExitConfirmation = () => {
-    setShowExitConfirm(true);
-  };
-
-  const confirmExitToLobby = () => {
-    setShowExitConfirm(false);
-    onExit();
+  const handleSendChat = (event: FormEvent) => {
+    event.preventDefault();
+    const text = chatText.trim();
+    if (!text || !canChat) return;
+    socket?.emit("chatMessage", text);
+    setChatText("");
   };
 
   return (
@@ -560,20 +510,6 @@ export default function DiscussionBoard({
                 </button>
 
                 <button
-                  onClick={() => setShowChat((prev) => !prev)}
-                  className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
-                      ? "px-2 py-1.5 text-[10px]"
-                      : "px-3 py-2 text-[11px]"
-                    }`}
-                  title="Bật/tắt khung chat"
-                >
-                  <MessageSquareText
-                    className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"}
-                  />
-                  {showChat ? "Ẩn chat" : "Hiện chat"}
-                </button>
-
-                <button
                   onClick={() => setShowForensicClueBoard(true)}
                   className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
                       ? "px-2 py-1.5 text-[10px]"
@@ -586,6 +522,38 @@ export default function DiscussionBoard({
                   />
                   Scene Board
                 </button>
+
+                <button
+                  onClick={onToggleRoleMask}
+                  className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
+                      ? "px-2 py-1.5 text-[10px]"
+                      : "px-3 py-2 text-[11px]"
+                    }`}
+                  title={hideRolesUi ? "Hiện lại role thật" : "Ẩn role thật"}
+                >
+                  <EyeOff
+                    className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"}
+                  />
+                  {hideRolesUi ? "Hiện Role" : "Ẩn Role"}
+                </button>
+
+                {canToggleDiscussionAudio && (
+                  <button
+                    onClick={onToggleBgm}
+                    className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
+                        ? "px-2 py-1.5 text-[10px]"
+                        : "px-3 py-2 text-[11px]"
+                      }`}
+                    title={bgmMuted ? "Bật nhạc nền" : "Tắt nhạc nền"}
+                  >
+                    {bgmMuted ? (
+                      <VolumeX className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                    ) : (
+                      <Volume2 className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                    )}
+                    {bgmMuted ? "Bật Nhạc" : "Tắt Nhạc"}
+                  </button>
+                )}
               </div>
 
               <div className="flex min-w-0 items-center gap-1.5">
@@ -601,7 +569,7 @@ export default function DiscussionBoard({
                 </div>
 
                 <button
-                  onClick={requestExitConfirmation}
+                  onClick={onExit}
                   className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
                       ? "px-2 py-1.5 text-[10px]"
                       : "px-3 py-2 text-[11px]"
@@ -621,58 +589,98 @@ export default function DiscussionBoard({
         {isForensic ? (
           <div className="min-h-0 flex-1 space-y-2 overflow-auto sm:space-y-3">
             <section className="rounded-xl border border-white/10 bg-slate-900/82 p-3 shadow-2xl backdrop-blur-xl sm:p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => setForensicTab("hints")}
-                    className={`rounded-md px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] transition ${forensicTab === "hints"
-                        ? "bg-rose-600 text-white"
-                        : "border border-(--deception-border) text-(--on-surface-variant) hover:border-rose-400 hover:text-rose-200"
-                      }`}
-                  >
-                    6 Viên Đạn
-                  </button>
+              <div className="flex flex-col gap-2.5 sm:gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-1 rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-1">
+                    <button
+                      onClick={() => setForensicTab("hints")}
+                      className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${forensicTab === "hints"
+                          ? "bg-rose-600 text-white"
+                          : "text-(--on-surface-variant) hover:bg-rose-500/15 hover:text-rose-200"
+                        }`}
+                    >
+                      6 Viên Đạn
+                    </button>
 
-                  <button
-                    onClick={() => setForensicTab("players")}
-                    className={`rounded-md px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] transition ${forensicTab === "players"
-                        ? "bg-cyan-600 text-white"
-                        : "border border-(--deception-border) text-(--on-surface-variant) hover:border-cyan-400 hover:text-cyan-200"
-                      }`}
-                  >
-                    Người chơi
-                  </button>
-                </div>
+                    <button
+                      onClick={() => setForensicTab("players")}
+                      className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${forensicTab === "players"
+                          ? "bg-cyan-600 text-white"
+                          : "text-(--on-surface-variant) hover:bg-cyan-500/15 hover:text-cyan-200"
+                        }`}
+                    >
+                      Người chơi
+                    </button>
+                  </div>
 
-                <div className="order-3 w-full rounded-md border-l-4 border-rose-500/60 bg-[rgba(255,255,255,0.04)] px-3 py-2 md:order-0 md:w-auto">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                    Solution
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2.5 text-sm font-bold uppercase tracking-[0.08em] text-slate-100">
-                    <span className="inline-flex min-w-0 items-center gap-1.5">
-                      <CookingPot className="h-4 w-4 shrink-0 text-cyan-300" />
-                      <span className="truncate">
-                        {selectedMeansForensic
-                          ? `${selectedMeansForensic.english} (${selectedMeansForensic.vietnamese})`
-                          : "Đang chờ"}
-                      </span>
-                    </span>
-                    <span className="text-slate-500">+</span>
-                    <span className="inline-flex min-w-0 items-center gap-1.5">
-                      <Fingerprint className="h-4 w-4 shrink-0 text-rose-300" />
-                      <span className="truncate">
-                        {selectedClueForensic
-                          ? `${selectedClueForensic.english} (${selectedClueForensic.vietnamese})`
-                          : "Đang chờ"}
-                      </span>
-                    </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={onToggleRoleMask}
+                      className="deception-icon-btn"
+                      title={hideRolesUi ? "Hiện lại role thật" : "Ẩn role thật"}
+                    >
+                      <EyeOff className="h-4 w-4" />
+                    </button>
+
+                    {canToggleDiscussionAudio && (
+                      <button
+                        onClick={onToggleBgm}
+                        className="deception-icon-btn"
+                        title={bgmMuted ? "Bật nhạc nền" : "Tắt nhạc nền"}
+                      >
+                        {bgmMuted ? (
+                          <VolumeX className="h-4 w-4" />
+                        ) : (
+                          <Volume2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={onExit}
+                      className="deception-icon-btn"
+                      title="Thoát về sảnh"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <div
-                    className={isCompactViewport ? "origin-right scale-90" : ""}
-                  >
+                <div className="w-full rounded-md border-l-4 border-rose-500/60 bg-[rgba(255,255,255,0.04)] px-2.5 py-2 sm:px-3 sm:py-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                    Solution
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-100 sm:gap-2.5 sm:text-sm">
+                    {hideRolesUi ? (
+                      <span className="text-[10px] uppercase tracking-[0.14em] text-(--on-surface-variant) sm:text-[11px] sm:tracking-[0.16em]">
+                        Ẩn theo chế độ ngụy trang
+                      </span>
+                    ) : (
+                      <>
+                        <span className="inline-flex min-w-0 items-center gap-1.5">
+                          <CookingPot className="h-4 w-4 shrink-0 text-cyan-300" />
+                          <span className="truncate">
+                            {selectedMeansForensic
+                              ? `${selectedMeansForensic.english} (${selectedMeansForensic.vietnamese})`
+                              : "Đang chờ"}
+                          </span>
+                        </span>
+                        <span className="text-slate-500">+</span>
+                        <span className="inline-flex min-w-0 items-center gap-1.5">
+                          <Fingerprint className="h-4 w-4 shrink-0 text-rose-300" />
+                          <span className="truncate">
+                            {selectedClueForensic
+                              ? `${selectedClueForensic.english} (${selectedClueForensic.vietnamese})`
+                              : "Đang chờ"}
+                          </span>
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <div className={isCompactViewport ? "origin-left scale-90" : ""}>
                     <TimerBar
                       currentRound={gameState.currentRound}
                       timerEndAt={gameState.timerEndAt}
@@ -681,31 +689,25 @@ export default function DiscussionBoard({
                     />
                   </div>
 
-                  {gameState.state === "DISCUSSION" &&
-                    !gameState.timerEndAt && (
-                      <button
-                        onClick={() => socket?.emit("startDiscussion")}
-                        className="deception-btn-cyan px-3 py-2 text-[11px] font-black uppercase tracking-[0.16em]"
-                      >
-                        Bắt đầu
-                      </button>
-                    )}
+                  <div className="flex items-center gap-1.5">
+                    {gameState.state === "DISCUSSION" &&
+                      !gameState.timerEndAt && (
+                        <button
+                          onClick={() => socket?.emit("startDiscussion")}
+                          className="deception-btn-cyan px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] sm:px-3 sm:py-2 sm:text-[11px] sm:tracking-[0.16em]"
+                        >
+                          Bắt đầu
+                        </button>
+                      )}
 
-                  <button
-                    onClick={() => setForensicTab("players")}
-                    className="deception-icon-btn"
-                    title="Xem thẻ người chơi"
-                  >
-                    <History className="h-4 w-4" />
-                  </button>
-
-                  <button
-                    onClick={requestExitConfirmation}
-                    className="deception-icon-btn"
-                    title="Thoát về sảnh"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </button>
+                    <button
+                      onClick={() => setForensicTab("players")}
+                      className="deception-icon-btn hidden lg:inline-flex"
+                      title="Xem thẻ người chơi"
+                    >
+                      <History className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -717,7 +719,7 @@ export default function DiscussionBoard({
               >
                 <SceneBoard
                   tiles={forensicHintTiles}
-                  variant="template4"
+                  variant="forensicNotes"
                   readOnly={gameState.state === "SOLVING_ATTEMPT"}
                   replacedTileIndex={gameState.replacedTileIndex}
                   onSelectOption={(tileId, optionIndex) => {
@@ -737,6 +739,9 @@ export default function DiscussionBoard({
 
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
                   {activePlayers.map((player) => {
+                    const isForensicPlayer = player.role === "ForensicScientist";
+                    const showForensicBadge = !hideRolesUi && isForensicPlayer;
+                    const accusationTone = accusationBadgeTone(player.hasBadge);
                     const active =
                       player.userId === resolvedFocusedPlayerUserId;
                     const isSelf = player.userId === me?.userId;
@@ -747,14 +752,38 @@ export default function DiscussionBoard({
                       player.name,
                       isCompactViewport ? 11 : 14,
                     );
-                    const roleTone = roleToneByRole(player.role);
+                    const roleTone = hideRolesUi
+                      ? roleToneByRole(undefined)
+                      : roleToneByRole(player.role);
 
                     return (
                       <button
                         key={player.userId}
-                        onClick={() => setFocusedPlayerUserId(player.userId)}
-                        className={`rounded-lg border p-2 text-left transition ${active ? roleTone.activeCardClass : roleTone.idleCardClass}`}
+                        disabled={isForensicPlayer}
+                        onClick={() => {
+                          if (isForensicPlayer) return;
+                          setFocusedPlayerUserId(player.userId);
+                        }}
+                        title={
+                          isForensicPlayer
+                            ? hideRolesUi
+                              ? "Không thể xem bộ thẻ này"
+                              : "Pháp y không có 8 thẻ để xem"
+                            : "Xem bộ thẻ người chơi"
+                        }
+                        className={`relative overflow-hidden rounded-lg border p-2 text-left transition ${active ? roleTone.activeCardClass : roleTone.idleCardClass} ${isForensicPlayer ? "cursor-not-allowed opacity-85" : ""}`}
                       >
+                        {isForensicPlayer && (
+                          <>
+                            <span className="pointer-events-none absolute inset-0 z-10 bg-[repeating-linear-gradient(-24deg,rgba(255,255,255,0.02)_0,rgba(255,255,255,0.02)_8px,rgba(13,20,33,0.22)_8px,rgba(13,20,33,0.22)_16px)]" />
+                            <span className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-0.5 w-[122%] -translate-x-1/2 -translate-y-1/2 rotate-[-22deg] bg-[rgba(255,110,130,0.9)] shadow-[0_0_9px_rgba(255,94,120,0.45)]" />
+                            <span className="pointer-events-none absolute right-1.5 top-1.5 z-20 inline-flex items-center gap-1 rounded border border-rose-300/75 bg-[rgba(68,16,26,0.82)] px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-rose-100">
+                              <Lock className="h-2.5 w-2.5" />
+                              {hideRolesUi ? "Khóa xem" : "Pháp y"}
+                            </span>
+                          </>
+                        )}
+
                         <div className="flex items-center gap-2">
                           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-black uppercase tracking-[0.08em] ${roleTone.avatarClass}`}>
                             {initial}
@@ -763,12 +792,40 @@ export default function DiscussionBoard({
                           <div className="min-w-0">
                             <p className="truncate text-xs font-bold uppercase tracking-[0.08em] text-(--on-surface)">
                               {displayName}
+                              {playerPings[player.userId] !== undefined && (
+                                <span className={`ml-1 text-[10px] font-black font-mono tracking-tighter ${
+                                  playerPings[player.userId] < 150
+                                    ? "text-emerald-400"
+                                    : playerPings[player.userId] < 350
+                                      ? "text-amber-400"
+                                      : "text-red-500"
+                                }`}>
+                                  {Math.min(999, playerPings[player.userId])}ms
+                                </span>
+                              )}
                             </p>
 
                             <div className="mt-1 flex flex-wrap items-center gap-1">
                               <span className={`inline-flex max-w-full items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${roleTone.chipClass}`}>
                                 <span className={`h-1.5 w-1.5 rounded-full ${roleTone.dotClass}`} />
-                                <span className="truncate">{roleLabel(player)}</span>
+                                <span className="truncate">
+                                  {hideRolesUi ? "Người chơi" : roleLabel(player)}
+                                </span>
+                              </span>
+
+                              {showForensicBadge && (
+                                <span className="inline-flex items-center gap-1 rounded border border-cyan-300/75 bg-[radial-gradient(circle_at_30%_30%,rgba(70,220,255,0.35),rgba(12,68,102,0.58))] px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-cyan-50 shadow-[0_0_10px_rgba(0,212,255,0.28)]">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-200 shadow-[0_0_8px_rgba(120,240,255,0.8)]" />
+                                  Pháp y
+                                </span>
+                              )}
+
+                              <span
+                                title={accusationTone.title}
+                                className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${accusationTone.chipClass}`}
+                              >
+                                <BadgeCheck className={`h-2.5 w-2.5 ${accusationTone.iconClass}`} />
+                                <span>{accusationTone.label}</span>
                               </span>
 
                               {isSelf && (
@@ -785,52 +842,103 @@ export default function DiscussionBoard({
                 </div>
 
                 <article className="mt-3 min-h-0 rounded-xl border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-3">
-                  {focusedPlayer?.role === "ForensicScientist" ? (
-                    <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
-                      <p
-                        className="text-base italic leading-tight text-(--on-surface-variant)"
-                        style={{
-                          fontFamily:
-                            "var(--font-cormorant), var(--font-headline), serif",
-                        }}
-                      >
-                        Đây là pháp y nên không có 8 thẻ (4 hung khí + 4 manh
-                        mối).
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid min-h-0 grid-cols-2 gap-3 md:grid-cols-4">
-                      {focusedPlayer?.meansCards.map((card, index) => (
-                        <div
-                          className="h-48 md:h-56"
-                          key={`forensic-players-means-${card.id}`}
-                        >
-                          <EvidencePreviewCard
-                            card={card}
-                            tone="means"
-                            highlighted={false}
-                            rotationClass={cardTiltClass(index)}
-                            evidenceNum={String(card.id).padStart(2, "0")}
-                          />
-                        </div>
-                      ))}
+                  <div className="relative min-h-48">
+                    {selectableEvidencePlayers.map((player) => {
+                      const view = playerEvidenceViews.get(player.userId);
+                      if (!view) return null;
 
-                      {focusedPlayer?.clueCards.map((card, index) => (
-                        <div
-                          className="h-48 md:h-56"
-                          key={`forensic-players-clue-${card.id}`}
+                      const isActive =
+                        player.userId === resolvedFocusedPlayerUserId;
+                      const playerIsForensicIdentity =
+                        !hideRolesUi && view.player.role === "ForensicScientist";
+                      const playerHasNoCards =
+                        hideRolesUi && view.cardCount === 0;
+                      const playerHasWarmCards = Boolean(playerReadyMap[player.userId]);
+                      const playerNeedsWarmup =
+                        !playerIsForensicIdentity &&
+                        !playerHasNoCards &&
+                        !playerHasWarmCards;
+
+                      return (
+                        <section
+                          key={`forensic-players-view-${player.userId}`}
+                          aria-hidden={!isActive}
+                          className={
+                            isActive
+                              ? "relative transition-opacity duration-200"
+                              : "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
+                          }
                         >
-                          <EvidencePreviewCard
-                            card={card}
-                            tone="clue"
-                            highlighted={false}
-                            rotationClass={cardTiltClass(index + 4)}
-                            evidenceNum={String(card.id).padStart(2, "0")}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                          {playerIsForensicIdentity || playerHasNoCards ? (
+                            <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
+                              <p
+                                className="text-base italic leading-tight text-(--on-surface-variant)"
+                                style={{
+                                  fontFamily:
+                                    "var(--font-cormorant), var(--font-headline), serif",
+                                }}
+                              >
+                                {playerIsForensicIdentity
+                                  ? "Đây là pháp y nên không có 8 thẻ (4 hung khí + 4 manh mối)."
+                                  : "Người chơi này không có bộ thẻ công khai."}
+                              </p>
+                            </div>
+                          ) : playerNeedsWarmup ? (
+                            <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
+                              <div>
+                                <p
+                                  className="text-base italic leading-tight text-(--on-surface-variant)"
+                                  style={{
+                                    fontFamily:
+                                      "var(--font-cormorant), var(--font-headline), serif",
+                                  }}
+                                >
+                                  Đang tải bộ chứng cứ của người chơi này. Dữ liệu người khác sẽ được nạp ngầm.
+                                </p>
+                                <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant)">
+                                  Tiến độ warm cache: {warmProgressLabel} người chơi
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid min-h-0 grid-cols-2 gap-3 md:grid-cols-4">
+                              {view.means.map(({ card, imageUrl, rotationClass }) => (
+                                <div
+                                  className="h-48 md:h-56"
+                                  key={`forensic-players-means-${player.userId}-${card.id}`}
+                                >
+                                  <EvidencePreviewCard
+                                    card={card}
+                                    tone="means"
+                                    highlighted={false}
+                                    rotationClass={rotationClass}
+                                    evidenceNum={String(card.id).padStart(2, "0")}
+                                    imageUrl={imageUrl}
+                                  />
+                                </div>
+                              ))}
+
+                              {view.clues.map(({ card, imageUrl, rotationClass }) => (
+                                <div
+                                  className="h-48 md:h-56"
+                                  key={`forensic-players-clue-${player.userId}-${card.id}`}
+                                >
+                                  <EvidencePreviewCard
+                                    card={card}
+                                    tone="clue"
+                                    highlighted={false}
+                                    rotationClass={rotationClass}
+                                    evidenceNum={String(card.id).padStart(2, "0")}
+                                    imageUrl={imageUrl}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      );
+                    })}
+                  </div>
                 </article>
               </section>
             )}
@@ -864,8 +972,15 @@ export default function DiscussionBoard({
                 }
               >
                 <section className="deception-card rounded-xl p-3">
-                  <div className="grid grid-cols-3 gap-2 md:grid-cols-4 xl:grid-cols-6">
+                  <div
+                    className={isDesktopWideViewport
+                      ? "flex gap-1.5 overflow-x-auto pr-1"
+                      : "grid grid-cols-3 gap-2 md:grid-cols-4 xl:grid-cols-6"}
+                  >
                     {activePlayers.map((player) => {
+                      const isForensicPlayer = player.role === "ForensicScientist";
+                      const showForensicBadge = !hideRolesUi && isForensicPlayer;
+                      const accusationTone = accusationBadgeTone(player.hasBadge);
                       const active =
                         player.userId === resolvedFocusedPlayerUserId;
                       const isSelf = player.userId === me?.userId;
@@ -874,34 +989,86 @@ export default function DiscussionBoard({
                       ).toUpperCase();
                       const displayName = clampPlayerName(
                         player.name,
-                        isCompactViewport ? 11 : 14,
+                        isDesktopWideViewport ? 11 : isCompactViewport ? 11 : 14,
                       );
-                      const roleTone = roleToneByRole(player.role);
+                      const roleTone = hideRolesUi
+                        ? roleToneByRole(undefined)
+                        : roleToneByRole(player.role);
 
                       return (
                         <button
                           key={player.userId}
-                          onClick={() => setFocusedPlayerUserId(player.userId)}
-                          className={`rounded-lg border p-2 text-left transition ${active ? roleTone.activeCardClass : roleTone.idleCardClass}`}
+                          disabled={isForensicPlayer}
+                          onClick={() => {
+                            if (isForensicPlayer) return;
+                            setFocusedPlayerUserId(player.userId);
+                          }}
+                          title={
+                            isForensicPlayer
+                              ? hideRolesUi
+                                ? "Không thể xem bộ thẻ này"
+                                : "Pháp y không có 8 thẻ để xem"
+                              : "Xem bộ thẻ người chơi"
+                          }
+                          className={`relative overflow-hidden rounded-lg border text-left transition ${active ? roleTone.activeCardClass : roleTone.idleCardClass} ${isForensicPlayer ? "cursor-not-allowed opacity-85" : ""} ${isDesktopWideViewport ? "min-w-[10.8rem] p-1.5" : "p-2"}`}
                         >
+                          {isForensicPlayer && (
+                            <>
+                              <span className="pointer-events-none absolute inset-0 z-10 bg-[repeating-linear-gradient(-24deg,rgba(255,255,255,0.02)_0,rgba(255,255,255,0.02)_8px,rgba(13,20,33,0.22)_8px,rgba(13,20,33,0.22)_16px)]" />
+                              <span className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-0.5 w-[122%] -translate-x-1/2 -translate-y-1/2 rotate-[-22deg] bg-[rgba(255,110,130,0.9)] shadow-[0_0_9px_rgba(255,94,120,0.45)]" />
+                              <span className="pointer-events-none absolute right-1.5 top-1.5 z-20 inline-flex items-center gap-1 rounded border border-rose-300/75 bg-[rgba(68,16,26,0.82)] px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-rose-100">
+                                <Lock className="h-2.5 w-2.5" />
+                                {hideRolesUi ? "Khóa xem" : "Pháp y"}
+                              </span>
+                            </>
+                          )}
+
                           <div className="flex items-center gap-2">
-                            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-sm font-black uppercase tracking-[0.08em] ${roleTone.avatarClass}`}>
+                            <div className={`flex shrink-0 items-center justify-center rounded-full border font-black uppercase tracking-[0.08em] ${roleTone.avatarClass} ${isDesktopWideViewport ? "h-9 w-9 text-xs" : "h-11 w-11 text-sm"}`}>
                               {initial}
                             </div>
 
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-bold uppercase tracking-[0.08em] text-(--on-surface)">
+                              <p className={`truncate font-bold uppercase tracking-[0.08em] text-(--on-surface) ${isDesktopWideViewport ? "text-xs" : "text-sm"}`}>
                                 {displayName}
+                                {playerPings[player.userId] !== undefined && (
+                                  <span className={`ml-1 text-[10px] font-black font-mono tracking-tighter ${
+                                    playerPings[player.userId] < 150
+                                      ? "text-emerald-400"
+                                      : playerPings[player.userId] < 350
+                                        ? "text-amber-400"
+                                        : "text-red-500"
+                                  }`}>
+                                    {Math.min(999, playerPings[player.userId])}ms
+                                  </span>
+                                )}
                               </p>
 
                               <div className="mt-1 flex flex-wrap items-center gap-1">
-                                <span className={`inline-flex max-w-full items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${roleTone.chipClass}`}>
+                                <span className={`inline-flex max-w-full items-center gap-1 rounded border font-black uppercase tracking-widest ${roleTone.chipClass} ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[9px]"}`}>
                                   <span className={`h-1.5 w-1.5 rounded-full ${roleTone.dotClass}`} />
-                                  <span className="truncate">{roleLabel(player)}</span>
+                                  <span className="truncate">
+                                    {hideRolesUi ? "Người chơi" : roleLabel(player)}
+                                  </span>
+                                </span>
+
+                                {showForensicBadge && (
+                                  <span className={`inline-flex items-center gap-1 rounded border border-cyan-300/75 bg-[radial-gradient(circle_at_30%_30%,rgba(70,220,255,0.35),rgba(12,68,102,0.58))] font-black uppercase tracking-widest text-cyan-50 shadow-[0_0_10px_rgba(0,212,255,0.28)] ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-200 shadow-[0_0_8px_rgba(120,240,255,0.8)]" />
+                                    Pháp y
+                                  </span>
+                                )}
+
+                                <span
+                                  title={accusationTone.title}
+                                  className={`inline-flex items-center gap-1 rounded border font-black uppercase tracking-widest ${accusationTone.chipClass} ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}
+                                >
+                                  <BadgeCheck className={`h-2.5 w-2.5 ${accusationTone.iconClass}`} />
+                                  <span>{accusationTone.label}</span>
                                 </span>
 
                                 {isSelf && (
-                                  <span className="rounded border border-cyan-300/70 bg-cyan-400/18 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-cyan-100">
+                                  <span className={`rounded border border-cyan-300/70 bg-cyan-400/18 font-black uppercase tracking-widest text-cyan-100 ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}>
                                     Bạn
                                   </span>
                                 )}
@@ -914,105 +1081,197 @@ export default function DiscussionBoard({
                   </div>
                 </section>
 
-                <section className="grid min-h-0 flex-1 gap-4 grid-cols-[minmax(0,1fr)_21rem]">
+                <section className={`grid min-h-0 flex-1 ${isDesktopWideViewport ? "gap-3 grid-cols-[minmax(0,1fr)_22rem]" : "gap-4 grid-cols-[minmax(0,1fr)_21rem]"}`}>
                   <article className="deception-card min-h-0 overflow-visible rounded-xl p-3">
-                    {focusedPlayer?.role === "ForensicScientist" ? (
-                      <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
-                        <p
-                          className="text-base italic leading-tight text-(--on-surface-variant)"
-                          style={{
-                            fontFamily:
-                              "var(--font-cormorant), var(--font-headline), serif",
-                          }}
-                        >
-                          Đây là pháp y nên không có 8 thẻ (4 hung khí + 4 manh
-                          mối).
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="grid h-full min-h-0 grid-cols-4 auto-rows-fr gap-3 overflow-visible">
-                        {focusedPlayer?.meansCards.map((card, index) => {
-                          const isMurderMeans =
-                            focusedIsKnownMurderer &&
-                            Boolean(revealedMurderSelection) &&
-                            card.id === revealedMurderSelection?.meansId;
+                    <div className="relative h-full min-h-0">
+                      {selectableEvidencePlayers.map((player) => {
+                        const view = playerEvidenceViews.get(player.userId);
+                        if (!view) return null;
 
-                          return (
-                            <EvidencePreviewCard
-                              key={`means-${card.id}`}
-                              card={card}
-                              tone="means"
-                              highlighted={isMurderMeans}
-                              rotationClass={cardTiltClass(index)}
-                              evidenceNum={String(card.id).padStart(2, "0")}
-                            />
-                          );
-                        })}
+                        const isActive =
+                          player.userId === resolvedFocusedPlayerUserId;
+                        const playerIsForensicIdentity =
+                          !hideRolesUi && view.player.role === "ForensicScientist";
+                        const playerHasNoCards = hideRolesUi && view.cardCount === 0;
+                        const playerHasWarmCards = Boolean(playerReadyMap[player.userId]);
+                        const playerNeedsWarmup =
+                          !playerIsForensicIdentity &&
+                          !playerHasNoCards &&
+                          !playerHasWarmCards;
+                        const playerIsKnownMurderer = Boolean(
+                          knownMurderer && player.userId === knownMurderer.userId,
+                        );
 
-                        {focusedPlayer?.clueCards.map((card, index) => {
-                          const isMurderClue =
-                            focusedIsKnownMurderer &&
-                            Boolean(revealedMurderSelection) &&
-                            card.id === revealedMurderSelection?.clueId;
+                        return (
+                          <section
+                            key={`discussion-players-view-${player.userId}`}
+                            aria-hidden={!isActive}
+                            className={
+                              isActive
+                                ? "relative h-full transition-opacity duration-200"
+                                : "pointer-events-none absolute inset-0 h-full opacity-0 transition-opacity duration-200"
+                            }
+                          >
+                            {playerIsForensicIdentity || playerHasNoCards ? (
+                              <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
+                                <p
+                                  className="text-base italic leading-tight text-(--on-surface-variant)"
+                                  style={{
+                                    fontFamily:
+                                      "var(--font-cormorant), var(--font-headline), serif",
+                                  }}
+                                >
+                                  {playerIsForensicIdentity
+                                    ? "Đây là pháp y nên không có 8 thẻ (4 hung khí + 4 manh mối)."
+                                    : "Người chơi này không có bộ thẻ công khai."}
+                                </p>
+                              </div>
+                            ) : playerNeedsWarmup ? (
+                              <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
+                                <div>
+                                  <p
+                                    className="text-base italic leading-tight text-(--on-surface-variant)"
+                                    style={{
+                                      fontFamily:
+                                        "var(--font-cormorant), var(--font-headline), serif",
+                                    }}
+                                  >
+                                    Đang nạp dữ liệu chứng cứ cho người chơi này. Chuyển tab chỉ đổi view sau khi cache hoàn tất.
+                                  </p>
+                                  <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant)">
+                                    {playerCardsReady
+                                      ? "Toàn bộ dữ liệu đã sẵn sàng"
+                                      : `Tiến độ warm cache: ${warmProgressLabel} người chơi`}
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="grid h-full min-h-0 grid-cols-4 auto-rows-fr gap-3 overflow-visible">
+                                {view.means.map(({ card, imageUrl, rotationClass }) => {
+                                  const isMurderMeans =
+                                    playerIsKnownMurderer &&
+                                    Boolean(revealedMurderSelection) &&
+                                    card.id === revealedMurderSelection?.meansId;
 
-                          return (
-                            <EvidencePreviewCard
-                              key={`clue-${card.id}`}
-                              card={card}
-                              tone="clue"
-                              highlighted={isMurderClue}
-                              rotationClass={cardTiltClass(index + 4)}
-                              evidenceNum={String(card.id).padStart(2, "0")}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
+                                  return (
+                                    <EvidencePreviewCard
+                                      key={`means-${player.userId}-${card.id}`}
+                                      card={card}
+                                      tone="means"
+                                      highlighted={isMurderMeans}
+                                      rotationClass={rotationClass}
+                                      evidenceNum={String(card.id).padStart(2, "0")}
+                                      imageUrl={imageUrl}
+                                    />
+                                  );
+                                })}
+
+                                {view.clues.map(({ card, imageUrl, rotationClass }) => {
+                                  const isMurderClue =
+                                    playerIsKnownMurderer &&
+                                    Boolean(revealedMurderSelection) &&
+                                    card.id === revealedMurderSelection?.clueId;
+
+                                  return (
+                                    <EvidencePreviewCard
+                                      key={`clue-${player.userId}-${card.id}`}
+                                      card={card}
+                                      tone="clue"
+                                      highlighted={isMurderClue}
+                                      rotationClass={rotationClass}
+                                      evidenceNum={String(card.id).padStart(2, "0")}
+                                      imageUrl={imageUrl}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </section>
+                        );
+                      })}
+                    </div>
                   </article>
 
                   <aside
-                    ref={forensicHintsAsideRef}
-                    className={`deception-card min-h-0 overflow-hidden rounded-xl ${isCompactViewport ? "p-2.5" : "p-3.5"} flex flex-col`}
+                    className={`deception-card min-h-0 overflow-hidden rounded-xl border-[rgba(133,103,70,0.42)] bg-[radial-gradient(circle_at_20%_14%,rgba(133,103,70,0.16),transparent_42%),linear-gradient(180deg,rgba(18,15,12,0.97),rgba(10,9,8,0.98))] ${isCompactViewport ? "p-2.5" : "p-3.5"} flex flex-col`}
                   >
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-(--deception-red-soft)">
-                      6 gợi ý của pháp y
-                    </p>
+                    <div className="flex items-center justify-between gap-2 border-b border-[rgba(188,155,117,0.24)] pb-2">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#dcc09a]">
+                        6 gợi ý của pháp y
+                      </p>
+                      <span className="rounded border border-[rgba(188,155,117,0.36)] bg-[rgba(86,59,34,0.26)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#c6ab87]">
+                        Case Board
+                      </span>
+                    </div>
 
-                    <div
-                      className="mt-2.5 grid min-h-0 flex-1 grid-cols-1"
-                      style={{
-                        gap: `${forensicHintSizing.gap}px`,
-                        gridTemplateRows: `repeat(${Math.max(1, forensicHints.length)}, minmax(0, 1fr))`,
-                      }}
-                    >
-                      {forensicHints.map((hint) => (
-                        <div
-                          key={hint.id}
-                          className={`min-h-0 overflow-hidden rounded-md border ${hint.cardClass}`}
-                          style={{
-                            padding: `${forensicHintSizing.cardPaddingY}px ${forensicHintSizing.cardPaddingX}px`,
-                          }}
-                        >
-                          <p
-                            className={`truncate font-bold uppercase tracking-[0.12em] ${hint.titleClass}`}
-                            style={{
-                              fontSize: `${forensicHintSizing.titleSize}px`,
-                            }}
-                            title={hint.title}
-                          >
-                            {hint.title}
-                          </p>
-                          <p
-                            className="mt-0.5 line-clamp-2 font-semibold leading-tight text-(--on-surface)"
-                            style={{
-                              fontSize: `${forensicHintSizing.pickedSize}px`,
-                            }}
-                            title={hint.picked}
-                          >
-                            {hint.picked}
-                          </p>
-                        </div>
-                      ))}
+                    <div className="relative mt-2.5 min-h-0 flex-1">
+                      <div className="pointer-events-none absolute bottom-0 left-1/2 top-0 w-px -translate-x-1/2 bg-[linear-gradient(180deg,rgba(214,182,143,0),rgba(214,182,143,0.52),rgba(214,182,143,0.2),rgba(214,182,143,0))]" />
+
+                      <div
+                        className="relative grid h-full min-h-0 grid-cols-1 gap-1.5"
+                        style={{
+                          gridTemplateRows: `repeat(${Math.max(1, forensicHints.length)}, minmax(0, 1fr))`,
+                        }}
+                      >
+                        {forensicHints.map((hint, index) => {
+                          const rightAligned = hint.side === "right";
+
+                          return (
+                            <div
+                              key={hint.id}
+                              className={`relative min-h-0 flex ${rightAligned ? "justify-end pl-4" : "justify-start pr-4"}`}
+                            >
+                              <span className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[rgba(214,182,143,0.75)] bg-[rgba(67,44,27,0.95)] shadow-[0_0_0_2px_rgba(11,10,8,0.8)]" />
+
+                              <span
+                                className={`pointer-events-none absolute top-1/2 h-px w-4 -translate-y-1/2 bg-[rgba(214,182,143,0.44)] ${rightAligned ? "left-[calc(50%+0.31rem)]" : "right-[calc(50%+0.31rem)]"}`}
+                              />
+
+                              <article
+                                className="relative flex h-full min-h-0 w-[86%] flex-col justify-center overflow-hidden rounded-md border px-3.5 py-2.5 shadow-[0_6px_16px_rgba(0,0,0,0.36),inset_0_0_0_1px_rgba(255,236,206,0.05)]"
+                                style={{
+                                  borderColor: hint.accentColor,
+                                  background: hint.cardSurface,
+                                }}
+                              >
+                                <span
+                                  className={`pointer-events-none absolute bottom-1 rounded border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.14em] opacity-75 z-0 ${
+                                    rightAligned ? "left-2" : "right-2"
+                                  }`}
+                                  style={{
+                                    color: hint.dossierInk,
+                                    borderColor: hint.accentColor,
+                                    background: "rgba(14,11,9,0.34)",
+                                  }}
+                                >
+                                  #{String(index + 1).padStart(2, "0")}
+                                </span>
+
+                                <span
+                                  className={`absolute top-2 h-1.5 w-6 rounded-full ${rightAligned ? "left-2" : "right-2"}`}
+                                  style={{ backgroundColor: hint.accentColor }}
+                                />
+
+                                <p
+                                  className={`relative z-10 truncate text-[11px] font-bold uppercase tracking-widest ${rightAligned ? "text-right" : "text-left"}`}
+                                  style={{ color: hint.titleColor }}
+                                  title={hint.title}
+                                >
+                                  {hint.title}
+                                </p>
+
+                                <p
+                                  className={`relative z-10 mt-1 line-clamp-1 text-[clamp(1.12rem,2.05vh,1.4rem)] font-bold leading-[1.06] wrap-break-word ${rightAligned ? "text-right" : "text-left"}`}
+                                  style={{ color: hint.pickedColor }}
+                                  title={hint.picked}
+                                >
+                                  {hint.picked}
+                                </p>
+                              </article>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </aside>
                 </section>
@@ -1034,87 +1293,19 @@ export default function DiscussionBoard({
         </div>
       )}
 
-      {showChat && (
-        <aside className="deception-chat-panel fixed inset-x-3 bottom-3 top-22 z-50 flex flex-col rounded-xl border border-(--deception-border) bg-[rgba(10,12,18,0.96)] p-3 backdrop-blur-md md:inset-y-20 md:left-auto md:right-4 md:w-88">
-          <div className="mb-3 flex items-center justify-between gap-2 border-b border-(--deception-border) pb-2">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-(--deception-cyan)">
-              Investigation Log
-            </p>
-            <button
-              onClick={() => setShowChat(false)}
-              className="deception-icon-btn"
-              title="Đóng chat"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-            {gameState.messages.length === 0 ? (
-              <p className="text-sm text-(--on-surface-variant)">
-                Chưa có tin nhắn.
-              </p>
-            ) : (
-              gameState.messages.slice(-30).map((message, index) => (
-                <div
-                  key={`${message.timestamp}-${index}`}
-                  className="rounded-md border border-(--deception-border) p-2"
-                >
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-(--deception-red-soft)">
-                    {message.senderName}
-                  </p>
-                  <p className="mt-1 text-sm text-(--on-surface)">
-                    {message.text}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-
-          {canChat ? (
-            <form
-              className="mt-3 flex items-center gap-2"
-              onSubmit={(event: FormEvent) => {
-                event.preventDefault();
-                const text = chatText.trim();
-                if (!text) return;
-                socket?.emit("chatMessage", text);
-                setChatText("");
-              }}
-            >
-              <input
-                value={chatText}
-                onChange={(event) =>
-                  setChatText(event.target.value.slice(0, 500))
-                }
-                className="deception-input min-w-0 flex-1"
-                placeholder="Nhập tin nhắn..."
-              />
-              <button
-                type="submit"
-                className="deception-icon-btn h-10 w-10"
-                title="Gửi"
-              >
-                <SendHorizontal className="h-4 w-4" />
-              </button>
-            </form>
-          ) : (
-            <div className="mt-3 rounded-md border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-2.5 text-[11px] uppercase tracking-[0.14em] text-(--on-surface-variant)">
-              Pháp y không được chat trong ván chơi.
-            </div>
-          )}
-        </aside>
-      )}
-
       {me && (
-        <DeceptionVoiceChatPanel
-          roomId={gameState.id}
+        <SharedChatDropdown
+          messages={visibleChatMessages}
           userId={me.userId}
-          playerName={me.name}
-          players={connectedVoicePlayers}
-          micAllowed={!isForensic}
-          hideLauncher={isForensic && isCompactViewport}
-          socket={socket}
+          showChat={showChat}
+          chatText={chatText}
+          theme={DECEPTION_CHAT_THEME}
+          onToggleChat={() => setShowChat((prev) => !prev)}
+          onCloseChat={() => setShowChat(false)}
+          onChatTextChange={(value) => setChatText(value.slice(0, 500))}
+          onSendChat={handleSendChat}
+          canSend={canChat}
+          sendBlockedMessage="Pháp y không được chat trong ván chơi."
         />
       )}
 
@@ -1131,134 +1322,78 @@ export default function DiscussionBoard({
       />
 
       {showIncorrectSolvingPopup && (
-        <div className="fixed inset-0 z-75 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <section className="deception-card w-full max-w-md rounded-2xl p-5 sm:p-6">
-            <div className="mx-auto flex h-13 w-13 items-center justify-center rounded-full bg-[rgba(255,45,85,0.16)] text-(--deception-red)">
-              <ShieldAlert className="h-7 w-7" />
-            </div>
+        <div className="fixed inset-0 z-75 flex items-center justify-center bg-[radial-gradient(circle_at_50%_20%,rgba(255,55,95,0.22),rgba(0,0,0,0.82)_55%)] p-3 backdrop-blur-md sm:p-6">
+          <section className="deception-card relative w-full max-w-2xl overflow-hidden rounded-3xl border border-[rgba(255,95,130,0.48)] bg-[linear-gradient(180deg,rgba(19,12,20,0.98),rgba(10,11,17,0.98))] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.72),0_0_0_1px_rgba(255,95,130,0.2)] sm:p-8">
+            <div className="pointer-events-none absolute -left-16 top-0 h-42 w-42 rounded-full bg-[radial-gradient(circle,rgba(255,84,122,0.36),transparent_70%)] blur-2xl" />
+            <div className="pointer-events-none absolute -right-18 bottom-0 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(255,84,122,0.22),transparent_72%)] blur-2xl" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,transparent,rgba(255,110,146,0.92),transparent)]" />
 
-            <h2 className="mt-4 text-center text-2xl font-black uppercase tracking-[0.14em] text-(--deception-red)">
-              Phá án sai
-            </h2>
+            <div className="relative z-10">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[rgba(255,112,148,0.62)] bg-[radial-gradient(circle_at_35%_30%,rgba(255,120,154,0.38),rgba(84,18,34,0.48))] text-(--deception-red) shadow-[0_0_30px_rgba(255,90,125,0.34)] sm:h-20 sm:w-20">
+                <ShieldAlert className="h-8 w-8 sm:h-10 sm:w-10" />
+              </div>
 
-            <p className="mt-3 text-center text-sm text-(--on-surface-variant)">
-              <span className="font-bold text-(--on-surface)">
-                {solvingResolutionNotice?.investigatorName || "Một điều tra viên"}
-              </span>{" "}
-              đã tố cáo sai
-              {solvingResolutionNotice?.accusedName
-                ? ` ${solvingResolutionNotice.accusedName}`
-                : ""}
-              .
-            </p>
+              <p className="mt-4 text-center text-[10px] font-black uppercase tracking-[0.24em] text-[rgba(255,186,202,0.78)]">
+                Alert • Solving Result
+              </p>
 
-            <p className="mt-2 text-center text-[11px] uppercase tracking-[0.14em] text-(--on-surface-variant)">
-              Huy hiệu của người tố cáo đã bị thu hồi.
-            </p>
-          </section>
-        </div>
-      )}
+              <h2 className="mt-2 text-center text-3xl font-black uppercase tracking-[0.16em] text-[#ff5f85] sm:text-5xl sm:tracking-[0.18em]">
+                Phá Án Sai
+              </h2>
 
-      {showExitConfirm && (
-        <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/72 p-4 backdrop-blur-sm">
-          <section className="deception-card w-full max-w-md rounded-2xl p-5 sm:p-6">
-            <div className="mx-auto flex h-13 w-13 items-center justify-center rounded-full bg-[rgba(255,45,85,0.15)] text-(--deception-red)">
-              <ArrowLeft className="h-6 w-6" />
-            </div>
+              <div className="mt-5 rounded-2xl border border-[rgba(255,110,146,0.3)] bg-[linear-gradient(145deg,rgba(255,95,130,0.1),rgba(255,95,130,0.02))] p-4 sm:mt-6 sm:p-5">
+                <p className="text-center text-sm leading-relaxed text-(--on-surface-variant) sm:text-base">
+                  <span className="font-black uppercase tracking-[0.08em] text-(--on-surface)">
+                    {solvingResolutionNotice?.investigatorName || "Một điều tra viên"}
+                  </span>{" "}
+                  đã tố cáo sai
+                  {solvingResolutionNotice?.accusedName
+                    ? ` ${solvingResolutionNotice.accusedName}`
+                    : ""}
+                  .
+                </p>
+              </div>
 
-            <h2 className="mt-4 text-center text-2xl font-black uppercase tracking-[0.14em] text-(--on-surface)">
-              Quay về sảnh?
-            </h2>
+              <div className="mt-3 grid grid-cols-1 gap-2.5 sm:mt-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-[rgba(255,95,130,0.38)] bg-[rgba(255,95,130,0.14)] px-3 py-2 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[rgba(255,193,207,0.88)]">
+                    Kết quả
+                  </p>
+                  <p className="mt-1 text-sm font-black uppercase tracking-[0.12em] text-[#ff7a9b]">
+                    Incorrect
+                  </p>
+                </div>
 
-            <p className="mt-3 text-center text-sm text-(--on-surface-variant)">
-              Bạn có chắc muốn rời phòng hiện tại và quay về sảnh không?
-            </p>
+                <div className="rounded-xl border border-[rgba(255,95,130,0.38)] bg-[rgba(255,95,130,0.14)] px-3 py-2 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[rgba(255,193,207,0.88)]">
+                    Badge
+                  </p>
+                  <p className="mt-1 text-sm font-black uppercase tracking-[0.12em] text-[#ffd2dc]">
+                    Revoked
+                  </p>
+                </div>
+              </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setShowExitConfirm(false)}
-                className="deception-btn-outline px-4 py-3 text-xs font-black uppercase tracking-[0.16em]"
-              >
-                Ở lại
-              </button>
-
-              <button
-                onClick={confirmExitToLobby}
-                className="deception-btn-cyan px-4 py-3 text-xs font-black uppercase tracking-[0.16em]"
-              >
-                Quay về
-              </button>
+              <p className="mt-4 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant) sm:mt-5 sm:text-xs">
+                Huy hiệu của người tố cáo đã bị thu hồi. Cuộc điều tra tiếp tục.
+              </p>
             </div>
           </section>
         </div>
       )}
 
       {attempt && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/72 p-4 backdrop-blur-sm">
-          <section className="deception-card relative w-full max-w-xl overflow-visible rounded-2xl p-5 sm:p-6">
-            <div className="pointer-events-none absolute -left-4 -top-3 z-20 h-7 w-28 -rotate-12 rounded-xs border border-[rgba(255,210,198,0.42)] bg-[linear-gradient(180deg,rgba(255,186,170,0.32),rgba(255,160,140,0.2))] shadow-[0_6px_14px_rgba(0,0,0,0.28)]" />
-
-            <div className="mx-auto flex h-13 w-13 items-center justify-center rounded-full bg-[rgba(255,45,85,0.15)] text-(--deception-red)">
-              <ShieldAlert className="h-7 w-7" />
-            </div>
-
-            <h2 className="mt-4 text-center text-2xl font-black uppercase tracking-[0.14em] text-(--on-surface)">
-              Solving Attempt
-            </h2>
-
-            <div className="mt-4 rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-(--deception-red-soft)">
-                {attempt.investigatorName} đang tố cáo{" "}
-                {attemptAccused?.name || attempt.accusedName}
-              </p>
-              <p className="mt-2 text-sm text-(--on-surface)">
-                Hung khí:{" "}
-                <span className="font-bold">
-                  {attemptMeans?.vietnamese || attempt.selectedMeansId}
-                </span>
-              </p>
-              <p className="mt-1 text-sm text-(--on-surface)">
-                Manh mối:{" "}
-                <span className="font-bold">
-                  {attemptClue?.vietnamese || attempt.selectedClueId}
-                </span>
-              </p>
-              <p className="mt-2 text-[11px] uppercase tracking-[0.14em] text-(--on-surface-variant)">
-                Vai trò bị tố: {roleLabel(attemptAccused)}
-              </p>
-            </div>
-
-            {isForensic ? (
-              <div className="mt-5 space-y-3">
-                <p
-                  className={`text-center text-xs font-bold uppercase tracking-[0.14em] ${
-                    autoSolvingResult === "correct"
-                      ? "text-(--deception-cyan)"
-                      : "text-(--deception-red-soft)"
-                  }`}
-                >
-                  {autoSolvingResult === null
-                    ? "Kết quả hệ thống: Đang đối chiếu"
-                    : autoSolvingResult === "correct"
-                    ? "Kết quả hệ thống: Đúng"
-                    : "Kết quả hệ thống: Sai"}
-                </p>
-
-                <button
-                  onClick={() => socket?.emit("resolveSolving")}
-                  className="deception-btn-cyan w-full px-4 py-3 text-xs font-black uppercase tracking-[0.16em]"
-                >
-                  Xác nhận kết quả
-                </button>
-              </div>
-            ) : (
-              <p className="mt-5 text-center text-xs uppercase tracking-[0.16em] text-(--on-surface-variant)">
-                Chờ Pháp y xác nhận kết quả hệ thống...
-              </p>
-            )}
-          </section>
-        </div>
+        <SolvingAttemptModal
+          attempt={attempt}
+          attemptAccused={attemptAccused}
+          attemptMeans={attemptMeans}
+          attemptClue={attemptClue}
+          isForensic={isForensic}
+          autoSolvingResult={autoSolvingResult}
+          onConfirm={() => socket?.emit("resolveSolving")}
+        />
       )}
+
     </div>
   );
 }

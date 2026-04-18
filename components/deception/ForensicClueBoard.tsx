@@ -80,7 +80,7 @@ export default function ForensicClueBoard({
   const snapshotTiles = tiles.slice(0, 6);
 
   return (
-    <section className="deception-card relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-(--deception-border) bg-[radial-gradient(circle_at_center,rgba(28,34,46,0.85)_0%,rgba(12,15,22,0.94)_52%,rgba(8,10,16,0.98)_100%)] p-2.5 sm:p-5">
+    <section className="deception-card relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-(--deception-border) bg-[radial-gradient(circle_at_center,rgba(28,34,46,0.85)_0%,rgba(12,15,22,0.94)_52%,rgba(8,10,16,0.98)_100%)]">
       {showCloseButton && onClose && (
         <button
           onClick={onClose}

@@ -42,9 +42,11 @@ export default function WitnessHunt({
           <span className="deception-logo-dot" />
           <span className="deception-brand-text">Witness Hunt</span>
         </div>
-        <button onClick={onExit} className="deception-icon-btn" title="Thoát về sảnh">
-          <ArrowLeft className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={onExit} className="deception-icon-btn" title="Thoát về sảnh">
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       <main className="relative min-h-0 flex-1 overflow-y-auto px-3 py-3 pb-5 sm:px-4 sm:py-6">
