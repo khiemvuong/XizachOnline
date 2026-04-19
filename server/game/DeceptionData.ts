@@ -541,6 +541,324 @@ export const EVIDENCE_TILES: Omit<SceneTile, "id" | "markerIndex">[] = [
   },
 ];
 
+// ─── Easy Mode Evidence Tiles (24 thẻ — cụ thể, cảm quan, dễ suy luận) ───
+
+export const EVIDENCE_TILES_EASY: Omit<SceneTile, "id" | "markerIndex">[] = [
+  {
+    name: "Weather",
+    nameVi: "Thời tiết",
+    type: "evidence_brown",
+    options: [
+      opt("Sunny", "Nắng"),
+      opt("Rainy", "Mưa"),
+      opt("Snowy", "Tuyết"),
+      opt("Stormy", "Bão"),
+      opt("Overcast", "U ám"),
+      opt("Foggy", "Sương mù"),
+    ],
+  },
+  {
+    name: "Victim's Build",
+    nameVi: "Vóc dáng nạn nhân",
+    type: "evidence_brown",
+    options: [
+      opt("Tall", "Cao"),
+      opt("Short", "Thấp"),
+      opt("Fat", "Mập"),
+      opt("Thin", "Gầy"),
+      opt("Muscular", "Cơ bắp"),
+      opt("Child-sized", "Trẻ con"),
+    ],
+  },
+  {
+    name: "Victim's Clothes",
+    nameVi: "Trang phục nạn nhân",
+    type: "evidence_brown",
+    options: [
+      opt("Designer Wear", "Đồ hiệu"),
+      opt("Ragged", "Rách rưới"),
+      opt("Pajamas", "Đồ ngủ"),
+      opt("Uniform", "Đồng phục"),
+      opt("Swimwear", "Đồ bơi"),
+      opt("Casual", "Bình thường"),
+    ],
+  },
+  {
+    name: "Victim's Expression",
+    nameVi: "Biểu cảm nạn nhân",
+    type: "evidence_brown",
+    options: [
+      opt("Terrified", "Sợ hãi"),
+      opt("Calm", "Bình thản"),
+      opt("Surprised", "Ngạc nhiên"),
+      opt("In Pain", "Đau đớn"),
+      opt("Angry", "Tức giận"),
+      opt("Smiling", "Cười"),
+    ],
+  },
+  {
+    name: "State of the Body",
+    nameVi: "Tình trạng tử thi",
+    type: "evidence_brown",
+    options: [
+      opt("Intact", "Nguyên vẹn"),
+      opt("Dismembered", "Bị chặt nhỏ"),
+      opt("Stiffened", "Cứng đờ"),
+      opt("Decomposed", "Thối rữa"),
+      opt("Desiccated", "Khô héo"),
+      opt("Still Warm", "Còn ấm"),
+    ],
+  },
+  {
+    name: "Sudden Note",
+    nameVi: "Vật để lại hiện trường",
+    type: "evidence_brown",
+    options: [
+      opt("Written in Blood", "Viết bằng máu"),
+      opt("Diary", "Nhật ký"),
+      opt("Suicide Note", "Thư tuyệt mệnh"),
+      opt("Drawing", "Bản vẽ"),
+      opt("Symbol", "Ký hiệu"),
+      opt("Anonymous Letter", "Thư nặc danh"),
+    ],
+  },
+  {
+    name: "Time of Death",
+    nameVi: "Thời gian tử vong",
+    type: "evidence_brown",
+    options: [
+      opt("Dawn", "Rạng sáng"),
+      opt("Morning", "Buổi sáng"),
+      opt("Noon", "Trưa"),
+      opt("Afternoon", "Chiều"),
+      opt("Evening", "Tối"),
+      opt("Midnight", "Đêm khuya"),
+    ],
+  },
+  {
+    name: "Duration of Crime",
+    nameVi: "Độ dài gây án",
+    type: "evidence_brown",
+    options: [
+      opt("Instantaneous", "Rất nhanh"),
+      opt("A Few Minutes", "Vài phút"),
+      opt("A Few Hours", "Vài giờ"),
+      opt("The Whole Day", "Cả ngày"),
+      opt("Extended Period", "Kéo dài lâu"),
+      opt("Unclear", "Không rõ"),
+    ],
+  },
+  {
+    name: "General Impression",
+    nameVi: "Ấn tượng chung",
+    type: "evidence_brown",
+    options: [
+      opt("Chaotic", "Hỗn loạn"),
+      opt("Tidy", "Gọn gàng"),
+      opt("Bizarre", "Kỳ quái"),
+      opt("Normal", "Bình thường"),
+      opt("Brutal", "Tàn khốc"),
+      opt("Artistic", "Nghệ thuật"),
+    ],
+  },
+  {
+    name: "Trace at the Scene",
+    nameVi: "Dấu vết hiện trường",
+    type: "evidence_brown",
+    options: [
+      opt("Footprint", "Dấu chân"),
+      opt("Fingerprint", "Vân tay"),
+      opt("Blood Stain", "Vết máu"),
+      opt("Hair / Fur", "Lông tóc"),
+      opt("Fabric Fiber", "Sợi vải"),
+      opt("Ash / Dust", "Tro bụi"),
+    ],
+  },
+  {
+    name: "Evidence Left Behind",
+    nameVi: "Bằng chứng để lại",
+    type: "evidence_brown",
+    options: [
+      opt("Personal Belonging", "Đồ cá nhân"),
+      opt("Fake Weapon", "Hung khí giả"),
+      opt("Letter / Note", "Thư từ"),
+      opt("Jewelry", "Trang sức"),
+      opt("Cash", "Tiền mặt"),
+      opt("Nothing", "Không có gì"),
+    ],
+  },
+  {
+    name: "Hint on the Victim",
+    nameVi: "Gợi ý trên nạn nhân",
+    type: "evidence_brown",
+    options: [
+      opt("Tattoo", "Hình xăm"),
+      opt("Scar", "Vết sẹo"),
+      opt("Makeup", "Trang điểm"),
+      opt("Fingernail", "Móng tay"),
+      opt("Jewelry", "Đồ trang sức"),
+      opt("Bruise", "Vết bầm"),
+    ],
+  },
+  {
+    name: "Social Relationship",
+    nameVi: "Mối quan hệ xã hội",
+    type: "evidence_brown",
+    options: [
+      opt("Family", "Gia đình"),
+      opt("Friend", "Bạn bè"),
+      opt("Enemy", "Kẻ thù"),
+      opt("Colleague", "Đồng nghiệp"),
+      opt("Stranger", "Người lạ"),
+      opt("Lover", "Người yêu"),
+    ],
+  },
+  {
+    name: "Occupation of Victim",
+    nameVi: "Nghề nghiệp nạn nhân",
+    type: "evidence_brown",
+    options: [
+      opt("Intellectual", "Trí thức"),
+      opt("Manual Laborer", "Lao động tay chân"),
+      opt("Artist", "Nghệ sĩ"),
+      opt("Student", "Học sinh"),
+      opt("Homeless", "Vô gia cư"),
+      opt("Unknown", "Không rõ"),
+    ],
+  },
+  {
+    name: "Personality of Victim",
+    nameVi: "Tính cách nạn nhân",
+    type: "evidence_brown",
+    options: [
+      opt("Kind", "Hiền lành"),
+      opt("Aggressive", "Hung dữ"),
+      opt("Arrogant", "Kiêu ngạo"),
+      opt("Timid", "Nhút nhát"),
+      opt("Cautious", "Cẩn thận"),
+      opt("Cheerful", "Vui vẻ"),
+    ],
+  },
+  {
+    name: "Day of Crime",
+    nameVi: "Ngày gây án",
+    type: "evidence_brown",
+    options: [
+      opt("Holiday", "Ngày lễ"),
+      opt("Weekend", "Cuối tuần"),
+      opt("Weekday", "Ngày thường"),
+      opt("Anniversary", "Kỷ niệm"),
+      opt("Day Off", "Ngày nghỉ"),
+      opt("Unknown", "Không rõ"),
+    ],
+  },
+  {
+    name: "Noticed by Bystander",
+    nameVi: "Người chứng kiến chú ý",
+    type: "evidence_brown",
+    options: [
+      opt("Loud Noise", "Tiếng động lớn"),
+      opt("Flash of Light", "Ánh sáng"),
+      opt("Strange Odor", "Mùi hôi"),
+      opt("Strange Behavior", "Hành động lạ"),
+      opt("Smoke", "Khói"),
+      opt("Nothing", "Không có gì"),
+    ],
+  },
+  {
+    name: "Scene of the Crime",
+    nameVi: "Không gian hiện trường",
+    type: "evidence_brown",
+    options: [
+      opt("Enclosed Room", "Phòng kín"),
+      opt("Open Space", "Không gian mở"),
+      opt("Public Place", "Nơi công cộng"),
+      opt("Remote Location", "Nơi hẻo lánh"),
+      opt("Rooftop", "Mái nhà"),
+      opt("Underground", "Dưới lòng đất"),
+    ],
+  },
+  {
+    name: "Severity of Injuries",
+    nameVi: "Mức độ thương tích",
+    type: "evidence_brown",
+    options: [
+      opt("Minor", "Nhẹ"),
+      opt("Severe", "Nặng"),
+      opt("Head Trauma", "Chấn thương đầu"),
+      opt("Stab Wound", "Vết đâm"),
+      opt("Burns", "Bị bỏng"),
+      opt("No External Injury", "Không vết ngoài"),
+    ],
+  },
+  {
+    name: "Lighting at the Scene",
+    nameVi: "Ánh sáng hiện trường",
+    type: "evidence_brown",
+    options: [
+      opt("Brightly Lit", "Sáng rực"),
+      opt("Pitch Dark", "Tối om"),
+      opt("Colored Lights", "Ánh đèn màu"),
+      opt("Dim", "Mờ ảo"),
+      opt("Sunlight", "Ánh nắng"),
+      opt("Flickering", "Nhấp nháy"),
+    ],
+  },
+  {
+    name: "Sound at the Scene",
+    nameVi: "Âm thanh hiện trường",
+    type: "evidence_brown",
+    options: [
+      opt("Silence", "Yên tĩnh"),
+      opt("Noisy", "Ồn ào"),
+      opt("Music", "Tiếng nhạc"),
+      opt("Screaming", "Tiếng hét"),
+      opt("Machinery", "Tiếng máy móc"),
+      opt("TV / Radio", "TV / Radio"),
+    ],
+  },
+  {
+    name: "Odor at the Scene",
+    nameVi: "Mùi hương hiện trường",
+    type: "evidence_brown",
+    options: [
+      opt("Foul Smell", "Mùi hôi"),
+      opt("Perfume", "Nước hoa"),
+      opt("Burnt Smell", "Mùi khét"),
+      opt("Chemicals", "Hóa chất"),
+      opt("Food", "Mùi thức ăn"),
+      opt("No Odor", "Không mùi"),
+    ],
+  },
+  {
+    name: "Victim's Identity",
+    nameVi: "Thân phận nạn nhân",
+    type: "evidence_brown",
+    options: [
+      opt("Celebrity", "Người nổi tiếng"),
+      opt("Criminal", "Kẻ tội phạm"),
+      opt("Tourist", "Khách du lịch"),
+      opt("Local Resident", "Người địa phương"),
+      opt("Foreigner", "Người nước ngoài"),
+      opt("Unknown", "Không rõ"),
+    ],
+  },
+  {
+    name: "Motive of Crime",
+    nameVi: "Động cơ gây án",
+    type: "evidence_brown",
+    options: [
+      opt("Revenge", "Trả thù"),
+      opt("Money", "Tiền bạc"),
+      opt("Love", "Tình ái"),
+      opt("Jealousy", "Ghen tuông"),
+      opt("Accident", "Tai nạn"),
+      opt("Politics", "Chính trị"),
+    ],
+  },
+];
+
+
 // ─── Utility: shuffle array in place (Fisher-Yates) ───
 
 export function shuffle<T>(arr: T[]): T[] {
@@ -616,16 +934,18 @@ function toSceneTile(
   };
 }
 
-export function generateSceneTiles(): {
+export function generateSceneTiles(difficulty: "easy" | "hard" = "hard"): {
   active: SceneTile[];
   pool: SceneTile[];
 } {
+  const evidencePool = difficulty === "easy" ? EVIDENCE_TILES_EASY : EVIDENCE_TILES;
+
   const causeOfDeath = toSceneTile(CAUSE_OF_DEATH_TILE);
   const locationTile = toSceneTile(
     LOCATION_TILES[Math.floor(Math.random() * LOCATION_TILES.length)],
   );
 
-  const shuffledEvidence = shuffle([...EVIDENCE_TILES]);
+  const shuffledEvidence = shuffle([...evidencePool]);
   const pickedEvidence = shuffledEvidence.slice(0, 4).map(toSceneTile);
   const poolEvidence = shuffledEvidence.slice(4).map(toSceneTile);
 

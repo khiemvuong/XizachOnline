@@ -90,6 +90,8 @@ export interface DeceptionSettings {
   discussionTimeSeconds: number;
   meansCardsPerPlayer: number;
   clueCardsPerPlayer: number;
+  /** "easy" = bộ thẻ cụ thể dễ suy luận; "hard" = bộ gốc bản board game */
+  sceneDifficulty: "easy" | "hard";
 }
 
 export interface DeceptionChatMessage {

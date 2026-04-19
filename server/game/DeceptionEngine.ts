@@ -378,6 +378,7 @@ export class DeceptionEngine {
         discussionTimeSeconds: 180,
         meansCardsPerPlayer: 4,
         clueCardsPerPlayer: 4,
+        sceneDifficulty: "hard",
       },
       messages: [],
       murderSelection: null,
@@ -517,6 +518,11 @@ export class DeceptionEngine {
       settings.discussionTimeSeconds = Math.max(60, Math.min(600, settings.discussionTimeSeconds));
     }
 
+    // Validate sceneDifficulty
+    if (settings.sceneDifficulty !== undefined && settings.sceneDifficulty !== "easy" && settings.sceneDifficulty !== "hard") {
+      delete settings.sceneDifficulty;
+    }
+
     room.settings = { ...room.settings, ...settings };
     this.broadcastState(roomId);
   }
@@ -602,8 +608,8 @@ export class DeceptionEngine {
       clueId: selection.clueId,
     };
 
-    // Generate scene tiles
-    const { active, pool } = generateSceneTiles();
+    // Generate scene tiles using the selected difficulty
+    const { active, pool } = generateSceneTiles(room.settings.sceneDifficulty);
     room.activeSceneTiles = active;
     room.scenePool = pool;
 
