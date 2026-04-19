@@ -386,7 +386,7 @@ export default function DeceptionLobby({
                   <button
                     disabled={!isHost}
                     onClick={() => socket?.emit("updateSettings", { sceneDifficulty: "easy" })}
-                    className={`rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.1em] transition disabled:cursor-not-allowed ${
+                    className={`rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-widest transition disabled:cursor-not-allowed ${
                       gameState.settings.sceneDifficulty === "easy"
                         ? "bg-emerald-600 text-white"
                         : "text-(--on-surface-variant) hover:bg-emerald-600/20 hover:text-emerald-300 disabled:hover:bg-transparent disabled:hover:text-(--on-surface-variant)"
@@ -398,7 +398,7 @@ export default function DeceptionLobby({
                   <button
                     disabled={!isHost}
                     onClick={() => socket?.emit("updateSettings", { sceneDifficulty: "hard" })}
-                    className={`rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.1em] transition disabled:cursor-not-allowed ${
+                    className={`rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-widest transition disabled:cursor-not-allowed ${
                       gameState.settings.sceneDifficulty === "hard"
                         ? "bg-rose-600 text-white"
                         : "text-(--on-surface-variant) hover:bg-rose-600/20 hover:text-rose-300 disabled:hover:bg-transparent disabled:hover:text-(--on-surface-variant)"
