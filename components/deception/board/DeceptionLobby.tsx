@@ -376,13 +376,76 @@ export default function DeceptionLobby({
                 />
                 Witness
               </label>
+
+              {/* Compact difficulty toggle — visible on all screens < lg */}
+              <div className="flex items-center gap-1.5 lg:hidden">
+                <span className="text-[10px] uppercase tracking-[0.12em] text-(--on-surface-variant)">
+                  Difficulty
+                </span>
+                <div className="flex items-center gap-0.5 rounded-md border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-0.5">
+                  <button
+                    disabled={!isHost}
+                    onClick={() => socket?.emit("updateSettings", { sceneDifficulty: "easy" })}
+                    className={`rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.1em] transition disabled:cursor-not-allowed ${
+                      gameState.settings.sceneDifficulty === "easy"
+                        ? "bg-emerald-600 text-white"
+                        : "text-(--on-surface-variant) hover:bg-emerald-600/20 hover:text-emerald-300 disabled:hover:bg-transparent disabled:hover:text-(--on-surface-variant)"
+                    }`}
+                    title="Easy — thẻ cụ thể, dễ suy luận"
+                  >
+                    Easy
+                  </button>
+                  <button
+                    disabled={!isHost}
+                    onClick={() => socket?.emit("updateSettings", { sceneDifficulty: "hard" })}
+                    className={`rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.1em] transition disabled:cursor-not-allowed ${
+                      gameState.settings.sceneDifficulty === "hard"
+                        ? "bg-rose-600 text-white"
+                        : "text-(--on-surface-variant) hover:bg-rose-600/20 hover:text-rose-300 disabled:hover:bg-transparent disabled:hover:text-(--on-surface-variant)"
+                    }`}
+                    title="Hard — bản gốc board game"
+                  >
+                    Hard
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="hidden items-center gap-2 rounded-lg border border-(--deception-border) px-3 py-2 lg:flex">
               <Gavel className="h-4 w-4 text-(--deception-amber)" />
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--on-surface)">Variant</p>
-                <p className="text-[11px] text-(--on-surface-variant)">Standard Deception</p>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-(--on-surface)">
+                  Scene Difficulty
+                </p>
+                <p className="text-[11px] text-(--on-surface-variant)">
+                  {gameState.settings.sceneDifficulty === "easy" ? "Easy — dễ suy luận" : "Hard — bản gốc"}
+                </p>
+              </div>
+              <div className="ml-2 flex items-center gap-1 rounded-md border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-0.5">
+                <button
+                  disabled={!isHost}
+                  onClick={() => socket?.emit("updateSettings", { sceneDifficulty: "easy" })}
+                  className={`rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] transition disabled:cursor-not-allowed ${
+                    gameState.settings.sceneDifficulty === "easy"
+                      ? "bg-emerald-600 text-white"
+                      : "text-(--on-surface-variant) hover:bg-emerald-600/20 hover:text-emerald-300 disabled:hover:bg-transparent disabled:hover:text-(--on-surface-variant)"
+                  }`}
+                  title="Chế độ Easy — thẻ tình huống cụ thể, dễ suy luận"
+                >
+                  Easy
+                </button>
+                <button
+                  disabled={!isHost}
+                  onClick={() => socket?.emit("updateSettings", { sceneDifficulty: "hard" })}
+                  className={`rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] transition disabled:cursor-not-allowed ${
+                    gameState.settings.sceneDifficulty === "hard"
+                      ? "bg-rose-600 text-white"
+                      : "text-(--on-surface-variant) hover:bg-rose-600/20 hover:text-rose-300 disabled:hover:bg-transparent disabled:hover:text-(--on-surface-variant)"
+                  }`}
+                  title="Chế độ Hard — thẻ tình huống bản gốc board game"
+                >
+                  Hard
+                </button>
               </div>
             </div>
           </div>
