@@ -1413,3 +1413,71 @@
     rgba(255, 45, 85, 0.58)
   );
 }
+
+@media (hover: hover) and (pointer: fine) {
+  :where(.deception-theme, .deception-theme *) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 60, 106, 0.72) rgba(255, 255, 255, 0.04);
+  }
+
+  :where(.deception-theme, .deception-theme *)::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  :where(.deception-theme, .deception-theme *)::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  :where(.deception-theme, .deception-theme *)::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 98, 136, 0.88),
+      rgba(197, 22, 65, 0.9)
+    );
+  }
+
+  :where(.deception-theme, .deception-theme *)::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 120, 154, 0.92),
+      rgba(219, 31, 76, 0.94)
+    );
+  }
+
+  @supports selector(body:has(.deception-theme)) {
+    body:has(.deception-theme) {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 60, 106, 0.72) rgba(255, 255, 255, 0.04);
+    }
+
+    body:has(.deception-theme)::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    body:has(.deception-theme)::-webkit-scrollbar-track {
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    body:has(.deception-theme)::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: linear-gradient(
+        180deg,
+        rgba(255, 98, 136, 0.88),
+        rgba(197, 22, 65, 0.9)
+      );
+    }
+
+    body:has(.deception-theme)::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(
+        180deg,
+        rgba(255, 120, 154, 0.92),
+        rgba(219, 31, 76, 0.94)
+      );
+    }
+  }
+}
