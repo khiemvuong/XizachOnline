@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Delete, Play, ArrowLeft } from 'lucide-react';
 import { io } from 'socket.io-client';
+import useScreenWakeLock from "@/hooks/useScreenWakeLock";
 
 function generateRoomId(): string {
   const value = new Uint16Array(1);
@@ -15,6 +16,11 @@ export default function AvalonHome() {
   const router = useRouter();
   const [roomId, setRoomId] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  useScreenWakeLock({
+    enabled: true,
+    mobileOnly: true,
+  });
 
   const handleJoin = (e?: React.FormEvent) => {
     e?.preventDefault();

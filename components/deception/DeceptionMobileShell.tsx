@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from "react";
 import DeceptionBoard from "./board/DeceptionBoard";
+import useScreenWakeLock from "@/hooks/useScreenWakeLock";
 
 export default function DeceptionMobileShell({ roomId }: { roomId: string }) {
   const [isLandscape, setIsLandscape] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+
+  const { supported: wakeLockSupported } = useScreenWakeLock({
+    enabled: isMobile,
+    mobileOnly: false,
+  });
 
   useEffect(() => {
     const update = () => {
@@ -30,6 +36,7 @@ export default function DeceptionMobileShell({ roomId }: { roomId: string }) {
   const shellClass = [
     "deception-theme",
     "deception-orientation-lock",
+    "relative",
     isMobile && isLandscape ? "deception-mobile-landscape" : "",
   ]
     .filter(Boolean)
@@ -46,6 +53,11 @@ export default function DeceptionMobileShell({ roomId }: { roomId: string }) {
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-(--on-surface-variant)">
               Giao diện Deception tối ưu cho landscape để hiển thị đủ bảng chứng cứ và thanh điều khiển.
+            </p>
+            <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-(--deception-cyan)">
+              {wakeLockSupported
+                ? "Khi vào landscape, game se giu man hinh sang de tranh mat ket noi."
+                : "Trinh duyet nay chua ho tro wake lock man hinh."}
             </p>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { Socket } from "socket.io-client";
 import type { DeceptionPlayer, DeceptionRoom } from "@/server/game/DeceptionTypes";
+import RulesModal from "@/components/deception/RulesModal";
 import PingIndicator from "./PingIndicator";
 import {
   ArrowLeft,
@@ -12,13 +13,12 @@ import {
   Copy,
   Fingerprint,
   Gavel,
-  History,
   MessageSquareText,
   Play,
   SendHorizontal,
-  Settings,
   Share2,
   Shield,
+  ScrollText,
   Star,
   UserPlus,
   UserRound,
@@ -49,6 +49,7 @@ export default function DeceptionLobby({
 }) {
   const [nameInput, setNameInput] = useState(me?.name || "");
   const [chatText, setChatText] = useState("");
+  const [showRules, setShowRules] = useState(false);
 
   const isHost = Boolean(me?.isHost);
   const connectedActivePlayers = gameState.players.filter(
@@ -111,11 +112,8 @@ export default function DeceptionLobby({
           <button onClick={copyRoomCode} className="deception-icon-btn md:hidden" title="Sao chép mã phòng">
             <Copy className="h-4 w-4" />
           </button>
-          <button className="deception-icon-btn" title="Lịch sử">
-            <History className="h-4 w-4" />
-          </button>
-          <button className="deception-icon-btn" title="Cài đặt">
-            <Settings className="h-4 w-4" />
+          <button onClick={() => setShowRules(true)} className="deception-icon-btn" title="Luật chơi">
+            <ScrollText className="h-4 w-4" />
           </button>
         </div>
       </header>
@@ -467,6 +465,8 @@ export default function DeceptionLobby({
           </div>
         </div>
       </footer>
+
+      <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
     </div>
   );
 }

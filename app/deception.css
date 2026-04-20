@@ -514,6 +514,7 @@
   min-height: 0;
   height: 100%;
   max-height: 100%;
+  max-width: min(96vw, 96rem);
 }
 
 .deception-role-centered-glow {
@@ -663,11 +664,12 @@
 
 .deception-role-main {
   display: grid;
-  grid-template-columns: minmax(0, 2.35fr) minmax(14rem, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 2.1fr) minmax(17rem, 1fr);
+  gap: clamp(0.55rem, 1vw, 0.9rem);
   align-items: stretch;
   flex: 1;
   min-height: 0;
+  height: 100%;
 }
 
 .deception-role-visual-pane {
@@ -678,7 +680,7 @@
 
 .deception-role-side-pane {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0.55rem;
   min-width: 0;
   min-height: 0;
@@ -721,6 +723,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 .deception-role-related-content,
@@ -729,6 +732,13 @@
 .deception-role-related-content li,
 .deception-role-related-content div {
   color: #2c1c10;
+}
+
+.deception-role-related-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .deception-role-mask-overlay .deception-role-mask-text {
@@ -744,8 +754,8 @@
 .deception-role-related-list {
   min-height: 0;
   max-height: none;
-  overflow: visible;
-  padding-right: 0;
+  overflow: auto;
+  padding-right: 0.2rem;
 }
 
 .deception-role-action-row {
@@ -800,19 +810,21 @@
 }
 
 .deception-role-reveal-image {
-  width: auto !important;
+  aspect-ratio: 4 / 3;
+  width: 100% !important;
   max-width: 100%;
+  height: auto;
   max-height: 100%;
-  height: 100%;
 }
 
 .deception-role-portrait {
   filter: sepia(0.42) contrast(1.08) saturate(0.8);
   transition: transform 900ms ease;
+  object-position: center;
 }
 
 .deception-role-reveal-image-wrap:hover .deception-role-portrait {
-  transform: scale(1.06);
+  transform: none;
 }
 
 .deception-role-corner {
@@ -850,6 +862,12 @@
 
   .deception-role-fit-wrap {
     max-height: none;
+    max-width: 100%;
+  }
+
+  .deception-role-fit-card {
+    min-height: 100%;
+    height: auto;
   }
 
   .deception-role-main {
@@ -1334,4 +1352,64 @@
   .deception-topbar {
     padding-inline: 0.75rem;
   }
+}
+
+.deception-rules-modal-shell {
+  background:
+    radial-gradient(
+      circle at 20% 18%,
+      rgba(255, 45, 85, 0.12),
+      transparent 34%
+    ),
+    radial-gradient(circle at 84% 80%, rgba(0, 212, 255, 0.1), transparent 38%);
+}
+
+.deception-rules-modal-frame {
+  background:
+    linear-gradient(
+      165deg,
+      rgba(13, 17, 26, 0.98) 0%,
+      rgba(7, 10, 16, 0.98) 100%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.02) 0,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+}
+
+.deception-rules-modal-header {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 45, 85, 0.06) 0%,
+      rgba(255, 45, 85, 0) 100%
+    ),
+    rgba(7, 10, 16, 0.74);
+}
+
+.deception-rules-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 212, 255, 0.42) rgba(255, 255, 255, 0.06);
+}
+
+.deception-rules-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.deception-rules-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.deception-rules-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 212, 255, 0.68),
+    rgba(255, 45, 85, 0.58)
+  );
 }

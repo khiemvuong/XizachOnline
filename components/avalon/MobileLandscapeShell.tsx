@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from "react";
 import AvalonBoard from "./board/AvalonBoard";
+import useScreenWakeLock from "@/hooks/useScreenWakeLock";
 
 export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
   const [isLandscape, setIsLandscape] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+
+  useScreenWakeLock({
+    enabled: isMobile,
+    mobileOnly: false,
+  });
 
   useEffect(() => {
     const update = () => {
