@@ -53,12 +53,18 @@ export default function TimerBar({
       ? "PAUSED"
       : "READY";
 
+  const statusClass = timerEndAt
+    ? "text-(--deception-cyan)"
+    : timerPausedRemaining
+      ? "text-(--on-surface-variant)"
+      : "text-(--deception-amber)";
+
   const isCritical = timerEndAt ? remainingMs <= 30000 : false;
 
   return (
     <div className="deception-chip deception-timer-chip inline-flex items-center gap-2 rounded-md px-3 py-1.5">
       <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-(--deception-red-soft)">
-        R{currentRound}
+        Round {currentRound}
       </span>
       <span
         className={`text-[11px] font-black uppercase tracking-[0.16em] ${
@@ -67,7 +73,7 @@ export default function TimerBar({
       >
         {timerText}
       </span>
-      <span className="text-[10px] uppercase tracking-[0.14em] text-(--on-surface-variant)">
+      <span className={`text-[10px] uppercase tracking-[0.14em] ${statusClass}`}>
         {statusText}
       </span>
     </div>

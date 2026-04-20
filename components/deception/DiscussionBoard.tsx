@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   ChevronDown,
   CookingPot,
+  Eye,
   EyeOff,
   FileText,
   Fingerprint,
@@ -29,7 +30,9 @@ import ForensicClueBoard from "@/components/deception/ForensicClueBoard";
 import SolvingAttemptModal from "@/components/deception/SolvingAttemptModal";
 import EvidencePreviewCard from "@/components/deception/EvidencePreviewCard";
 import TimerBar from "@/components/deception/TimerBar";
-import SharedChatDropdown, { type ChatTheme } from "@/components/shared/ChatDropdown";
+import SharedChatDropdown, {
+  type ChatTheme,
+} from "@/components/shared/ChatDropdown";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import { usePreloadCardImages } from "@/hooks/usePreloadCardImages";
 import {
@@ -253,7 +256,9 @@ export default function DiscussionBoard({
   const actualSolutionMeans = useMemo(() => {
     if (!gameState.murderSelection) return undefined;
     for (const p of gameState.players) {
-      const card = p.meansCards.find((c) => c.id === gameState.murderSelection!.meansId);
+      const card = p.meansCards.find(
+        (c) => c.id === gameState.murderSelection!.meansId,
+      );
       if (card) return card;
     }
     return undefined;
@@ -262,7 +267,9 @@ export default function DiscussionBoard({
   const actualSolutionClue = useMemo(() => {
     if (!gameState.murderSelection) return undefined;
     for (const p of gameState.players) {
-      const card = p.clueCards.find((c) => c.id === gameState.murderSelection!.clueId);
+      const card = p.clueCards.find(
+        (c) => c.id === gameState.murderSelection!.clueId,
+      );
       if (card) return card;
     }
     return undefined;
@@ -309,10 +316,7 @@ export default function DiscussionBoard({
   }, [gameState.players]);
 
   const selectableEvidencePlayers = useMemo(
-    () =>
-      activePlayers.filter(
-        (player) => player.role !== "ForensicScientist",
-      ),
+    () => activePlayers.filter((player) => player.role !== "ForensicScientist"),
     [activePlayers],
   );
 
@@ -321,16 +325,13 @@ export default function DiscussionBoard({
       isForensic
         ? selectableEvidencePlayers
         : selectableEvidencePlayers.filter(
-          (player) => player.userId !== me?.userId,
-        ),
+            (player) => player.userId !== me?.userId,
+          ),
     [isForensic, me?.userId, selectableEvidencePlayers],
   );
 
   const visibleChatMessages = useMemo(
-    () =>
-      gameState.messages.filter(
-        (message) => message.senderId !== "system",
-      ),
+    () => gameState.messages.filter((message) => message.senderId !== "system"),
     [gameState.messages],
   );
 
@@ -353,8 +354,8 @@ export default function DiscussionBoard({
   const attempt = gameState.activeSolvingAttempt;
   const attemptAccused = attempt
     ? gameState.players.find(
-      (player) => player.userId === attempt.accusedUserId,
-    )
+        (player) => player.userId === attempt.accusedUserId,
+      )
     : undefined;
   const attemptMeans = attempt
     ? allMeans.get(attempt.selectedMeansId)
@@ -369,15 +370,18 @@ export default function DiscussionBoard({
         ? "incorrect"
         : null;
   const solvingResolutionNotice = gameState.solvingResolutionNotice;
-  const showIncorrectSolvingPopup = solvingResolutionNotice?.result === "incorrect";
+  const showIncorrectSolvingPopup =
+    solvingResolutionNotice?.result === "incorrect";
   const hideRolesUi = roleMaskEnabled;
 
-  const selectedMeansForensic = !hideRolesUi && gameState.murderSelection
-    ? allMeans.get(gameState.murderSelection.meansId)
-    : undefined;
-  const selectedClueForensic = !hideRolesUi && gameState.murderSelection
-    ? allClues.get(gameState.murderSelection.clueId)
-    : undefined;
+  const selectedMeansForensic =
+    !hideRolesUi && gameState.murderSelection
+      ? allMeans.get(gameState.murderSelection.meansId)
+      : undefined;
+  const selectedClueForensic =
+    !hideRolesUi && gameState.murderSelection
+      ? allClues.get(gameState.murderSelection.clueId)
+      : undefined;
 
   const forensicHintTiles = useMemo(
     () => gameState.activeSceneTiles.slice(0, 6),
@@ -397,8 +401,9 @@ export default function DiscussionBoard({
     return (
       (isForensic
         ? selectableEvidencePlayers[0]?.userId
-        : selectableEvidencePlayers.find((player) => player.userId === me?.userId)
-          ?.userId) ||
+        : selectableEvidencePlayers.find(
+            (player) => player.userId === me?.userId,
+          )?.userId) ||
       selectableEvidencePlayers[0]?.userId ||
       ""
     );
@@ -427,14 +432,16 @@ export default function DiscussionBoard({
     () =>
       effectivePendingSolveSelection
         ? solveTargetPlayers.find(
-          (player) => player.userId === effectivePendingSolveSelection.accusedUserId,
-        )
+            (player) =>
+              player.userId === effectivePendingSolveSelection.accusedUserId,
+          )
         : undefined,
     [effectivePendingSolveSelection, solveTargetPlayers],
   );
 
   const isPendingSolveComplete = Boolean(
-    effectivePendingSolveSelection?.means && effectivePendingSolveSelection?.clue,
+    effectivePendingSolveSelection?.means &&
+    effectivePendingSolveSelection?.clue,
   );
   const selectedEvidenceCount =
     Number(Boolean(effectivePendingSolveSelection?.means)) +
@@ -460,11 +467,11 @@ export default function DiscussionBoard({
         current && current.accusedUserId === accusedPlayer.userId
           ? { ...current, accusedName: accusedPlayer.name }
           : {
-            accusedUserId: accusedPlayer.userId,
-            accusedName: accusedPlayer.name,
-            means: null,
-            clue: null,
-          };
+              accusedUserId: accusedPlayer.userId,
+              accusedName: accusedPlayer.name,
+              means: null,
+              clue: null,
+            };
 
       return updater(base);
     });
@@ -512,7 +519,11 @@ export default function DiscussionBoard({
   };
 
   const submitDirectSolve = () => {
-    if (!effectivePendingSolveSelection?.means || !effectivePendingSolveSelection?.clue) return;
+    if (
+      !effectivePendingSolveSelection?.means ||
+      !effectivePendingSolveSelection?.clue
+    )
+      return;
 
     socket?.emit("submitSolving", {
       accusedUserId: effectivePendingSolveSelection.accusedUserId,
@@ -648,9 +659,7 @@ export default function DiscussionBoard({
     !isForensic && viewportWidth > 0 && viewportWidth <= 1200;
   const isCompactViewport = viewportWidth > 0 && viewportWidth <= 1200;
   const isDesktopWideViewport = viewportWidth > 1200;
-  const shouldShowSolveSelectionDetails = Boolean(
-    isSolveSelectionDetailsOpen,
-  );
+  const shouldShowSolveSelectionDetails = Boolean(isSolveSelectionDetailsOpen);
   const selectedMeansTitle = getEvidenceTitle(
     effectivePendingSolveSelection?.means?.card,
   );
@@ -688,22 +697,24 @@ export default function DiscussionBoard({
   return (
     <div className="deception-room-bg deception-theme deception-phase-shell flex h-dvh flex-col overflow-hidden">
       <main
-        className={`deception-phase-main relative flex min-h-0 flex-1 flex-col ${isCompactViewport ? "gap-2 p-2" : "gap-3 p-3"
-          }`}
+        className={`deception-phase-main relative flex min-h-0 flex-1 flex-col ${
+          isCompactViewport ? "gap-2 p-2" : "gap-3 p-3"
+        }`}
       >
         {!isForensic && (
           <section
-            className={`deception-card relative z-40 overflow-visible rounded-xl ${isCompactViewport ? "p-2" : "p-2.5"}`}
+            className={`deception-card relative z-40 overflow-visible rounded-xl ${isCompactViewport ? "p-1.5" : "p-2"}`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-1.5">
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   onClick={openSolveConfirmModal}
                   disabled={!canOpenSolve || !isPendingSolveComplete}
-                  className={`deception-btn-cyan inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] disabled:cursor-not-allowed disabled:opacity-45 ${isCompactViewport
+                  className={`deception-btn-cyan shrink-0 inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] disabled:cursor-not-allowed disabled:opacity-45 ${
+                    isCompactViewport
                       ? "px-2 py-1.5 text-[10px]"
-                      : "px-3 py-2 text-[11px]"
-                    }`}
+                      : "px-2.5 py-1.5 text-[10px]"
+                  }`}
                   title={solveButtonTitle}
                 >
                   <Search
@@ -716,10 +727,11 @@ export default function DiscussionBoard({
                   onClick={() =>
                     setIsSolveSelectionDetailsOpen((previous) => !previous)
                   }
-                  className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
+                  className={`deception-btn-outline shrink-0 inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${
+                    isCompactViewport
                       ? "px-2 py-1.5 text-[10px]"
-                      : "px-3 py-2 text-[11px]"
-                    }`}
+                      : "px-2.5 py-1.5 text-[10px]"
+                  }`}
                   title={
                     isSolveSelectionDetailsOpen
                       ? "Thu gọn chi tiết lựa chọn"
@@ -731,94 +743,79 @@ export default function DiscussionBoard({
                       isSolveSelectionDetailsOpen ? "rotate-180" : "rotate-0"
                     }`}
                   />
-                  {isCompactViewport ? `${selectedEvidenceCount}/2` : `Đã chọn ${selectedEvidenceCount}/2`}
+                  {selectedEvidenceCount}/2
                 </button>
-
-                <button
-                  onClick={() => setShowForensicClueBoard(true)}
-                  className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
-                      ? "px-2 py-1.5 text-[10px]"
-                      : "px-3 py-2 text-[11px]"
-                    }`}
-                  title="Mở Scene Board"
-                >
-                  <FileText
-                    className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"}
-                  />
-                  Scene Board
-                </button>
-                <button
-                  onClick={() => setShowSolvingHistory(true)}
-                  className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
-                      ? "px-2 py-1.5 text-[10px]"
-                      : "px-3 py-2 text-[11px]"
-                    }`}
-                  title="Lịch sử Tố Cáo"
-                >
-                  <History
-                    className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"}
-                  />
-                  Lịch sử
-                  {gameState.solvingAttempts.length > 0 && ` (${gameState.solvingAttempts.length})`}
-                </button>
-
-                <button
-                  onClick={onToggleRoleMask}
-                  className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
-                      ? "px-2 py-1.5 text-[10px]"
-                      : "px-3 py-2 text-[11px]"
-                    }`}
-                  title={hideRolesUi ? "Hiện lại role thật" : "Ẩn role thật"}
-                >
-                  <EyeOff
-                    className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"}
-                  />
-                  {hideRolesUi ? "Hiện Role" : "Ẩn Role"}
-                </button>
-
-                {canToggleDiscussionAudio && (
-                  <button
-                    onClick={onToggleBgm}
-                    className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
-                        ? "px-2 py-1.5 text-[10px]"
-                        : "px-3 py-2 text-[11px]"
-                      }`}
-                    title={bgmMuted ? "Bật nhạc nền" : "Tắt nhạc nền"}
-                  >
-                    {bgmMuted ? (
-                      <VolumeX className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"} />
-                    ) : (
-                      <Volume2 className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"} />
-                    )}
-                    {bgmMuted ? "Bật Nhạc" : "Tắt Nhạc"}
-                  </button>
-                )}
               </div>
 
-              <div className="flex min-w-0 items-center gap-1.5">
+              <div className="flex min-w-0 justify-center">
                 <div
-                  className={isCompactViewport ? "origin-right scale-90" : ""}
+                  className={`shrink-0 ${isCompactViewport ? "origin-center scale-90" : ""}`}
                 >
                   <TimerBar
                     currentRound={gameState.currentRound}
                     timerEndAt={gameState.timerEndAt}
                     timerPausedRemaining={gameState.timerPausedRemaining}
-                    roundDurationSeconds={gameState.settings.discussionTimeSeconds}
+                    roundDurationSeconds={
+                      gameState.settings.discussionTimeSeconds
+                    }
                   />
                 </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() => setShowForensicClueBoard(true)}
+                  className="deception-btn-outline shrink-0 inline-flex h-8 w-8 items-center justify-center p-0"
+                  title="Mở Scene Board"
+                  aria-label="Mở Scene Board"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                </button>
+
+                <button
+                  onClick={() => setShowSolvingHistory(true)}
+                  className="deception-btn-outline shrink-0 inline-flex h-8 w-8 items-center justify-center p-0"
+                  title="Lịch sử Tố Cáo"
+                  aria-label="Lịch sử Tố Cáo"
+                >
+                  <History className="h-3.5 w-3.5" />
+                </button>
+
+                <button
+                  onClick={onToggleRoleMask}
+                  className="deception-btn-outline shrink-0 inline-flex h-8 w-8 items-center justify-center p-0"
+                  title={hideRolesUi ? "Hiện lại role thật" : "Ẩn role thật"}
+                  aria-label={hideRolesUi ? "Hiện lại role thật" : "Ẩn role thật"}
+                >
+                  {hideRolesUi ? (
+                    <Eye className="h-3.5 w-3.5" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  )}
+                </button>
+
+                {canToggleDiscussionAudio && (
+                  <button
+                    onClick={onToggleBgm}
+                    className="deception-btn-outline shrink-0 inline-flex h-8 w-8 items-center justify-center p-0"
+                    title={bgmMuted ? "Bật nhạc nền" : "Tắt nhạc nền"}
+                    aria-label={bgmMuted ? "Bật nhạc nền" : "Tắt nhạc nền"}
+                  >
+                    {bgmMuted ? (
+                      <VolumeX className="h-3.5 w-3.5" />
+                    ) : (
+                      <Volume2 className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                )}
 
                 <button
                   onClick={onExit}
-                  className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
-                      ? "px-2 py-1.5 text-[10px]"
-                      : "px-3 py-2 text-[11px]"
-                    }`}
+                  className="deception-btn-outline shrink-0 inline-flex h-8 w-8 items-center justify-center p-0"
                   title="Thoát về sảnh"
+                  aria-label="Thoát về sảnh"
                 >
-                  <ArrowLeft
-                    className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"}
-                  />
-                  Quay về
+                  <ArrowLeft className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -885,20 +882,22 @@ export default function DiscussionBoard({
                   <div className="inline-flex items-center gap-1 rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-1">
                     <button
                       onClick={() => setForensicTab("hints")}
-                      className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${forensicTab === "hints"
+                      className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${
+                        forensicTab === "hints"
                           ? "bg-rose-600 text-white"
                           : "text-(--on-surface-variant) hover:bg-rose-500/15 hover:text-rose-200"
-                        }`}
+                      }`}
                     >
                       6 Viên Đạn
                     </button>
 
                     <button
                       onClick={() => setForensicTab("players")}
-                      className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${forensicTab === "players"
+                      className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${
+                        forensicTab === "players"
                           ? "bg-cyan-600 text-white"
                           : "text-(--on-surface-variant) hover:bg-cyan-500/15 hover:text-cyan-200"
-                        }`}
+                      }`}
                     >
                       Người chơi
                     </button>
@@ -913,13 +912,16 @@ export default function DiscussionBoard({
                       <span className="flex items-center gap-1.5">
                         <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         Lịch sử
-                        {gameState.solvingAttempts.length > 0 && ` (${gameState.solvingAttempts.length})`}
+                        {gameState.solvingAttempts.length > 0 &&
+                          ` (${gameState.solvingAttempts.length})`}
                       </span>
                     </button>
                     <button
                       onClick={onToggleRoleMask}
                       className="deception-icon-btn"
-                      title={hideRolesUi ? "Hiện lại role thật" : "Ẩn role thật"}
+                      title={
+                        hideRolesUi ? "Hiện lại role thật" : "Ẩn role thật"
+                      }
                     >
                       <EyeOff className="h-4 w-4" />
                     </button>
@@ -982,12 +984,16 @@ export default function DiscussionBoard({
                 </div>
 
                 <div className="flex items-center justify-between gap-2">
-                  <div className={isCompactViewport ? "origin-left scale-90" : ""}>
+                  <div
+                    className={isCompactViewport ? "origin-left scale-90" : ""}
+                  >
                     <TimerBar
                       currentRound={gameState.currentRound}
                       timerEndAt={gameState.timerEndAt}
                       timerPausedRemaining={gameState.timerPausedRemaining}
-                      roundDurationSeconds={gameState.settings.discussionTimeSeconds}
+                      roundDurationSeconds={
+                        gameState.settings.discussionTimeSeconds
+                      }
                     />
                   </div>
 
@@ -1016,8 +1022,9 @@ export default function DiscussionBoard({
 
             {forensicTab === "hints" ? (
               <section
-                className={`deception-card rounded-xl ${isCompactViewport ? "p-2.5 pb-20" : "p-4"
-                  }`}
+                className={`deception-card rounded-xl ${
+                  isCompactViewport ? "p-2.5 pb-20" : "p-4"
+                }`}
               >
                 <SceneBoard
                   tiles={forensicHintTiles}
@@ -1035,13 +1042,14 @@ export default function DiscussionBoard({
               </section>
             ) : (
               <section
-                className={`deception-card rounded-xl ${isCompactViewport ? "p-2.5 pb-20" : "p-3.5"
-                  }`}
+                className={`deception-card rounded-xl ${
+                  isCompactViewport ? "p-2.5 pb-20" : "p-3.5"
+                }`}
               >
-
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
                   {activePlayers.map((player) => {
-                    const isForensicPlayer = player.role === "ForensicScientist";
+                    const isForensicPlayer =
+                      player.role === "ForensicScientist";
                     const showForensicBadge = !hideRolesUi && isForensicPlayer;
                     const accusationTone = accusationBadgeTone(player.hasBadge);
                     const active =
@@ -1087,7 +1095,9 @@ export default function DiscussionBoard({
                         )}
 
                         <div className="flex items-center gap-2">
-                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-black uppercase tracking-[0.08em] ${roleTone.avatarClass}`}>
+                          <div
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-black uppercase tracking-[0.08em] ${roleTone.avatarClass}`}
+                          >
                             {initial}
                           </div>
 
@@ -1095,23 +1105,31 @@ export default function DiscussionBoard({
                             <p className="truncate text-xs font-bold uppercase tracking-[0.08em] text-(--on-surface)">
                               {displayName}
                               {playerPings[player.userId] !== undefined && (
-                                <span className={`ml-1 text-[10px] font-black font-mono tracking-tighter ${
-                                  playerPings[player.userId] < 150
-                                    ? "text-emerald-400"
-                                    : playerPings[player.userId] < 350
-                                      ? "text-amber-400"
-                                      : "text-red-500"
-                                }`}>
+                                <span
+                                  className={`ml-1 text-[10px] font-black font-mono tracking-tighter ${
+                                    playerPings[player.userId] < 150
+                                      ? "text-emerald-400"
+                                      : playerPings[player.userId] < 350
+                                        ? "text-amber-400"
+                                        : "text-red-500"
+                                  }`}
+                                >
                                   {Math.min(999, playerPings[player.userId])}ms
                                 </span>
                               )}
                             </p>
 
                             <div className="mt-1 flex flex-wrap items-center gap-1">
-                              <span className={`inline-flex max-w-full items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${roleTone.chipClass}`}>
-                                <span className={`h-1.5 w-1.5 rounded-full ${roleTone.dotClass}`} />
+                              <span
+                                className={`inline-flex max-w-full items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${roleTone.chipClass}`}
+                              >
+                                <span
+                                  className={`h-1.5 w-1.5 rounded-full ${roleTone.dotClass}`}
+                                />
                                 <span className="truncate">
-                                  {hideRolesUi ? "Người chơi" : roleLabel(player)}
+                                  {hideRolesUi
+                                    ? "Người chơi"
+                                    : roleLabel(player)}
                                 </span>
                               </span>
 
@@ -1126,7 +1144,9 @@ export default function DiscussionBoard({
                                 title={accusationTone.title}
                                 className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${accusationTone.chipClass}`}
                               >
-                                <BadgeCheck className={`h-2.5 w-2.5 ${accusationTone.iconClass}`} />
+                                <BadgeCheck
+                                  className={`h-2.5 w-2.5 ${accusationTone.iconClass}`}
+                                />
                                 <span>{accusationTone.label}</span>
                               </span>
 
@@ -1152,10 +1172,13 @@ export default function DiscussionBoard({
                       const isActive =
                         player.userId === resolvedFocusedPlayerUserId;
                       const playerIsForensicIdentity =
-                        !hideRolesUi && view.player.role === "ForensicScientist";
+                        !hideRolesUi &&
+                        view.player.role === "ForensicScientist";
                       const playerHasNoCards =
                         hideRolesUi && view.cardCount === 0;
-                      const playerHasWarmCards = Boolean(playerReadyMap[player.userId]);
+                      const playerHasWarmCards = Boolean(
+                        playerReadyMap[player.userId],
+                      );
                       const playerNeedsWarmup =
                         !playerIsForensicIdentity &&
                         !playerHasNoCards &&
@@ -1195,46 +1218,58 @@ export default function DiscussionBoard({
                                       "var(--font-cormorant), var(--font-headline), serif",
                                   }}
                                 >
-                                  Đang tải bộ chứng cứ của người chơi này. Dữ liệu người khác sẽ được nạp ngầm.
+                                  Đang tải bộ chứng cứ của người chơi này. Dữ
+                                  liệu người khác sẽ được nạp ngầm.
                                 </p>
                                 <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant)">
-                                  Tiến độ warm cache: {warmProgressLabel} người chơi
+                                  Tiến độ warm cache: {warmProgressLabel} người
+                                  chơi
                                 </p>
                               </div>
                             </div>
                           ) : (
                             <div className="grid min-h-0 grid-cols-2 gap-3 md:grid-cols-4">
-                              {view.means.map(({ card, imageUrl, rotationClass }) => (
-                                <div
-                                  className="h-48 md:h-56"
-                                  key={`forensic-players-means-${player.userId}-${card.id}`}
-                                >
-                                  <EvidencePreviewCard
-                                    card={card}
-                                    tone="means"
-                                    highlighted={false}
-                                    rotationClass={rotationClass}
-                                    evidenceNum={String(card.id).padStart(2, "0")}
-                                    imageUrl={imageUrl}
-                                  />
-                                </div>
-                              ))}
+                              {view.means.map(
+                                ({ card, imageUrl, rotationClass }) => (
+                                  <div
+                                    className="h-48 md:h-56"
+                                    key={`forensic-players-means-${player.userId}-${card.id}`}
+                                  >
+                                    <EvidencePreviewCard
+                                      card={card}
+                                      tone="means"
+                                      highlighted={false}
+                                      rotationClass={rotationClass}
+                                      evidenceNum={String(card.id).padStart(
+                                        2,
+                                        "0",
+                                      )}
+                                      imageUrl={imageUrl}
+                                    />
+                                  </div>
+                                ),
+                              )}
 
-                              {view.clues.map(({ card, imageUrl, rotationClass }) => (
-                                <div
-                                  className="h-48 md:h-56"
-                                  key={`forensic-players-clue-${player.userId}-${card.id}`}
-                                >
-                                  <EvidencePreviewCard
-                                    card={card}
-                                    tone="clue"
-                                    highlighted={false}
-                                    rotationClass={rotationClass}
-                                    evidenceNum={String(card.id).padStart(2, "0")}
-                                    imageUrl={imageUrl}
-                                  />
-                                </div>
-                              ))}
+                              {view.clues.map(
+                                ({ card, imageUrl, rotationClass }) => (
+                                  <div
+                                    className="h-48 md:h-56"
+                                    key={`forensic-players-clue-${player.userId}-${card.id}`}
+                                  >
+                                    <EvidencePreviewCard
+                                      card={card}
+                                      tone="clue"
+                                      highlighted={false}
+                                      rotationClass={rotationClass}
+                                      evidenceNum={String(card.id).padStart(
+                                        2,
+                                        "0",
+                                      )}
+                                      imageUrl={imageUrl}
+                                    />
+                                  </div>
+                                ),
+                              )}
                             </div>
                           )}
                         </section>
@@ -1251,10 +1286,11 @@ export default function DiscussionBoard({
             className={`relative min-h-0 flex-1 ${shouldScaleNonForensicLayout ? "overflow-hidden" : "overflow-auto"}`}
           >
             <div
-              className={`flex h-full w-full ${shouldScaleNonForensicLayout
+              className={`flex h-full w-full ${
+                shouldScaleNonForensicLayout
                   ? "items-start justify-center overflow-hidden"
                   : "items-stretch justify-stretch"
-                }`}
+              }`}
             >
               <div
                 className={
@@ -1265,24 +1301,30 @@ export default function DiscussionBoard({
                 style={
                   shouldScaleNonForensicLayout
                     ? {
-                      width: `${nonForensicSceneWidth}px`,
-                      height: `${nonForensicSceneHeight}px`,
-                      transform: `scale(${nonForensicScale})`,
-                      transformOrigin: "top center",
-                    }
+                        width: `${nonForensicSceneWidth}px`,
+                        height: `${nonForensicSceneHeight}px`,
+                        transform: `scale(${nonForensicScale})`,
+                        transformOrigin: "top center",
+                      }
                     : undefined
                 }
               >
                 <section className="deception-card rounded-xl p-3">
                   <div
-                    className={isDesktopWideViewport
-                      ? "flex gap-1.5 overflow-x-auto pr-1"
-                      : "grid grid-cols-3 gap-2 md:grid-cols-4 xl:grid-cols-6"}
+                    className={
+                      isDesktopWideViewport
+                        ? "flex gap-1.5 overflow-x-auto pr-1"
+                        : "grid grid-cols-3 gap-2 md:grid-cols-4 xl:grid-cols-6"
+                    }
                   >
                     {activePlayers.map((player) => {
-                      const isForensicPlayer = player.role === "ForensicScientist";
-                      const showForensicBadge = !hideRolesUi && isForensicPlayer;
-                      const accusationTone = accusationBadgeTone(player.hasBadge);
+                      const isForensicPlayer =
+                        player.role === "ForensicScientist";
+                      const showForensicBadge =
+                        !hideRolesUi && isForensicPlayer;
+                      const accusationTone = accusationBadgeTone(
+                        player.hasBadge,
+                      );
                       const active =
                         player.userId === resolvedFocusedPlayerUserId;
                       const isSelf = player.userId === me?.userId;
@@ -1291,10 +1333,15 @@ export default function DiscussionBoard({
                       ).toUpperCase();
                       const displayName = clampPlayerName(
                         player.name,
-                        isDesktopWideViewport ? 11 : isCompactViewport ? 11 : 14,
+                        isDesktopWideViewport
+                          ? 11
+                          : isCompactViewport
+                            ? 11
+                            : 14,
                       );
                       const isPendingAccusedTarget =
-                        effectivePendingSolveSelection?.accusedUserId === player.userId;
+                        effectivePendingSolveSelection?.accusedUserId ===
+                        player.userId;
                       const roleTone = hideRolesUi
                         ? roleToneByRole(undefined)
                         : roleToneByRole(player.role);
@@ -1328,36 +1375,51 @@ export default function DiscussionBoard({
                           )}
 
                           <div className="flex items-center gap-2">
-                            <div className={`flex shrink-0 items-center justify-center rounded-full border font-black uppercase tracking-[0.08em] ${roleTone.avatarClass} ${isDesktopWideViewport ? "h-9 w-9 text-xs" : "h-11 w-11 text-sm"}`}>
+                            <div
+                              className={`flex shrink-0 items-center justify-center rounded-full border font-black uppercase tracking-[0.08em] ${roleTone.avatarClass} ${isDesktopWideViewport ? "h-9 w-9 text-xs" : "h-11 w-11 text-sm"}`}
+                            >
                               {initial}
                             </div>
 
                             <div className="min-w-0">
-                              <p className={`truncate font-bold uppercase tracking-[0.08em] text-(--on-surface) ${isDesktopWideViewport ? "text-xs" : "text-sm"}`}>
+                              <p
+                                className={`truncate font-bold uppercase tracking-[0.08em] text-(--on-surface) ${isDesktopWideViewport ? "text-xs" : "text-sm"}`}
+                              >
                                 {displayName}
                                 {playerPings[player.userId] !== undefined && (
-                                  <span className={`ml-1 text-[10px] font-black font-mono tracking-tighter ${
-                                    playerPings[player.userId] < 150
-                                      ? "text-emerald-400"
-                                      : playerPings[player.userId] < 350
-                                        ? "text-amber-400"
-                                        : "text-red-500"
-                                  }`}>
-                                    {Math.min(999, playerPings[player.userId])}ms
+                                  <span
+                                    className={`ml-1 text-[10px] font-black font-mono tracking-tighter ${
+                                      playerPings[player.userId] < 150
+                                        ? "text-emerald-400"
+                                        : playerPings[player.userId] < 350
+                                          ? "text-amber-400"
+                                          : "text-red-500"
+                                    }`}
+                                  >
+                                    {Math.min(999, playerPings[player.userId])}
+                                    ms
                                   </span>
                                 )}
                               </p>
 
                               <div className="mt-1 flex flex-wrap items-center gap-1">
-                                <span className={`inline-flex max-w-full items-center gap-1 rounded border font-black uppercase tracking-widest ${roleTone.chipClass} ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[9px]"}`}>
-                                  <span className={`h-1.5 w-1.5 rounded-full ${roleTone.dotClass}`} />
+                                <span
+                                  className={`inline-flex max-w-full items-center gap-1 rounded border font-black uppercase tracking-widest ${roleTone.chipClass} ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[9px]"}`}
+                                >
+                                  <span
+                                    className={`h-1.5 w-1.5 rounded-full ${roleTone.dotClass}`}
+                                  />
                                   <span className="truncate">
-                                    {hideRolesUi ? "Người chơi" : roleLabel(player)}
+                                    {hideRolesUi
+                                      ? "Người chơi"
+                                      : roleLabel(player)}
                                   </span>
                                 </span>
 
                                 {showForensicBadge && (
-                                  <span className={`inline-flex items-center gap-1 rounded border border-cyan-300/75 bg-[radial-gradient(circle_at_30%_30%,rgba(70,220,255,0.35),rgba(12,68,102,0.58))] font-black uppercase tracking-widest text-cyan-50 shadow-[0_0_10px_rgba(0,212,255,0.28)] ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}>
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded border border-cyan-300/75 bg-[radial-gradient(circle_at_30%_30%,rgba(70,220,255,0.35),rgba(12,68,102,0.58))] font-black uppercase tracking-widest text-cyan-50 shadow-[0_0_10px_rgba(0,212,255,0.28)] ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}
+                                  >
                                     <span className="h-1.5 w-1.5 rounded-full bg-cyan-200 shadow-[0_0_8px_rgba(120,240,255,0.8)]" />
                                     Pháp y
                                   </span>
@@ -1367,19 +1429,25 @@ export default function DiscussionBoard({
                                   title={accusationTone.title}
                                   className={`inline-flex items-center gap-1 rounded border font-black uppercase tracking-widest ${accusationTone.chipClass} ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}
                                 >
-                                  <BadgeCheck className={`h-2.5 w-2.5 ${accusationTone.iconClass}`} />
+                                  <BadgeCheck
+                                    className={`h-2.5 w-2.5 ${accusationTone.iconClass}`}
+                                  />
                                   <span>{accusationTone.label}</span>
                                 </span>
 
                                 {isPendingAccusedTarget && (
-                                  <span className={`inline-flex items-center gap-1 rounded border border-rose-300/80 bg-[radial-gradient(circle_at_30%_30%,rgba(255,137,165,0.36),rgba(101,18,35,0.66))] font-black uppercase tracking-widest text-rose-50 shadow-[0_0_12px_rgba(255,105,145,0.28)] ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}>
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded border border-rose-300/80 bg-[radial-gradient(circle_at_30%_30%,rgba(255,137,165,0.36),rgba(101,18,35,0.66))] font-black uppercase tracking-widest text-rose-50 shadow-[0_0_12px_rgba(255,105,145,0.28)] ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}
+                                  >
                                     <span className="h-1.5 w-1.5 rounded-full bg-rose-100" />
                                     Đang tố cáo
                                   </span>
                                 )}
 
                                 {isSelf && (
-                                  <span className={`rounded border border-cyan-300/70 bg-cyan-400/18 font-black uppercase tracking-widest text-cyan-100 ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}>
+                                  <span
+                                    className={`rounded border border-cyan-300/70 bg-cyan-400/18 font-black uppercase tracking-widest text-cyan-100 ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}
+                                  >
                                     Bạn
                                   </span>
                                 )}
@@ -1392,7 +1460,9 @@ export default function DiscussionBoard({
                   </div>
                 </section>
 
-                <section className={`grid min-h-0 flex-1 ${isDesktopWideViewport ? "gap-3 grid-cols-[minmax(0,1fr)_22rem]" : "gap-4 grid-cols-[minmax(0,1fr)_21rem]"}`}>
+                <section
+                  className={`grid min-h-0 flex-1 ${isDesktopWideViewport ? "gap-3 grid-cols-[minmax(0,1fr)_22rem]" : "gap-4 grid-cols-[minmax(0,1fr)_21rem]"}`}
+                >
                   <article className="deception-card min-h-0 overflow-visible rounded-xl p-3">
                     <div className="relative h-full min-h-0">
                       {selectableEvidencePlayers.map((player) => {
@@ -1402,9 +1472,13 @@ export default function DiscussionBoard({
                         const isActive =
                           player.userId === resolvedFocusedPlayerUserId;
                         const playerIsForensicIdentity =
-                          !hideRolesUi && view.player.role === "ForensicScientist";
-                        const playerHasNoCards = hideRolesUi && view.cardCount === 0;
-                        const playerHasWarmCards = Boolean(playerReadyMap[player.userId]);
+                          !hideRolesUi &&
+                          view.player.role === "ForensicScientist";
+                        const playerHasNoCards =
+                          hideRolesUi && view.cardCount === 0;
+                        const playerHasWarmCards = Boolean(
+                          playerReadyMap[player.userId],
+                        );
                         const playerNeedsWarmup =
                           !playerIsForensicIdentity &&
                           !playerHasNoCards &&
@@ -1412,7 +1486,8 @@ export default function DiscussionBoard({
                         const canSelectPlayerForSolve =
                           isForensic || player.userId !== me?.userId;
                         const playerIsKnownMurderer = Boolean(
-                          knownMurderer && player.userId === knownMurderer.userId,
+                          knownMurderer &&
+                          player.userId === knownMurderer.userId,
                         );
 
                         return (
@@ -1449,7 +1524,9 @@ export default function DiscussionBoard({
                                         "var(--font-cormorant), var(--font-headline), serif",
                                     }}
                                   >
-                                    Đang nạp dữ liệu chứng cứ cho người chơi này. Chuyển tab chỉ đổi view sau khi cache hoàn tất.
+                                    Đang nạp dữ liệu chứng cứ cho người chơi
+                                    này. Chuyển tab chỉ đổi view sau khi cache
+                                    hoàn tất.
                                   </p>
                                   <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant)">
                                     {playerCardsReady
@@ -1460,61 +1537,101 @@ export default function DiscussionBoard({
                               </div>
                             ) : (
                               <div className="grid h-full min-h-0 grid-cols-4 auto-rows-fr gap-3 overflow-visible">
-                                {view.means.map(({ card, imageUrl, rotationClass }) => {
-                                  const isMurderMeans =
-                                    playerIsKnownMurderer &&
-                                    Boolean(revealedMurderSelection) &&
-                                    card.id === revealedMurderSelection?.meansId;
-                                  const isSelectedMeans =
-                                    effectivePendingSolveSelection?.accusedUserId === player.userId &&
-                                    effectivePendingSolveSelection.means?.id === card.id;
+                                {view.means.map(
+                                  ({ card, imageUrl, rotationClass }) => {
+                                    const isMurderMeans =
+                                      playerIsKnownMurderer &&
+                                      Boolean(revealedMurderSelection) &&
+                                      card.id ===
+                                        revealedMurderSelection?.meansId;
+                                    const isSelectedMeans =
+                                      effectivePendingSolveSelection?.accusedUserId ===
+                                        player.userId &&
+                                      effectivePendingSolveSelection.means
+                                        ?.id === card.id;
 
-                                  return (
-                                    <EvidencePreviewCard
-                                      key={`means-${player.userId}-${card.id}`}
-                                      card={card}
-                                      tone="means"
-                                      highlighted={isMurderMeans}
-                                      selected={isSelectedMeans}
-                                      rotationClass={rotationClass}
-                                      evidenceNum={String(card.id).padStart(2, "0")}
-                                      imageUrl={imageUrl}
-                                      onSelect={canSelectPlayerForSolve
-                                        ? (_, __, img) =>
-                                          handleSelectMeansForSolve(player, card, img)
-                                        : undefined}
-                                      onLongPress={(c, t, img) => setZoomedCard({ card: c, tone: t, imageUrl: img })}
-                                    />
-                                  );
-                                })}
+                                    return (
+                                      <EvidencePreviewCard
+                                        key={`means-${player.userId}-${card.id}`}
+                                        card={card}
+                                        tone="means"
+                                        highlighted={isMurderMeans}
+                                        selected={isSelectedMeans}
+                                        rotationClass={rotationClass}
+                                        evidenceNum={String(card.id).padStart(
+                                          2,
+                                          "0",
+                                        )}
+                                        imageUrl={imageUrl}
+                                        onSelect={
+                                          canSelectPlayerForSolve
+                                            ? (_, __, img) =>
+                                                handleSelectMeansForSolve(
+                                                  player,
+                                                  card,
+                                                  img,
+                                                )
+                                            : undefined
+                                        }
+                                        onLongPress={(c, t, img) =>
+                                          setZoomedCard({
+                                            card: c,
+                                            tone: t,
+                                            imageUrl: img,
+                                          })
+                                        }
+                                      />
+                                    );
+                                  },
+                                )}
 
-                                {view.clues.map(({ card, imageUrl, rotationClass }) => {
-                                  const isMurderClue =
-                                    playerIsKnownMurderer &&
-                                    Boolean(revealedMurderSelection) &&
-                                    card.id === revealedMurderSelection?.clueId;
-                                  const isSelectedClue =
-                                    effectivePendingSolveSelection?.accusedUserId === player.userId &&
-                                    effectivePendingSolveSelection.clue?.id === card.id;
+                                {view.clues.map(
+                                  ({ card, imageUrl, rotationClass }) => {
+                                    const isMurderClue =
+                                      playerIsKnownMurderer &&
+                                      Boolean(revealedMurderSelection) &&
+                                      card.id ===
+                                        revealedMurderSelection?.clueId;
+                                    const isSelectedClue =
+                                      effectivePendingSolveSelection?.accusedUserId ===
+                                        player.userId &&
+                                      effectivePendingSolveSelection.clue
+                                        ?.id === card.id;
 
-                                  return (
-                                    <EvidencePreviewCard
-                                      key={`clue-${player.userId}-${card.id}`}
-                                      card={card}
-                                      tone="clue"
-                                      highlighted={isMurderClue}
-                                      selected={isSelectedClue}
-                                      rotationClass={rotationClass}
-                                      evidenceNum={String(card.id).padStart(2, "0")}
-                                      imageUrl={imageUrl}
-                                      onSelect={canSelectPlayerForSolve
-                                        ? (_, __, img) =>
-                                          handleSelectClueForSolve(player, card, img)
-                                        : undefined}
-                                      onLongPress={(c, t, img) => setZoomedCard({ card: c, tone: t, imageUrl: img })}
-                                    />
-                                  );
-                                })}
+                                    return (
+                                      <EvidencePreviewCard
+                                        key={`clue-${player.userId}-${card.id}`}
+                                        card={card}
+                                        tone="clue"
+                                        highlighted={isMurderClue}
+                                        selected={isSelectedClue}
+                                        rotationClass={rotationClass}
+                                        evidenceNum={String(card.id).padStart(
+                                          2,
+                                          "0",
+                                        )}
+                                        imageUrl={imageUrl}
+                                        onSelect={
+                                          canSelectPlayerForSolve
+                                            ? (_, __, img) =>
+                                                handleSelectClueForSolve(
+                                                  player,
+                                                  card,
+                                                  img,
+                                                )
+                                            : undefined
+                                        }
+                                        onLongPress={(c, t, img) =>
+                                          setZoomedCard({
+                                            card: c,
+                                            tone: t,
+                                            imageUrl: img,
+                                          })
+                                        }
+                                      />
+                                    );
+                                  },
+                                )}
                               </div>
                             )}
                           </section>
@@ -1613,27 +1730,35 @@ export default function DiscussionBoard({
       </main>
 
       {zoomedCard && (
-        <div 
+        <div
           className="fixed inset-0 z-80 flex flex-col items-center justify-center bg-black/85 p-4 backdrop-blur-md"
           onClick={() => setZoomedCard(null)}
         >
-          <div 
+          <div
             className="relative flex w-full flex-col items-center gap-3 sm:gap-4 animate-in fade-in zoom-in duration-200"
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Image Container */}
-            <div className={`relative ${isCompactViewport ? "aspect-square h-[min(82vw,52dvh)]" : "aspect-2/3 h-[60dvh]"} shrink-0 overflow-hidden rounded-2xl border-2 shadow-[0_20px_50px_rgba(0,0,0,0.8)] ${zoomedCard.tone === 'means' ? 'border-(--deception-amber)' : 'border-(--deception-cyan)'}`}>
-              <Image 
+            <div
+              className={`relative ${isCompactViewport ? "aspect-square h-[min(82vw,52dvh)]" : "aspect-2/3 h-[60dvh]"} shrink-0 overflow-hidden rounded-2xl border-2 shadow-[0_20px_50px_rgba(0,0,0,0.8)] ${zoomedCard.tone === "means" ? "border-(--deception-amber)" : "border-(--deception-cyan)"}`}
+            >
+              <Image
                 src={zoomedCard.imageUrl}
-                alt={zoomedCard.card.vietnamese || zoomedCard.card.english || "Card"}
+                alt={
+                  zoomedCard.card.vietnamese ||
+                  zoomedCard.card.english ||
+                  "Card"
+                }
                 fill
                 unoptimized
                 className="object-cover"
               />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-[linear-gradient(to_top,rgba(0,0,0,0.9),transparent)]" />
               <div className="absolute inset-x-0 bottom-0 p-4 text-center">
-                <p className={`text-[10px] font-black uppercase tracking-widest ${zoomedCard.tone === 'means' ? 'text-(--deception-amber)' : 'text-(--deception-cyan)'}`}>
-                  {zoomedCard.tone === 'means' ? 'Hung khí' : 'Manh mối'}
+                <p
+                  className={`text-[10px] font-black uppercase tracking-widest ${zoomedCard.tone === "means" ? "text-(--deception-amber)" : "text-(--deception-cyan)"}`}
+                >
+                  {zoomedCard.tone === "means" ? "Hung khí" : "Manh mối"}
                 </p>
                 <h3 className="mt-1 text-lg font-bold uppercase leading-tight text-white drop-shadow-md">
                   {zoomedCard.card.vietnamese || zoomedCard.card.english}
@@ -1643,13 +1768,15 @@ export default function DiscussionBoard({
 
             {/* Description Container */}
             {zoomedCard.card.description && (
-              <div className={`w-full max-w-xs sm:max-w-sm rounded-xl border p-3 sm:p-4 text-center backdrop-blur-sm ${zoomedCard.tone === 'means' ? 'border-(--deception-amber)/30 bg-(--deception-amber)/10 text-(--deception-amber-soft)' : 'border-(--deception-cyan)/30 bg-(--deception-cyan)/10 text-(--deception-cyan-soft)'}`}>
+              <div
+                className={`w-full max-w-xs sm:max-w-sm rounded-xl border p-3 sm:p-4 text-center backdrop-blur-sm ${zoomedCard.tone === "means" ? "border-(--deception-amber)/30 bg-(--deception-amber)/10 text-(--deception-amber-soft)" : "border-(--deception-cyan)/30 bg-(--deception-cyan)/10 text-(--deception-cyan-soft)"}`}
+              >
                 <p className="text-sm italic leading-relaxed">
                   &quot;{zoomedCard.card.description}&quot;
                 </p>
               </div>
             )}
-            
+
             <button
               onClick={() => setZoomedCard(null)}
               className="mt-2 rounded-full border border-white/20 bg-white/10 px-6 py-2 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm transition hover:bg-white/20"
@@ -1699,7 +1826,8 @@ export default function DiscussionBoard({
               <p className="mt-3 text-center text-sm leading-relaxed text-(--on-surface-variant)">
                 Bạn đang tố cáo{" "}
                 <span className="font-black uppercase tracking-[0.08em] text-(--deception-red-soft)">
-                  {pendingSolveAccused?.name || effectivePendingSolveSelection.accusedName}
+                  {pendingSolveAccused?.name ||
+                    effectivePendingSolveSelection.accusedName}
                 </span>
                 . Hãy kiểm tra đúng người và đúng 2 lá trước khi gửi.
               </p>
@@ -1713,7 +1841,12 @@ export default function DiscussionBoard({
                     <div className="relative h-18 w-12 shrink-0 overflow-hidden rounded-md border border-(--deception-amber)/45 bg-black/45">
                       <Image
                         src={effectivePendingSolveSelection.means.imageUrl}
-                        alt={effectivePendingSolveSelection.means.card.vietnamese || effectivePendingSolveSelection.means.card.english || "Means"}
+                        alt={
+                          effectivePendingSolveSelection.means.card
+                            .vietnamese ||
+                          effectivePendingSolveSelection.means.card.english ||
+                          "Means"
+                        }
                         fill
                         unoptimized
                         className="object-cover"
@@ -1721,10 +1854,15 @@ export default function DiscussionBoard({
                     </div>
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-(--deception-amber)">
-                        #{String(effectivePendingSolveSelection.means.id).padStart(2, "0")}
+                        #
+                        {String(
+                          effectivePendingSolveSelection.means.id,
+                        ).padStart(2, "0")}
                       </p>
                       <p className="mt-1 text-sm font-bold leading-snug text-(--on-surface)">
-                        {getEvidenceTitle(effectivePendingSolveSelection.means.card)}
+                        {getEvidenceTitle(
+                          effectivePendingSolveSelection.means.card,
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1738,7 +1876,11 @@ export default function DiscussionBoard({
                     <div className="relative h-18 w-12 shrink-0 overflow-hidden rounded-md border border-(--deception-cyan)/45 bg-black/45">
                       <Image
                         src={effectivePendingSolveSelection.clue.imageUrl}
-                        alt={effectivePendingSolveSelection.clue.card.vietnamese || effectivePendingSolveSelection.clue.card.english || "Clue"}
+                        alt={
+                          effectivePendingSolveSelection.clue.card.vietnamese ||
+                          effectivePendingSolveSelection.clue.card.english ||
+                          "Clue"
+                        }
                         fill
                         unoptimized
                         className="object-cover"
@@ -1746,10 +1888,15 @@ export default function DiscussionBoard({
                     </div>
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-(--deception-cyan)">
-                        #{String(effectivePendingSolveSelection.clue.id).padStart(2, "0")}
+                        #
+                        {String(
+                          effectivePendingSolveSelection.clue.id,
+                        ).padStart(2, "0")}
                       </p>
                       <p className="mt-1 text-sm font-bold leading-snug text-(--on-surface)">
-                        {getEvidenceTitle(effectivePendingSolveSelection.clue.card)}
+                        {getEvidenceTitle(
+                          effectivePendingSolveSelection.clue.card,
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1797,7 +1944,8 @@ export default function DiscussionBoard({
               <div className="mt-5 rounded-2xl border border-[rgba(255,110,146,0.3)] bg-[linear-gradient(145deg,rgba(255,95,130,0.1),rgba(255,95,130,0.02))] p-4 sm:mt-6 sm:p-5">
                 <p className="text-center text-sm leading-relaxed text-(--on-surface-variant) sm:text-base">
                   <span className="font-black uppercase tracking-[0.08em] text-(--deception-cyan)">
-                    {solvingResolutionNotice?.investigatorName || "Một điều tra viên"}
+                    {solvingResolutionNotice?.investigatorName ||
+                      "Một điều tra viên"}
                   </span>{" "}
                   đã tố cáo sai
                   {solvingResolutionNotice?.accusedName ? (
@@ -1862,11 +2010,13 @@ export default function DiscussionBoard({
             <h2 className="text-center text-xl font-black uppercase tracking-[0.16em] text-(--on-surface)">
               Lịch sử phá án
             </h2>
-            <div className="mt-5 flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="mt-5 max-h-[60vh] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
               {gameState.solvingAttempts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 opacity-60">
                   <ShieldAlert className="mb-3 h-10 w-10 text-(--on-surface-variant)" />
-                  <p className="text-sm font-bold uppercase tracking-widest text-(--on-surface-variant)">Chưa có ai tố cáo.</p>
+                  <p className="text-sm font-bold uppercase tracking-widest text-(--on-surface-variant)">
+                    Chưa có ai tố cáo.
+                  </p>
                 </div>
               ) : (
                 gameState.solvingAttempts.map((hist) => {
@@ -1880,45 +2030,64 @@ export default function DiscussionBoard({
                     : `Unknown Clue #${hist.selectedClueId}`;
 
                   return (
-                    <div key={hist.id} className="relative overflow-hidden rounded-2xl border border-(--deception-border) bg-black/40 p-4 transition hover:bg-black/60">
-                      <div className={`absolute top-0 bottom-0 left-0 w-1 ${hist.result === 'correct' ? 'bg-(--deception-cyan)' : 'bg-(--deception-red)'}`} />
+                    <div
+                      key={hist.id}
+                      className="relative shrink-0 overflow-hidden rounded-2xl border border-(--deception-border) bg-black/40 p-4 transition hover:bg-black/60"
+                    >
+                      <div
+                        className={`absolute top-0 bottom-0 left-0 w-1 ${hist.result === "correct" ? "bg-(--deception-cyan)" : "bg-(--deception-red)"}`}
+                      />
                       <p className="text-sm">
                         <span className="font-black uppercase tracking-[0.06em] text-(--deception-cyan)">
                           {hist.investigatorName}
                         </span>{" "}
-                        <span className="text-(--on-surface-variant) px-1 text-sm lowercase tracking-[0.04em]">đã tố cáo</span>{" "}
+                        <span className="text-(--on-surface-variant) px-1 text-sm lowercase tracking-[0.04em]">
+                          đã tố cáo
+                        </span>{" "}
                         <span className="font-black uppercase tracking-[0.06em] text-(--deception-red-soft)">
                           {hist.accusedName}
                         </span>
                       </p>
-                      
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                        {/* Means display */}
-                        <div className="flex items-center gap-1.5 rounded-lg border border-(--deception-amber)/30 bg-(--deception-amber)/10 px-2.5 py-1.5">
-                          <CookingPot className="h-3.5 w-3.5 text-(--deception-amber)" />
-                          <span className="max-w-[16ch] truncate font-bold text-(--deception-amber)" title={meansTitle}>
-                            {meansTitle}
-                          </span>
-                        </div>
-                        <span className="px-1 text-(--on-surface-variant) font-black">+</span>
-                        {/* Clue display */}
-                        <div className="flex items-center gap-1.5 rounded-lg border border-(--deception-cyan)/30 bg-(--deception-cyan)/10 px-2.5 py-1.5">
-                          <Fingerprint className="h-3.5 w-3.5 text-(--deception-cyan)" />
-                          <span className="max-w-[16ch] truncate font-bold text-(--deception-cyan)" title={clueTitle}>
-                            {clueTitle}
-                          </span>
+
+                      <div className="mt-3 space-y-2 text-xs">
+                        <div className="flex items-start gap-2 rounded-lg border border-(--deception-amber)/30 bg-(--deception-amber)/10 px-2.5 py-2">
+                          <CookingPot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--deception-amber)" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-(--deception-amber)">
+                              Hung khí
+                            </p>
+                            <p className="mt-0.5 wrap-break-word text-xs leading-snug font-bold text-(--deception-amber)">
+                              {meansTitle}
+                            </p>
+                          </div>
                         </div>
 
-                        <span className={`ml-auto font-black uppercase tracking-[0.12em] ${hist.result === 'correct' ? 'text-(--deception-cyan)' : 'text-(--deception-red)'}`}>
-                          {hist.result === 'correct' ? '✓ Đúng' : '✗ Sai'}
-                        </span>
+                        <div className="flex items-start gap-2 rounded-lg border border-(--deception-cyan)/30 bg-(--deception-cyan)/10 px-2.5 py-2">
+                          <Fingerprint className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--deception-cyan)" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-(--deception-cyan)">
+                              Manh mối
+                            </p>
+                            <p className="mt-0.5 wrap-break-word text-xs leading-snug font-bold text-(--deception-cyan)">
+                              {clueTitle}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <span
+                            className={`font-black uppercase tracking-[0.12em] ${hist.result === "correct" ? "text-(--deception-cyan)" : "text-(--deception-red)"}`}
+                          >
+                            {hist.result === "correct" ? "✓ Đúng" : "✗ Sai"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );
                 })
               )}
             </div>
-            
+
             <button
               onClick={() => setShowSolvingHistory(false)}
               className="deception-btn-outline mt-6 w-full py-3.5 text-xs font-black uppercase tracking-[0.16em]"
@@ -1928,7 +2097,6 @@ export default function DiscussionBoard({
           </section>
         </div>
       )}
-
     </div>
   );
 }
