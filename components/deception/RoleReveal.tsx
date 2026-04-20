@@ -120,7 +120,7 @@ export default function RoleReveal({
 
       <main className="deception-role-reveal-stage relative z-10 flex min-h-0 flex-1 items-center justify-center px-3 py-2 sm:px-4 sm:py-2.5">
         <section
-          className="deception-role-centered-wrap deception-role-fit-wrap relative w-full max-w-4xl select-none touch-none"
+          className="deception-role-centered-wrap deception-role-fit-wrap relative w-full select-none touch-none"
           style={roleStyle}
           onPointerUp={() => setIsRevealing(false)}
           onPointerLeave={() => setIsRevealing(false)}
@@ -149,7 +149,7 @@ export default function RoleReveal({
                   onPointerCancel={() => setIsRevealing(false)}
                 >
                   {!imageFailed && meta && roleImageSource ? (
-                    <div className="deception-role-reveal-image relative mx-auto aspect-square w-full max-w-none overflow-hidden">
+                    <div className="deception-role-reveal-image relative mx-auto aspect-4/3 w-full max-w-none overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={roleImageSource}
@@ -157,16 +157,16 @@ export default function RoleReveal({
                         loading="eager"
                         decoding="async"
                         draggable={false}
-                        className={`deception-role-portrait h-full w-full object-cover transition-all duration-200 ${
+                        className={`deception-role-portrait h-full w-full object-contain transition-all duration-200 ${
                           isRevealing
                             ? ""
-                            : "scale-[1.08] blur-xl saturate-0 brightness-[0.08] contrast-50"
+                            : "blur-xl saturate-0 brightness-[0.08] contrast-50"
                         }`}
                         onError={() => setFailedImageSource(roleImageSource || "__unknown__")}
                       />
                     </div>
                   ) : (
-                    <div className="deception-role-reveal-image mx-auto flex aspect-square w-full max-w-none flex-col items-center justify-center gap-2 text-center text-(--deception-cyan)">
+                    <div className="deception-role-reveal-image mx-auto flex aspect-4/3 w-full max-w-none flex-col items-center justify-center gap-2 text-center text-(--deception-cyan)">
                       <Fingerprint className="h-14 w-14 opacity-70" />
                       <p className="px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-(--on-surface-variant)">
                         Không thể tải ảnh vai trò

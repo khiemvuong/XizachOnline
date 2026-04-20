@@ -1,363 +1,260 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Fingerprint, Search, Settings, Shield, Swords, User } from "lucide-react";
+import useScreenWakeLock from "@/hooks/useScreenWakeLock";
 
-interface GameCard {
-  id: string;
-  title: string;
-  subtitle: string;
-  description: string;
-  players: string;
-  time: string;
-  difficulty: string;
-  route: string;
-  accentColor: string;
-  glowColor: string;
-  badge: string;
-  tags: string[];
-  hidden?: boolean;
-  icon: React.ReactNode;
-}
+const AVALON_BG =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuAzM7hbSAjzAjxRKWC0uk-8VKxpa8pv9R4xLgOAEEbMuNXfcpwoUy6s0qrLB87iLmaUM7w_zm6BWPauSQrtbjowYmpYYoxSc0O5FZ76VJWzFwC5GHWugqwijm63Cljh1w9Z_XMrVhM_zajZiDljO8ylGQ4SgvYNomqZiAN8WFiXntyKTQBsGs3GJr2R3OzxnTCWucb70fmfbKWqQ5kqqh6kCxjqbuyF2IzNdbY41B9O824WcOI8PcE2lBC87x7DHRpcBjJq_dvJhA1G";
 
-const SwordIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-    <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
-    <path d="M13 19l6-6" />
-    <path d="M16 16l4 4" />
-    <path d="M19 21l2-2" />
-  </svg>
-);
-
-const MagnifyIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-    <circle cx="11" cy="11" r="8" />
-    <path d="M21 21l-4.35-4.35" />
-    <path d="M11 8v6M8 11h6" />
-  </svg>
-);
-
-const CardIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-    <rect x="2" y="5" width="20" height="14" rx="3" />
-    <path d="M2 10h20" />
-  </svg>
-);
-
-const GAMES: GameCard[] = [
-  {
-    id: "avalon",
-    title: "Avalon",
-    subtitle: "The Resistance",
-    description: "Trò chơi xã hội ẩn danh chiến lược. Phe Tốt và phe Evil đối đầu trong bóng tối. Ai là Merlin? Ai là Assassin?",
-    players: "5–10",
-    time: "30–60 phút",
-    difficulty: "Trung bình",
-    route: "/avalon",
-    accentColor: "rgba(99, 102, 241, 1)",
-    glowColor: "rgba(99, 102, 241, 0.25)",
-    badge: "ĐANG CÓ",
-    tags: ["Nhập vai", "Chiến lược", "Bluffing"],
-    icon: <SwordIcon />,
-  },
-  {
-    id: "deception",
-    title: "Deception",
-    subtitle: "Murder in Hong Kong",
-    description: "Pháp y dẫn dắt điều tra. Kẻ sát nhân ẩn mình. Điều tra viên phải phá án trước khi hết giờ.",
-    players: "4–12",
-    time: "20–40 phút",
-    difficulty: "Dễ học",
-    route: "/deception",
-    accentColor: "rgba(239, 68, 68, 1)",
-    glowColor: "rgba(239, 68, 68, 0.25)",
-    badge: "ĐANG CÓ",
-    tags: ["Điều tra", "Suy luận", "Deduction"],
-    icon: <MagnifyIcon />,
-  },
-  {
-    id: "xizach",
-    title: "Xì Dách",
-    subtitle: "Blackjack Online",
-    description: "Trò chơi bài kinh điển. Đừng vượt quá 21. Chơi cùng bạn bè với voice chat thời gian thực.",
-    players: "2–8",
-    time: "Tự do",
-    difficulty: "Dễ",
-    route: "/xizach",
-    accentColor: "rgba(234, 179, 8, 1)",
-    glowColor: "rgba(234, 179, 8, 0.2)",
-    badge: "ĐANG CÓ",
-    tags: ["Bài", "May mắn", "Voice Chat"],
-    hidden: true,
-    icon: <CardIcon />,
-  },
-];
-
-const VISIBLE_GAMES = GAMES.filter((g) => !g.hidden);
+const DECEPTION_BG =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuCI8V8mtn_yhTd76gbeXp-8g4vSNqH_CZ7Uh21SFxh01Jin9W3aggTnH_-6x2k9bWvkUkXhap6aSM4_bq3BiboHEyzgLR5Uw5m7tMN6cPBvNFhH7BytBz5_mdLdIqiriWJSDzazhuVr9tQXSa4s2hHKa2jQrXINnNY2mv9L8fyjXZ03fxsfprO_iLB1oEIjOQ7Wrj1QT6WkFj36-kivptKyL1QJ_HlY0lEYyczgtwaZ-RS922flBQ9mmH345cffEkaFSkYObe6JFmYO";
 
 export default function HomePage() {
   const router = useRouter();
 
+  useScreenWakeLock({
+    enabled: true,
+    mobileOnly: true,
+  });
+
   return (
-    <div className="hub-page">
+    <div className="game-hub-root min-h-screen overflow-x-hidden bg-[#121416] text-[#e2e2e5] antialiased selection:bg-[#ff5167] selection:text-[#5b0015]">
       <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        .hub-page {
-          min-height: 100dvh;
-          background: #06080f;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 32px 20px;
-          font-family: 'Inter', system-ui, sans-serif;
+        .game-hub-root {
+          --hub-topbar-height: 80px;
+          font-family: "Work Sans", var(--font-body), sans-serif;
+          height: 100dvh;
+          overflow: hidden;
         }
 
-        /* ── Header ── */
-        .hub-header {
-          text-align: center;
-          margin-bottom: 36px;
-        }
-        .hub-logo {
-          font-size: clamp(1.8rem, 5vw, 3rem);
-          font-weight: 900;
-          letter-spacing: 0.03em;
-          background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          line-height: 1.1;
-          margin-bottom: 6px;
-        }
-        .hub-tagline {
-          font-size: clamp(0.7rem, 2vw, 0.875rem);
-          color: #475569;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          font-weight: 500;
+        .game-hub-main {
+          margin-top: var(--hub-topbar-height);
+          height: calc(100dvh - var(--hub-topbar-height));
+          min-height: 0;
         }
 
-        /* ── Grid ── */
-        .hub-grid {
-          display: grid;
-          grid-template-columns: repeat(${VISIBLE_GAMES.length}, minmax(0, 420px));
-          gap: 20px;
-          width: 100%;
-          max-width: ${VISIBLE_GAMES.length === 2 ? "860px" : "1060px"};
+        .game-hub-title,
+        .game-hub-logo {
+          font-family: "Space Grotesk", var(--font-headline), sans-serif;
         }
 
-        /* Portrait mobile: 1 column */
-        @media (max-width: 640px) {
-          .hub-grid {
-            grid-template-columns: 1fr;
-            max-width: 400px;
+        .game-hub-label {
+          font-family: "Be Vietnam Pro", var(--font-body), sans-serif;
+        }
+
+        @media (max-width: 767px) {
+          .game-hub-main {
+            height: calc(100dvh - var(--hub-topbar-height));
+            min-height: 0;
+          }
+
+          .game-hub-panel {
+            height: calc((100dvh - var(--hub-topbar-height)) / 2);
+            min-height: 0;
+            padding: 1rem;
+          }
+
+          .game-hub-card {
+            max-width: min(100%, 34rem);
+            padding: 1rem;
+          }
+
+          .game-hub-title {
+            font-size: 1.65rem;
+            line-height: 1.08;
+          }
+
+          .game-hub-subtitle {
+            margin-bottom: 0.45rem;
+          }
+
+          .game-hub-subdesc {
+            margin-bottom: 0.8rem;
+            font-size: 0.88rem;
+            line-height: 1.35;
+          }
+
+          .game-hub-action-wrap {
+            gap: 0.5rem;
+          }
+
+          .game-hub-action {
+            font-size: 0.72rem;
+            padding: 0.54rem 0.88rem;
           }
         }
 
-        /* Landscape mobile (short viewport): compact 2-col */
+        @media (max-width: 767px) and (orientation: landscape) {
+          .game-hub-main {
+            flex-direction: row;
+          }
+
+          .game-hub-panel {
+            width: 50%;
+            height: calc(100dvh - var(--hub-topbar-height));
+          }
+
+          .game-hub-panel:first-child {
+            border-right: 1px solid rgba(93, 63, 64, 0.2);
+            border-bottom: 0;
+          }
+        }
+
         @media (orientation: landscape) and (max-height: 520px) {
-          .hub-page { padding: 12px 16px; justify-content: flex-start; }
-          .hub-header { margin-bottom: 12px; }
-          .hub-logo { font-size: 1.4rem; }
-          .hub-grid {
-            grid-template-columns: repeat(${VISIBLE_GAMES.length}, minmax(0, 1fr));
-            gap: 12px;
+          .game-hub-root {
+            --hub-topbar-height: 56px;
           }
-          .game-card { padding: 14px 16px; gap: 8px; }
-          .card-desc { display: none; }
-          .card-meta { display: none; }
-          .card-tags { display: none; }
-          .card-icon-wrap { width: 40px; height: 40px; padding: 9px; border-radius: 10px; }
-          .card-title { font-size: 1.1rem; }
-          .card-cta { padding: 9px 0; font-size: 0.8rem; }
-        }
 
-        /* ── Card ── */
-        .game-card {
-          position: relative;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 22px;
-          padding: 24px;
-          cursor: pointer;
-          transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-        }
-        .game-card:hover {
-          transform: translateY(-5px);
-          border-color: var(--card-accent);
-          box-shadow: 0 0 48px var(--card-glow), 0 24px 48px rgba(0,0,0,0.5);
-        }
-        .game-card:active { transform: translateY(-2px) scale(0.99); }
+          .game-hub-topbar {
+            padding: 0.55rem 1rem;
+          }
 
-        /* ── Card interior ── */
-        .card-top {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-        }
-        .card-icon-wrap {
-          width: 50px;
-          height: 50px;
-          border-radius: 14px;
-          flex-shrink: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 11px;
-          background: var(--card-glow);
-          color: var(--card-accent);
-        }
-        .card-titles { flex: 1; min-width: 0; }
-        .card-title {
-          font-size: 1.35rem;
-          font-weight: 800;
-          color: #f1f5f9;
-          line-height: 1.1;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .card-subtitle {
-          font-size: 0.7rem;
-          color: var(--card-accent);
-          font-weight: 600;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          margin-top: 3px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .card-badge {
-          font-size: 0.58rem;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          padding: 3px 8px;
-          border-radius: 999px;
-          background: var(--card-glow);
-          color: var(--card-accent);
-          border: 1px solid var(--card-accent);
-          white-space: nowrap;
-          flex-shrink: 0;
-          align-self: flex-start;
-        }
+          .game-hub-logo {
+            font-size: 1.2rem;
+          }
 
-        .card-desc {
-          font-size: 0.875rem;
-          color: #94a3b8;
-          line-height: 1.6;
-        }
+          .game-hub-panel {
+            min-height: calc(100dvh - 56px);
+            padding: 0.9rem 1rem;
+          }
 
-        .card-meta {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-        .meta-item {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 0.72rem;
-          color: #64748b;
-          background: rgba(255,255,255,0.05);
-          border-radius: 8px;
-          padding: 4px 9px;
-        }
+          .game-hub-card {
+            max-width: min(100%, 30rem);
+            padding: 1rem;
+          }
 
-        .card-tags {
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
-        }
-        .tag {
-          font-size: 0.68rem;
-          font-weight: 600;
-          color: var(--card-accent);
-          background: var(--card-glow);
-          border-radius: 6px;
-          padding: 3px 8px;
-        }
+          .game-hub-title {
+            font-size: 1.55rem;
+            line-height: 1.05;
+          }
 
-        .card-cta {
-          margin-top: auto;
-          width: 100%;
-          padding: 12px 0;
-          border-radius: 12px;
-          font-size: 0.875rem;
-          font-weight: 700;
-          letter-spacing: 0.06em;
-          background: var(--card-accent);
-          color: #06080f;
-          border: none;
-          cursor: pointer;
-          transition: filter 0.18s, transform 0.15s;
-          text-transform: uppercase;
-        }
-        .card-cta:hover { filter: brightness(1.1); transform: scale(1.02); }
-        .card-cta:active { transform: scale(0.98); }
+          .game-hub-subtitle {
+            margin-bottom: 0.55rem;
+          }
 
-        .hub-footer {
-          margin-top: 28px;
-          font-size: 0.68rem;
-          color: #1e293b;
-          letter-spacing: 0.1em;
-          text-align: center;
+          .game-hub-subdesc {
+            margin-bottom: 0.9rem;
+            font-size: 0.86rem;
+            line-height: 1.42;
+          }
+
+          .game-hub-action-wrap {
+            gap: 0.55rem;
+          }
+
+          .game-hub-action {
+            font-size: 0.72rem;
+            padding: 0.56rem 0.9rem;
+          }
         }
       `}</style>
 
-      <header className="hub-header">
-        <h1 className="hub-logo">BoardGame</h1>
-        <p className="hub-tagline">Chọn trò chơi để bắt đầu</p>
+      <header className="game-hub-topbar fixed top-0 z-50 flex w-full items-center justify-between bg-linear-to-b from-black/40 to-transparent px-6 py-4 uppercase tracking-widest text-[#ff2d55]">
+        <div className="game-hub-logo text-2xl font-black tracking-tight">ARCHIVE NEXUS</div>
+        <div className="flex gap-4">
+          <button
+            type="button"
+            className="cursor-pointer p-2 text-slate-500 transition-colors hover:bg-white/5 hover:text-slate-200"
+            aria-label="Account"
+          >
+            <User className="h-6 w-6" />
+          </button>
+          <button
+            type="button"
+            className="cursor-pointer p-2 text-slate-500 transition-colors hover:bg-white/5 hover:text-slate-200"
+            aria-label="Settings"
+          >
+            <Settings className="h-6 w-6" />
+          </button>
+        </div>
       </header>
 
-      <div className="hub-grid">
-        {VISIBLE_GAMES.map((game) => (
-          <div
-            key={game.id}
-            className="game-card"
-            style={{
-              "--card-accent": game.accentColor,
-              "--card-glow": game.glowColor,
-            } as React.CSSProperties}
-            onClick={() => router.push(game.route)}
-          >
-            <div className="card-top">
-              <div className="card-icon-wrap">{game.icon}</div>
-              <div className="card-titles">
-                <h2 className="card-title">{game.title}</h2>
-                <p className="card-subtitle">{game.subtitle}</p>
-              </div>
-              <span className="card-badge">{game.badge}</span>
+      <main className="game-hub-main flex w-full flex-col md:flex-row">
+        <section
+          className="game-hub-panel group relative flex h-128 w-full cursor-pointer items-center justify-center overflow-hidden border-b border-[#5d3f40]/20 bg-[#1a1c1e] p-8 md:h-auto md:w-1/2 md:border-b-0 md:border-r lg:p-16"
+          style={{
+            backgroundImage: `linear-gradient(to bottom, rgba(18, 20, 22, 0.4), rgba(18, 20, 22, 0.9)), url('${AVALON_BG}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+          onClick={() => router.push("/avalon")}
+        >
+          <div className="game-hub-card relative z-10 w-full max-w-lg border-t border-[#5d3f40]/20 bg-[rgba(51,53,55,0.7)] p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-[20px] transition-transform duration-500 group-hover:-translate-y-2">
+            <div className="mb-6 flex items-center gap-4">
+              <Shield className="h-10 w-10 fill-current text-[#00d2fd]" />
+              <h2 className="game-hub-title text-4xl font-bold tracking-tight text-[#e2e2e5] lg:text-5xl">
+                AVALON
+              </h2>
             </div>
 
-            <p className="card-desc">{game.description}</p>
+            <p className="game-hub-subdesc mb-8 text-lg leading-relaxed text-[#e6bcbd]">
+              The Resistance: A game of secret identities, deduction, and betrayal. Will the forces of good prevail,
+              or will Mordred&apos;s minions sabotage the quest?
+            </p>
 
-            <div className="card-meta">
-              <span className="meta-item">👥 {game.players} người</span>
-              <span className="meta-item">⏱ {game.time}</span>
-              <span className="meta-item">📊 {game.difficulty}</span>
+            <div className="game-hub-action-wrap mt-auto flex flex-wrap gap-4">
+              <button
+                type="button"
+                className="game-hub-action flex items-center gap-2 bg-[#00d2fd] px-6 py-3 font-bold uppercase tracking-wider text-[#001f27] transition-all hover:brightness-110"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  router.push("/avalon");
+                }}
+              >
+                <span>Enter Kingdom</span>
+                <Swords className="ml-2 h-4 w-4" />
+              </button>
             </div>
-
-            <div className="card-tags">
-              {game.tags.map((tag) => (
-                <span key={tag} className="tag">{tag}</span>
-              ))}
-            </div>
-
-            <button
-              className="card-cta"
-              onClick={(e) => { e.stopPropagation(); router.push(game.route); }}
-            >
-              Chơi ngay →
-            </button>
           </div>
-        ))}
-      </div>
+        </section>
 
-      <footer className="hub-footer">XizachOnline · Play with friends</footer>
+        <section
+          className="game-hub-panel group relative flex h-128 w-full cursor-pointer items-center justify-center overflow-hidden bg-[#1e2022] p-8 md:h-auto md:w-1/2 lg:p-16"
+          style={{
+            backgroundImage: `linear-gradient(to bottom, rgba(18, 20, 22, 0.6), rgba(18, 20, 22, 0.95)), url('${DECEPTION_BG}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+          onClick={() => router.push("/deception")}
+        >
+          <div className="game-hub-card relative z-10 w-full max-w-lg border-t border-[#5d3f40]/20 bg-[rgba(51,53,55,0.8)] p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-[20px] transition-transform duration-500 group-hover:-translate-y-2">
+            <div className="absolute -left-4 -top-4 z-20 h-0.5 w-12 rotate-45 bg-[#ff2d55] shadow-[0_0_8px_rgba(255,45,85,0.6)]" />
+            <div className="absolute right-4 top-0 h-2 w-2 rounded-full border border-[#5d3f40]/60 bg-[#37393b] shadow-md" />
+
+            <div className="mb-6 flex items-center gap-4">
+              <Fingerprint className="h-10 w-10 stroke-[1.5] text-[#ffb3b5]" />
+              <h2 className="game-hub-title text-4xl font-black tracking-tight text-[#e2e2e5] lg:text-5xl">
+                DECEPTION
+              </h2>
+            </div>
+
+            <h3 className="game-hub-label game-hub-subtitle mb-4 inline-block border-b-2 border-[#5d3f40]/30 pb-2 text-sm font-bold uppercase tracking-widest text-[#ffb3b5]">
+              Murder in Hong Kong
+            </h3>
+
+            <p className="game-hub-subdesc mb-8 text-lg leading-relaxed text-[#e6bcbd]">
+              A forensic investigation game where the truth is hidden in plain sight. Uncover the murderer among your
+              team before the trail goes cold.
+            </p>
+
+            <div className="game-hub-action-wrap mt-auto flex flex-wrap gap-4">
+              <button
+                type="button"
+                className="game-hub-action flex items-center gap-2 bg-linear-to-br from-[#ffb3b5] to-[#ff5167] px-6 py-3 font-bold uppercase tracking-wider text-[#5b0015] transition-all hover:brightness-110"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  router.push("/deception");
+                }}
+              >
+                <span>Investigate</span>
+                <Search className="ml-2 h-4 w-4" />
+              </button>
+
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
