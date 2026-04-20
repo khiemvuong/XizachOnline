@@ -5,6 +5,7 @@ import type { Socket } from "socket.io-client";
 import {
   ArrowLeft,
   BadgeCheck,
+  ChevronDown,
   CookingPot,
   EyeOff,
   FileText,
@@ -22,10 +23,10 @@ import type {
   DeceptionRoom,
   MeansCard,
 } from "@/server/game/DeceptionTypes";
+import Image from "next/image";
 import SceneBoard from "@/components/deception/SceneBoard";
 import ForensicClueBoard from "@/components/deception/ForensicClueBoard";
 import SolvingAttemptModal from "@/components/deception/SolvingAttemptModal";
-import SolvingWizard from "@/components/deception/SolvingWizard";
 import EvidencePreviewCard from "@/components/deception/EvidencePreviewCard";
 import TimerBar from "@/components/deception/TimerBar";
 import SharedChatDropdown, { type ChatTheme } from "@/components/shared/ChatDropdown";
@@ -34,6 +35,8 @@ import { usePreloadCardImages } from "@/hooks/usePreloadCardImages";
 import {
   getResolvedClueImageUrl,
   getResolvedMeansImageUrl,
+  getClueImageUrl,
+  getMeansImageUrl,
 } from "@/utils/deceptionAssets";
 
 const NON_FORENSIC_SCENE_WIDTH = 1820;
@@ -183,6 +186,33 @@ function accusationBadgeTone(hasBadge: boolean) {
   };
 }
 
+type SelectedEvidenceEntry<TCard extends MeansCard | ClueCard> = {
+  id: number;
+  card: TCard;
+  imageUrl: string;
+};
+
+type PendingSolveSelection = {
+  accusedUserId: string;
+  accusedName: string;
+  means: SelectedEvidenceEntry<MeansCard> | null;
+  clue: SelectedEvidenceEntry<ClueCard> | null;
+};
+
+function getEvidenceTitle(card: MeansCard | ClueCard | null | undefined) {
+  if (!card) return "Chưa chọn";
+
+  const english = card.english?.trim();
+  const vietnamese = card.vietnamese?.trim();
+
+  if (!english) return vietnamese || "Unknown";
+  if (!vietnamese || vietnamese.toLowerCase() === english.toLowerCase()) {
+    return english;
+  }
+
+  return `${english} (${vietnamese})`;
+}
+
 export default function DiscussionBoard({
   gameState,
   me,
@@ -207,9 +237,36 @@ export default function DiscussionBoard({
   const [showChat, setShowChat] = useState(false);
   const [chatText, setChatText] = useState("");
   const [focusedPlayerUserId, setFocusedPlayerUserId] = useState("");
-  const [showSolvingWizard, setShowSolvingWizard] = useState(false);
   const [showForensicClueBoard, setShowForensicClueBoard] = useState(false);
-  const [solvingWizardVersion, setSolvingWizardVersion] = useState(0);
+  const [showSolvingHistory, setShowSolvingHistory] = useState(false);
+  const [isSolveSelectionDetailsOpen, setIsSolveSelectionDetailsOpen] =
+    useState(false);
+  const [pendingSolveSelection, setPendingSolveSelection] =
+    useState<PendingSolveSelection | null>(null);
+  const [showSolveConfirmModal, setShowSolveConfirmModal] = useState(false);
+  const [zoomedCard, setZoomedCard] = useState<{
+    card: MeansCard | ClueCard;
+    tone: "means" | "clue";
+    imageUrl: string;
+  } | null>(null);
+
+  const actualSolutionMeans = useMemo(() => {
+    if (!gameState.murderSelection) return undefined;
+    for (const p of gameState.players) {
+      const card = p.meansCards.find((c) => c.id === gameState.murderSelection!.meansId);
+      if (card) return card;
+    }
+    return undefined;
+  }, [gameState.murderSelection, gameState.players]);
+
+  const actualSolutionClue = useMemo(() => {
+    if (!gameState.murderSelection) return undefined;
+    for (const p of gameState.players) {
+      const card = p.clueCards.find((c) => c.id === gameState.murderSelection!.clueId);
+      if (card) return card;
+    }
+    return undefined;
+  }, [gameState.murderSelection, gameState.players]);
   const [viewportWidth, setViewportWidth] = useState(0);
   const [forensicTab, setForensicTab] = useState<"hints" | "players">("hints");
   const nonForensicViewportRef = useRef<HTMLDivElement | null>(null);
@@ -257,6 +314,16 @@ export default function DiscussionBoard({
         (player) => player.role !== "ForensicScientist",
       ),
     [activePlayers],
+  );
+
+  const solveTargetPlayers = useMemo(
+    () =>
+      isForensic
+        ? selectableEvidencePlayers
+        : selectableEvidencePlayers.filter(
+          (player) => player.userId !== me?.userId,
+        ),
+    [isForensic, me?.userId, selectableEvidencePlayers],
   );
 
   const visibleChatMessages = useMemo(
@@ -336,6 +403,128 @@ export default function DiscussionBoard({
       ""
     );
   }, [focusedPlayerUserId, isForensic, me?.userId, selectableEvidencePlayers]);
+
+  const effectivePendingSolveSelection = useMemo(() => {
+    if (!canOpenSolve || attempt || !pendingSolveSelection) return null;
+
+    const accused = solveTargetPlayers.find(
+      (player) => player.userId === pendingSolveSelection.accusedUserId,
+    );
+
+    if (!accused) return null;
+
+    if (pendingSolveSelection.accusedName === accused.name) {
+      return pendingSolveSelection;
+    }
+
+    return {
+      ...pendingSolveSelection,
+      accusedName: accused.name,
+    };
+  }, [canOpenSolve, attempt, pendingSolveSelection, solveTargetPlayers]);
+
+  const pendingSolveAccused = useMemo(
+    () =>
+      effectivePendingSolveSelection
+        ? solveTargetPlayers.find(
+          (player) => player.userId === effectivePendingSolveSelection.accusedUserId,
+        )
+        : undefined,
+    [effectivePendingSolveSelection, solveTargetPlayers],
+  );
+
+  const isPendingSolveComplete = Boolean(
+    effectivePendingSolveSelection?.means && effectivePendingSolveSelection?.clue,
+  );
+  const selectedEvidenceCount =
+    Number(Boolean(effectivePendingSolveSelection?.means)) +
+    Number(Boolean(effectivePendingSolveSelection?.clue));
+
+  const solveButtonTitle = !canOpenSolve
+    ? "Bạn chưa thể tố cáo ở thời điểm này"
+    : !effectivePendingSolveSelection
+      ? "Chọn 1 hung khí và 1 manh mối trên cùng người chơi"
+      : isPendingSolveComplete
+        ? "Xác nhận thông tin tố cáo"
+        : "Cần chọn đủ hung khí và manh mối trên cùng người chơi";
+
+  const withAccusedSelectionBase = (
+    accusedPlayer: DeceptionPlayer,
+    updater: (base: PendingSolveSelection) => PendingSolveSelection,
+  ) => {
+    if (!canOpenSolve) return;
+
+    setFocusedPlayerUserId(accusedPlayer.userId);
+    setPendingSolveSelection((current) => {
+      const base: PendingSolveSelection =
+        current && current.accusedUserId === accusedPlayer.userId
+          ? { ...current, accusedName: accusedPlayer.name }
+          : {
+            accusedUserId: accusedPlayer.userId,
+            accusedName: accusedPlayer.name,
+            means: null,
+            clue: null,
+          };
+
+      return updater(base);
+    });
+  };
+
+  const handleSelectMeansForSolve = (
+    accusedPlayer: DeceptionPlayer,
+    card: MeansCard,
+    imageUrl: string,
+  ) => {
+    withAccusedSelectionBase(accusedPlayer, (base) => ({
+      ...base,
+      means: {
+        id: card.id,
+        card,
+        imageUrl,
+      },
+    }));
+  };
+
+  const handleSelectClueForSolve = (
+    accusedPlayer: DeceptionPlayer,
+    card: ClueCard,
+    imageUrl: string,
+  ) => {
+    withAccusedSelectionBase(accusedPlayer, (base) => ({
+      ...base,
+      clue: {
+        id: card.id,
+        card,
+        imageUrl,
+      },
+    }));
+  };
+
+  const openSolveConfirmModal = () => {
+    if (!isPendingSolveComplete) return;
+    setShowSolveConfirmModal(true);
+  };
+
+  const clearPendingSolveSelection = () => {
+    setPendingSolveSelection(null);
+    setShowSolveConfirmModal(false);
+    setIsSolveSelectionDetailsOpen(false);
+  };
+
+  const submitDirectSolve = () => {
+    if (!effectivePendingSolveSelection?.means || !effectivePendingSolveSelection?.clue) return;
+
+    socket?.emit("submitSolving", {
+      accusedUserId: effectivePendingSolveSelection.accusedUserId,
+      meansId: effectivePendingSolveSelection.means.id,
+      clueId: effectivePendingSolveSelection.clue.id,
+    });
+
+    setShowSolveConfirmModal(false);
+    setPendingSolveSelection(null);
+    setIsSolveSelectionDetailsOpen(false);
+  };
+
   const playerEvidenceViews = useMemo(() => {
     const views = new Map<
       string,
@@ -356,15 +545,23 @@ export default function DiscussionBoard({
     >();
 
     activePlayers.forEach((player) => {
+      const isPlayerWarmed = Boolean(playerReadyMap[player.userId]);
+      const resolveMeansImage = isPlayerWarmed
+        ? getResolvedMeansImageUrl
+        : getMeansImageUrl;
+      const resolveClueImage = isPlayerWarmed
+        ? getResolvedClueImageUrl
+        : getClueImageUrl;
+
       const means = player.meansCards.map((card, index) => ({
         card,
-        imageUrl: getResolvedMeansImageUrl(card.id),
+        imageUrl: resolveMeansImage(card.id),
         rotationClass: cardTiltClass(index),
       }));
 
       const clues = player.clueCards.map((card, index) => ({
         card,
-        imageUrl: getResolvedClueImageUrl(card.id),
+        imageUrl: resolveClueImage(card.id),
         rotationClass: cardTiltClass(index + 4),
       }));
 
@@ -377,7 +574,7 @@ export default function DiscussionBoard({
     });
 
     return views;
-  }, [activePlayers]);
+  }, [activePlayers, playerReadyMap]);
   const warmedPlayersCount = useMemo(
     () =>
       activePlayers.reduce(
@@ -451,6 +648,15 @@ export default function DiscussionBoard({
     !isForensic && viewportWidth > 0 && viewportWidth <= 1200;
   const isCompactViewport = viewportWidth > 0 && viewportWidth <= 1200;
   const isDesktopWideViewport = viewportWidth > 1200;
+  const shouldShowSolveSelectionDetails = Boolean(
+    isSolveSelectionDetailsOpen,
+  );
+  const selectedMeansTitle = getEvidenceTitle(
+    effectivePendingSolveSelection?.means?.card,
+  );
+  const selectedClueTitle = getEvidenceTitle(
+    effectivePendingSolveSelection?.clue?.card,
+  );
   const canToggleDiscussionAudio = gameState.state === "DISCUSSION";
   const nonForensicSceneWidth = isCompactViewport
     ? COMPACT_NON_FORENSIC_SCENE_WIDTH
@@ -487,26 +693,45 @@ export default function DiscussionBoard({
       >
         {!isForensic && (
           <section
-            className={`deception-card rounded-xl ${isCompactViewport ? "p-2" : "p-2.5"}`}
+            className={`deception-card relative z-40 overflow-visible rounded-xl ${isCompactViewport ? "p-2" : "p-2.5"}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-1.5">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <button
-                  onClick={() => {
-                    setSolvingWizardVersion((prev) => prev + 1);
-                    setShowSolvingWizard(true);
-                  }}
-                  disabled={!canOpenSolve}
+                  onClick={openSolveConfirmModal}
+                  disabled={!canOpenSolve || !isPendingSolveComplete}
                   className={`deception-btn-cyan inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] disabled:cursor-not-allowed disabled:opacity-45 ${isCompactViewport
                       ? "px-2 py-1.5 text-[10px]"
                       : "px-3 py-2 text-[11px]"
                     }`}
-                  title="Tố cáo"
+                  title={solveButtonTitle}
                 >
                   <Search
                     className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"}
                   />
                   Tố cáo
+                </button>
+
+                <button
+                  onClick={() =>
+                    setIsSolveSelectionDetailsOpen((previous) => !previous)
+                  }
+                  className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
+                      ? "px-2 py-1.5 text-[10px]"
+                      : "px-3 py-2 text-[11px]"
+                    }`}
+                  title={
+                    isSolveSelectionDetailsOpen
+                      ? "Thu gọn chi tiết lựa chọn"
+                      : "Mở chi tiết lựa chọn"
+                  }
+                >
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 transition-transform ${
+                      isSolveSelectionDetailsOpen ? "rotate-180" : "rotate-0"
+                    }`}
+                  />
+                  {isCompactViewport ? `${selectedEvidenceCount}/2` : `Đã chọn ${selectedEvidenceCount}/2`}
                 </button>
 
                 <button
@@ -521,6 +746,20 @@ export default function DiscussionBoard({
                     className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"}
                   />
                   Scene Board
+                </button>
+                <button
+                  onClick={() => setShowSolvingHistory(true)}
+                  className={`deception-btn-outline inline-flex items-center gap-1.5 font-black uppercase tracking-[0.14em] ${isCompactViewport
+                      ? "px-2 py-1.5 text-[10px]"
+                      : "px-3 py-2 text-[11px]"
+                    }`}
+                  title="Lịch sử Tố Cáo"
+                >
+                  <History
+                    className={isCompactViewport ? "h-3 w-3" : "h-3.5 w-3.5"}
+                  />
+                  Lịch sử
+                  {gameState.solvingAttempts.length > 0 && ` (${gameState.solvingAttempts.length})`}
                 </button>
 
                 <button
@@ -583,6 +822,58 @@ export default function DiscussionBoard({
                 </button>
               </div>
             </div>
+
+            {shouldShowSolveSelectionDetails && (
+              <div className="pointer-events-none absolute left-2 right-2 top-full z-50 mt-1.5">
+                <div className="pointer-events-auto rounded-lg border border-(--deception-border) bg-[rgba(11,16,26,0.96)] px-2 py-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <p
+                      className={`min-w-0 truncate text-[10px] font-bold uppercase tracking-[0.14em] ${
+                        effectivePendingSolveSelection
+                          ? "text-(--on-surface)"
+                          : "text-(--on-surface-variant)"
+                      }`}
+                      title={
+                        effectivePendingSolveSelection
+                          ? `Đang chọn tố cáo: ${pendingSolveAccused?.name || effectivePendingSolveSelection.accusedName}`
+                          : "Chọn trực tiếp 1 hung khí + 1 manh mối trên cùng người chơi để tố cáo"
+                      }
+                    >
+                      {effectivePendingSolveSelection
+                        ? `Đang chọn tố cáo: ${pendingSolveAccused?.name || effectivePendingSolveSelection.accusedName}`
+                        : "Chưa chọn đủ 2 lá để tố cáo"}
+                    </p>
+
+                    <div className="flex shrink-0 items-center gap-1">
+                      {effectivePendingSolveSelection && (
+                        <button
+                          onClick={clearPendingSolveSelection}
+                          className="deception-btn-outline px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em]"
+                          title="Bỏ lựa chọn tố cáo hiện tại"
+                        >
+                          Xóa chọn
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {effectivePendingSolveSelection && (
+                    <p className="mt-1 text-[9px] font-black uppercase tracking-[0.12em] text-(--on-surface-variant)">
+                      Đã chọn: {selectedEvidenceCount}/2
+                    </p>
+                  )}
+
+                  <div className="mt-1.5 grid gap-1 sm:grid-cols-2">
+                    <p className="truncate rounded-md border border-(--deception-amber)/30 bg-(--deception-amber)/10 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-(--deception-amber)">
+                      Hung khí: {selectedMeansTitle}
+                    </p>
+                    <p className="truncate rounded-md border border-(--deception-cyan)/30 bg-(--deception-cyan)/10 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-(--deception-cyan)">
+                      Manh mối: {selectedClueTitle}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
         )}
 
@@ -614,6 +905,17 @@ export default function DiscussionBoard({
                   </div>
 
                   <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setShowSolvingHistory(true)}
+                      className={`deception-btn-outline rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px]`}
+                      title="Lịch sử Tố Cáo"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                        Lịch sử
+                        {gameState.solvingAttempts.length > 0 && ` (${gameState.solvingAttempts.length})`}
+                      </span>
+                    </button>
                     <button
                       onClick={onToggleRoleMask}
                       className="deception-icon-btn"
@@ -991,6 +1293,8 @@ export default function DiscussionBoard({
                         player.name,
                         isDesktopWideViewport ? 11 : isCompactViewport ? 11 : 14,
                       );
+                      const isPendingAccusedTarget =
+                        effectivePendingSolveSelection?.accusedUserId === player.userId;
                       const roleTone = hideRolesUi
                         ? roleToneByRole(undefined)
                         : roleToneByRole(player.role);
@@ -1067,6 +1371,13 @@ export default function DiscussionBoard({
                                   <span>{accusationTone.label}</span>
                                 </span>
 
+                                {isPendingAccusedTarget && (
+                                  <span className={`inline-flex items-center gap-1 rounded border border-rose-300/80 bg-[radial-gradient(circle_at_30%_30%,rgba(255,137,165,0.36),rgba(101,18,35,0.66))] font-black uppercase tracking-widest text-rose-50 shadow-[0_0_12px_rgba(255,105,145,0.28)] ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-rose-100" />
+                                    Đang tố cáo
+                                  </span>
+                                )}
+
                                 {isSelf && (
                                   <span className={`rounded border border-cyan-300/70 bg-cyan-400/18 font-black uppercase tracking-widest text-cyan-100 ${isDesktopWideViewport ? "px-1 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]"}`}>
                                     Bạn
@@ -1098,6 +1409,8 @@ export default function DiscussionBoard({
                           !playerIsForensicIdentity &&
                           !playerHasNoCards &&
                           !playerHasWarmCards;
+                        const canSelectPlayerForSolve =
+                          isForensic || player.userId !== me?.userId;
                         const playerIsKnownMurderer = Boolean(
                           knownMurderer && player.userId === knownMurderer.userId,
                         );
@@ -1152,6 +1465,9 @@ export default function DiscussionBoard({
                                     playerIsKnownMurderer &&
                                     Boolean(revealedMurderSelection) &&
                                     card.id === revealedMurderSelection?.meansId;
+                                  const isSelectedMeans =
+                                    effectivePendingSolveSelection?.accusedUserId === player.userId &&
+                                    effectivePendingSolveSelection.means?.id === card.id;
 
                                   return (
                                     <EvidencePreviewCard
@@ -1159,9 +1475,15 @@ export default function DiscussionBoard({
                                       card={card}
                                       tone="means"
                                       highlighted={isMurderMeans}
+                                      selected={isSelectedMeans}
                                       rotationClass={rotationClass}
                                       evidenceNum={String(card.id).padStart(2, "0")}
                                       imageUrl={imageUrl}
+                                      onSelect={canSelectPlayerForSolve
+                                        ? (_, __, img) =>
+                                          handleSelectMeansForSolve(player, card, img)
+                                        : undefined}
+                                      onLongPress={(c, t, img) => setZoomedCard({ card: c, tone: t, imageUrl: img })}
                                     />
                                   );
                                 })}
@@ -1171,6 +1493,9 @@ export default function DiscussionBoard({
                                     playerIsKnownMurderer &&
                                     Boolean(revealedMurderSelection) &&
                                     card.id === revealedMurderSelection?.clueId;
+                                  const isSelectedClue =
+                                    effectivePendingSolveSelection?.accusedUserId === player.userId &&
+                                    effectivePendingSolveSelection.clue?.id === card.id;
 
                                   return (
                                     <EvidencePreviewCard
@@ -1178,9 +1503,15 @@ export default function DiscussionBoard({
                                       card={card}
                                       tone="clue"
                                       highlighted={isMurderClue}
+                                      selected={isSelectedClue}
                                       rotationClass={rotationClass}
                                       evidenceNum={String(card.id).padStart(2, "0")}
                                       imageUrl={imageUrl}
+                                      onSelect={canSelectPlayerForSolve
+                                        ? (_, __, img) =>
+                                          handleSelectClueForSolve(player, card, img)
+                                        : undefined}
+                                      onLongPress={(c, t, img) => setZoomedCard({ card: c, tone: t, imageUrl: img })}
                                     />
                                   );
                                 })}
@@ -1281,6 +1612,54 @@ export default function DiscussionBoard({
         )}
       </main>
 
+      {zoomedCard && (
+        <div 
+          className="fixed inset-0 z-80 flex flex-col items-center justify-center bg-black/85 p-4 backdrop-blur-md"
+          onClick={() => setZoomedCard(null)}
+        >
+          <div 
+            className="relative flex w-full flex-col items-center gap-3 sm:gap-4 animate-in fade-in zoom-in duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Image Container */}
+            <div className={`relative ${isCompactViewport ? "aspect-square h-[min(82vw,52dvh)]" : "aspect-2/3 h-[60dvh]"} shrink-0 overflow-hidden rounded-2xl border-2 shadow-[0_20px_50px_rgba(0,0,0,0.8)] ${zoomedCard.tone === 'means' ? 'border-(--deception-amber)' : 'border-(--deception-cyan)'}`}>
+              <Image 
+                src={zoomedCard.imageUrl}
+                alt={zoomedCard.card.vietnamese || zoomedCard.card.english || "Card"}
+                fill
+                unoptimized
+                className="object-cover"
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-[linear-gradient(to_top,rgba(0,0,0,0.9),transparent)]" />
+              <div className="absolute inset-x-0 bottom-0 p-4 text-center">
+                <p className={`text-[10px] font-black uppercase tracking-widest ${zoomedCard.tone === 'means' ? 'text-(--deception-amber)' : 'text-(--deception-cyan)'}`}>
+                  {zoomedCard.tone === 'means' ? 'Hung khí' : 'Manh mối'}
+                </p>
+                <h3 className="mt-1 text-lg font-bold uppercase leading-tight text-white drop-shadow-md">
+                  {zoomedCard.card.vietnamese || zoomedCard.card.english}
+                </h3>
+              </div>
+            </div>
+
+            {/* Description Container */}
+            {zoomedCard.card.description && (
+              <div className={`w-full max-w-xs sm:max-w-sm rounded-xl border p-3 sm:p-4 text-center backdrop-blur-sm ${zoomedCard.tone === 'means' ? 'border-(--deception-amber)/30 bg-(--deception-amber)/10 text-(--deception-amber-soft)' : 'border-(--deception-cyan)/30 bg-(--deception-cyan)/10 text-(--deception-cyan-soft)'}`}>
+                <p className="text-sm italic leading-relaxed">
+                  &quot;{zoomedCard.card.description}&quot;
+                </p>
+              </div>
+            )}
+            
+            <button
+              onClick={() => setZoomedCard(null)}
+              className="mt-2 rounded-full border border-white/20 bg-white/10 px-6 py-2 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm transition hover:bg-white/20"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
+
       {showForensicClueBoard && !isForensic && (
         <div className="fixed inset-0 z-60 bg-black/70 p-1.5 backdrop-blur-sm sm:p-4">
           <div className="mx-auto h-full w-full max-w-6xl overflow-hidden pt-1.5 sm:pt-6">
@@ -1309,17 +1688,91 @@ export default function DiscussionBoard({
         />
       )}
 
-      <SolvingWizard
-        key={solvingWizardVersion}
-        open={showSolvingWizard}
-        me={me}
-        players={activePlayers}
-        onClose={() => setShowSolvingWizard(false)}
-        onSubmit={(payload) => {
-          socket?.emit("submitSolving", payload);
-          setShowSolvingWizard(false);
-        }}
-      />
+      {showSolveConfirmModal &&
+        effectivePendingSolveSelection?.means &&
+        effectivePendingSolveSelection?.clue && (
+          <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+            <section className="deception-card w-full max-w-2xl rounded-3xl border border-(--deception-red)/40 bg-[linear-gradient(180deg,rgba(23,15,18,0.97),rgba(13,11,16,0.98))] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.74)] sm:p-6">
+              <h2 className="text-center text-2xl font-black uppercase tracking-[0.15em] text-(--on-surface)">
+                Xác nhận tố cáo
+              </h2>
+              <p className="mt-3 text-center text-sm leading-relaxed text-(--on-surface-variant)">
+                Bạn đang tố cáo{" "}
+                <span className="font-black uppercase tracking-[0.08em] text-(--deception-red-soft)">
+                  {pendingSolveAccused?.name || effectivePendingSolveSelection.accusedName}
+                </span>
+                . Hãy kiểm tra đúng người và đúng 2 lá trước khi gửi.
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <article className="rounded-2xl border border-(--deception-amber)/35 bg-(--deception-amber)/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-(--deception-amber)">
+                    Hung khí
+                  </p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <div className="relative h-18 w-12 shrink-0 overflow-hidden rounded-md border border-(--deception-amber)/45 bg-black/45">
+                      <Image
+                        src={effectivePendingSolveSelection.means.imageUrl}
+                        alt={effectivePendingSolveSelection.means.card.vietnamese || effectivePendingSolveSelection.means.card.english || "Means"}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-(--deception-amber)">
+                        #{String(effectivePendingSolveSelection.means.id).padStart(2, "0")}
+                      </p>
+                      <p className="mt-1 text-sm font-bold leading-snug text-(--on-surface)">
+                        {getEvidenceTitle(effectivePendingSolveSelection.means.card)}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+
+                <article className="rounded-2xl border border-(--deception-cyan)/35 bg-(--deception-cyan)/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-(--deception-cyan)">
+                    Manh mối
+                  </p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <div className="relative h-18 w-12 shrink-0 overflow-hidden rounded-md border border-(--deception-cyan)/45 bg-black/45">
+                      <Image
+                        src={effectivePendingSolveSelection.clue.imageUrl}
+                        alt={effectivePendingSolveSelection.clue.card.vietnamese || effectivePendingSolveSelection.clue.card.english || "Clue"}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-(--deception-cyan)">
+                        #{String(effectivePendingSolveSelection.clue.id).padStart(2, "0")}
+                      </p>
+                      <p className="mt-1 text-sm font-bold leading-snug text-(--on-surface)">
+                        {getEvidenceTitle(effectivePendingSolveSelection.clue.card)}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setShowSolveConfirmModal(false)}
+                  className="deception-btn-outline py-3 text-xs font-black uppercase tracking-[0.15em]"
+                >
+                  Xem lại
+                </button>
+                <button
+                  onClick={submitDirectSolve}
+                  className="deception-btn-red py-3 text-xs font-black uppercase tracking-[0.15em]"
+                >
+                  Xác nhận tố cáo
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
 
       {showIncorrectSolvingPopup && (
         <div className="fixed inset-0 z-75 flex items-center justify-center bg-[radial-gradient(circle_at_50%_20%,rgba(255,55,95,0.22),rgba(0,0,0,0.82)_55%)] p-3 backdrop-blur-md sm:p-6">
@@ -1343,13 +1796,20 @@ export default function DiscussionBoard({
 
               <div className="mt-5 rounded-2xl border border-[rgba(255,110,146,0.3)] bg-[linear-gradient(145deg,rgba(255,95,130,0.1),rgba(255,95,130,0.02))] p-4 sm:mt-6 sm:p-5">
                 <p className="text-center text-sm leading-relaxed text-(--on-surface-variant) sm:text-base">
-                  <span className="font-black uppercase tracking-[0.08em] text-(--on-surface)">
+                  <span className="font-black uppercase tracking-[0.08em] text-(--deception-cyan)">
                     {solvingResolutionNotice?.investigatorName || "Một điều tra viên"}
                   </span>{" "}
                   đã tố cáo sai
-                  {solvingResolutionNotice?.accusedName
-                    ? ` ${solvingResolutionNotice.accusedName}`
-                    : ""}
+                  {solvingResolutionNotice?.accusedName ? (
+                    <>
+                      {" "}
+                      <span className="font-black uppercase tracking-[0.08em] text-(--deception-red-soft)">
+                        {solvingResolutionNotice.accusedName}
+                      </span>
+                    </>
+                  ) : (
+                    ""
+                  )}
                   .
                 </p>
               </div>
@@ -1388,10 +1848,85 @@ export default function DiscussionBoard({
           attemptAccused={attemptAccused}
           attemptMeans={attemptMeans}
           attemptClue={attemptClue}
+          actualSolutionMeans={actualSolutionMeans}
+          actualSolutionClue={actualSolutionClue}
           isForensic={isForensic}
           autoSolvingResult={autoSolvingResult}
           onConfirm={() => socket?.emit("resolveSolving")}
         />
+      )}
+
+      {showSolvingHistory && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <section className="deception-card w-full max-w-2xl rounded-3xl border border-(--deception-cyan)/40 bg-[linear-gradient(180deg,rgba(16,21,30,0.98),rgba(10,12,18,0.98))] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_0_1px_rgba(0,212,255,0.1)] sm:p-6">
+            <h2 className="text-center text-xl font-black uppercase tracking-[0.16em] text-(--on-surface)">
+              Lịch sử phá án
+            </h2>
+            <div className="mt-5 flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar">
+              {gameState.solvingAttempts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 opacity-60">
+                  <ShieldAlert className="mb-3 h-10 w-10 text-(--on-surface-variant)" />
+                  <p className="text-sm font-bold uppercase tracking-widest text-(--on-surface-variant)">Chưa có ai tố cáo.</p>
+                </div>
+              ) : (
+                gameState.solvingAttempts.map((hist) => {
+                  const selectedMeans = allMeans.get(hist.selectedMeansId);
+                  const selectedClue = allClues.get(hist.selectedClueId);
+                  const meansTitle = selectedMeans
+                    ? getEvidenceTitle(selectedMeans)
+                    : `Unknown Means #${hist.selectedMeansId}`;
+                  const clueTitle = selectedClue
+                    ? getEvidenceTitle(selectedClue)
+                    : `Unknown Clue #${hist.selectedClueId}`;
+
+                  return (
+                    <div key={hist.id} className="relative overflow-hidden rounded-2xl border border-(--deception-border) bg-black/40 p-4 transition hover:bg-black/60">
+                      <div className={`absolute top-0 bottom-0 left-0 w-1 ${hist.result === 'correct' ? 'bg-(--deception-cyan)' : 'bg-(--deception-red)'}`} />
+                      <p className="text-sm">
+                        <span className="font-black uppercase tracking-[0.06em] text-(--deception-cyan)">
+                          {hist.investigatorName}
+                        </span>{" "}
+                        <span className="text-(--on-surface-variant) px-1 text-sm lowercase tracking-[0.04em]">đã tố cáo</span>{" "}
+                        <span className="font-black uppercase tracking-[0.06em] text-(--deception-red-soft)">
+                          {hist.accusedName}
+                        </span>
+                      </p>
+                      
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                        {/* Means display */}
+                        <div className="flex items-center gap-1.5 rounded-lg border border-(--deception-amber)/30 bg-(--deception-amber)/10 px-2.5 py-1.5">
+                          <CookingPot className="h-3.5 w-3.5 text-(--deception-amber)" />
+                          <span className="max-w-[16ch] truncate font-bold text-(--deception-amber)" title={meansTitle}>
+                            {meansTitle}
+                          </span>
+                        </div>
+                        <span className="px-1 text-(--on-surface-variant) font-black">+</span>
+                        {/* Clue display */}
+                        <div className="flex items-center gap-1.5 rounded-lg border border-(--deception-cyan)/30 bg-(--deception-cyan)/10 px-2.5 py-1.5">
+                          <Fingerprint className="h-3.5 w-3.5 text-(--deception-cyan)" />
+                          <span className="max-w-[16ch] truncate font-bold text-(--deception-cyan)" title={clueTitle}>
+                            {clueTitle}
+                          </span>
+                        </div>
+
+                        <span className={`ml-auto font-black uppercase tracking-[0.12em] ${hist.result === 'correct' ? 'text-(--deception-cyan)' : 'text-(--deception-red)'}`}>
+                          {hist.result === 'correct' ? '✓ Đúng' : '✗ Sai'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            
+            <button
+              onClick={() => setShowSolvingHistory(false)}
+              className="deception-btn-outline mt-6 w-full py-3.5 text-xs font-black uppercase tracking-[0.16em]"
+            >
+              Đóng
+            </button>
+          </section>
+        </div>
       )}
 
     </div>

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import type { ClueCard, MeansCard } from "@/server/game/DeceptionTypes";
 
 type EvidenceCard = MeansCard | ClueCard;
@@ -7,18 +8,24 @@ interface EvidencePreviewCardProps {
   card: EvidenceCard;
   tone: "means" | "clue";
   highlighted: boolean;
+  selected?: boolean;
   rotationClass: string;
   evidenceNum: string;
   imageUrl: string;
+  onLongPress?: (card: EvidenceCard, tone: "means" | "clue", imageUrl: string) => void;
+  onSelect?: (card: EvidenceCard, tone: "means" | "clue", imageUrl: string) => void;
 }
 
 export default function EvidencePreviewCard({
   card,
   tone,
   highlighted,
+  selected = false,
   rotationClass,
   evidenceNum,
   imageUrl,
+  onLongPress,
+  onSelect,
 }: EvidencePreviewCardProps) {
   const isMeans = tone === "means";
   const englishTitle = card.english?.trim();
@@ -49,15 +56,96 @@ export default function EvidencePreviewCard({
     ? "object-cover grayscale-28 opacity-90 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100"
     : "object-cover opacity-95 saturate-110 contrast-105 transition-all duration-300 group-hover:saturate-125 group-hover:contrast-110";
 
+  const LONG_PRESS_MS = 260;
+  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const loadedImageSrcRef = useRef(imageUrl);
+
+  useEffect(() => {
+    loadedImageSrcRef.current = imageUrl;
+  }, [imageUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (pressTimerRef.current) {
+        clearTimeout(pressTimerRef.current);
+      }
+      longPressTriggeredRef.current = false;
+    };
+  }, []);
+
+  const startPress = () => {
+    if (!onLongPress && !onSelect) return;
+
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+    }
+
+    longPressTriggeredRef.current = false;
+
+    if (!onLongPress) {
+      return;
+    }
+
+    pressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      onLongPress(card, tone, loadedImageSrcRef.current || imageUrl);
+    }, LONG_PRESS_MS);
+  };
+
+  const cancelPress = () => {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  };
+
+  const finishPress = () => {
+    cancelPress();
+    const wasLongPress = longPressTriggeredRef.current;
+    longPressTriggeredRef.current = false;
+    return wasLongPress;
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    startPress();
+  };
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const wasLongPress = finishPress();
+    if (wasLongPress || !onSelect) return;
+
+    onSelect(card, tone, loadedImageSrcRef.current || imageUrl);
+  };
+
+  const handlePointerCancel = () => {
+    finishPress();
+  };
+
   return (
     <div
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onPointerLeave={handlePointerCancel}
+      onContextMenu={(e) => {
+        // Prevent default context menu on long press for touch devices to allow custom long press
+        if (onLongPress) e.preventDefault();
+      }}
       className={`group relative h-full min-h-0 overflow-visible rounded-sm border p-1.5 shadow-[5px_5px_14px_rgba(0,0,0,0.45)] transition-transform duration-200 origin-top ${rotationClass} ${
         highlighted
           ? tone === "means"
             ? "border-(--deception-amber) bg-[rgba(255,184,0,0.12)] shadow-[0_0_0_1px_rgba(255,184,0,0.24),5px_5px_16px_rgba(0,0,0,0.5)]"
             : "border-(--deception-cyan) bg-[rgba(0,212,255,0.12)] shadow-[0_0_0_1px_rgba(0,212,255,0.22),5px_5px_16px_rgba(0,0,0,0.5)]"
           : "border-(--deception-border) bg-[rgba(10,14,22,0.5)]"
-      }`}
+      } ${selected
+          ? isMeans
+            ? "ring-2 ring-(--deception-amber) shadow-[0_0_0_1px_rgba(255,184,0,0.46),0_0_16px_rgba(255,184,0,0.3),5px_5px_16px_rgba(0,0,0,0.5)]"
+            : "ring-2 ring-(--deception-cyan) shadow-[0_0_0_1px_rgba(0,212,255,0.42),0_0_16px_rgba(0,212,255,0.3),5px_5px_16px_rgba(0,0,0,0.5)]"
+          : ""
+        }`}
     >
       <div
         className={`absolute left-1/2 top-1 z-10 flex h-4 w-4 -translate-x-1/2 items-center justify-center rounded-full shadow-inner ${pinOuterClass}`}
@@ -82,6 +170,12 @@ export default function EvidencePreviewCard({
               fill
               unoptimized
               sizes="160px"
+              onLoad={(event) => {
+                const currentSrc = event.currentTarget.currentSrc || event.currentTarget.src;
+                if (currentSrc) {
+                  loadedImageSrcRef.current = currentSrc;
+                }
+              }}
               className={imageFilterClass}
             />
           ) : (
@@ -111,6 +205,18 @@ export default function EvidencePreviewCard({
       >
         {isMeans ? "Means" : "Clue"} #{evidenceNum}
       </div>
+
+      {selected && (
+        <div
+          className={`pointer-events-none absolute -left-1 -top-1 z-25 rounded-md border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] ${
+            isMeans
+              ? "border-(--deception-amber) bg-(--deception-amber) text-black"
+              : "border-(--deception-cyan) bg-(--deception-cyan) text-black"
+          }`}
+        >
+          Đã chọn
+        </div>
+      )}
 
       {highlighted && (
         <>

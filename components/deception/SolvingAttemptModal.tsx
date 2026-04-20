@@ -12,6 +12,8 @@ interface SolvingAttemptModalProps {
   attemptAccused: DeceptionPlayer | undefined;
   attemptMeans: MeansCard | undefined;
   attemptClue: ClueCard | undefined;
+  actualSolutionMeans?: MeansCard;
+  actualSolutionClue?: ClueCard;
   isForensic: boolean;
   autoSolvingResult: "correct" | "incorrect" | null;
   onConfirm: () => void;
@@ -22,6 +24,8 @@ export default function SolvingAttemptModal({
   attemptAccused,
   attemptMeans,
   attemptClue,
+  actualSolutionMeans,
+  actualSolutionClue,
   isForensic,
   autoSolvingResult,
   onConfirm,
@@ -40,7 +44,9 @@ export default function SolvingAttemptModal({
           <div className="min-w-0">
             <p className="text-[9px] uppercase tracking-[0.18em] text-(--deception-red-soft)">Solving Attempt</p>
             <h2 className="truncate text-base font-black uppercase tracking-widest text-(--on-surface) sm:text-xl">
-              {attempt.investigatorName} tố cáo {attemptAccused?.name || attempt.accusedName}
+              <span className="text-(--deception-cyan)">{attempt.investigatorName}</span>{" "}
+              <span className="text-(--on-surface-variant) tracking-[0.05em] text-sm lowercase font-normal mx-1">tố cáo</span>{" "}
+              <span className="text-(--deception-red-soft)">{attemptAccused?.name || attempt.accusedName}</span>
             </h2>
           </div>
         </div>
@@ -85,6 +91,25 @@ export default function SolvingAttemptModal({
               >
                 Xác nhận kết quả
               </button>
+
+              {/* Forensic sees actual solution for comparison */}
+              <div className=" rounded-xl border border-(--deception-border) bg-black/40 text-left">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="flex min-w-0 flex-col items-end">
+                    <span className="text-[9px] uppercase tracking-[0.14em] text-(--deception-amber)">Means</span>
+                    <span className="truncate text-xs font-bold text-(--on-surface)">
+                      {actualSolutionMeans?.vietnamese || "???"}
+                    </span>
+                  </div>
+                  <div className="h-4 w-px bg-(--deception-border)" />
+                  <div className="flex min-w-0 flex-col items-start">
+                    <span className="text-[9px] uppercase tracking-[0.14em] text-(--deception-cyan)">Clue</span>
+                    <span className="truncate text-xs font-bold text-(--on-surface)">
+                      {actualSolutionClue?.vietnamese || "???"}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <p className="text-center text-[11px] uppercase tracking-[0.16em] text-(--on-surface-variant)">
