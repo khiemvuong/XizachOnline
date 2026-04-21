@@ -19,7 +19,7 @@ export type DeceptionVoicePolicyReason =
   | "unknown-user"
   | "spectator"
   | "disconnected"
-  | "forensic-muted";
+;
 
 export type DeceptionVoiceAccessPolicy = {
   roomType: "deception" | "other";
@@ -28,11 +28,6 @@ export type DeceptionVoiceAccessPolicy = {
 };
 
 const deceptionVoiceRooms = new Map<string, DeceptionVoiceRoomSnapshot>();
-const FORENSIC_MUTE_STATES: ReadonlySet<DeceptionGameState> = new Set([
-  "DISCUSSION",
-  "SOLVING_ATTEMPT",
-]);
-
 export function upsertDeceptionVoiceRoom(snapshot: {
   roomId: string;
   state: DeceptionGameState;
@@ -90,14 +85,6 @@ export function getDeceptionVoiceAccessPolicy(
       roomType: "deception",
       canPublish: false,
       reason: "disconnected",
-    };
-  }
-
-  if (player.role === "ForensicScientist" && FORENSIC_MUTE_STATES.has(room.state)) {
-    return {
-      roomType: "deception",
-      canPublish: false,
-      reason: "forensic-muted",
     };
   }
 

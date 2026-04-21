@@ -251,7 +251,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       : "Bạn có chắc muốn rời phòng hiện tại và quay về sảnh Deception không?";
   const returnConfirmLabel = returnIntent === "lobby" ? "Về lobby" : "Về sảnh";
 
-  const withReturnConfirm = (content: ReactNode) => (
+  const withReturnConfirm = (content: ReactNode, voicePosition: 'bottom-left' | 'bottom-right' = 'bottom-left') => (
     <>
       {content}
       {me && (
@@ -260,6 +260,8 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
           userId={me.userId}
           playerName={me.name}
           players={connectedVoicePlayers}
+          position={voicePosition}
+          themeClass="[--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
         />
       )}
       <ReturnConfirmModal
@@ -347,15 +349,17 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
           playerPings={playerPings}
           setPlayerPings={setPlayerPings}
           onBackHome={() => router.push("/deception")}
+          voiceSlot={me ? (
+            <VoiceChatPanel
+              roomId={gameState.id}
+              userId={me.userId}
+              playerName={me.name}
+              players={connectedVoicePlayers}
+              position="header-dropdown"
+              themeClass="[--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
+            />
+          ) : undefined}
         />
-        {me && (
-          <VoiceChatPanel
-            roomId={gameState.id}
-            userId={me.userId}
-            playerName={me.name}
-            players={connectedVoicePlayers}
-          />
-        )}
       </>
     );
   }
@@ -389,23 +393,47 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         me={me}
         socket={socket}
         onExit={() => requestReturn()}
-      />
+      />,
+      "bottom-right",
     );
   }
 
   if (gameState.state === "DISCUSSION" || gameState.state === "SOLVING_ATTEMPT") {
-    return withReturnConfirm(
-      <DiscussionBoard
-        gameState={gameState}
-        me={me}
-        socket={socket}
-        playerPings={playerPings}
-        roleMaskEnabled={roleMaskEnabled}
-        bgmMuted={isDiscussionBgmMuted}
-        onToggleRoleMask={() => setRoleMaskEnabled((prev) => !prev)}
-        onToggleBgm={() => setIsDiscussionBgmMuted((prev) => !prev)}
-        onExit={() => requestReturn()}
+    const voiceSlot = me ? (
+      <VoiceChatPanel
+        roomId={gameState.id}
+        userId={me.userId}
+        playerName={me.name}
+        players={connectedVoicePlayers}
+        position="header-dropdown"
+        themeClass="[--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
       />
+    ) : undefined;
+
+    return (
+      <>
+        <DiscussionBoard
+          gameState={gameState}
+          me={me}
+          socket={socket}
+          playerPings={playerPings}
+          roleMaskEnabled={roleMaskEnabled}
+          bgmMuted={isDiscussionBgmMuted}
+          onToggleRoleMask={() => setRoleMaskEnabled((prev) => !prev)}
+          onToggleBgm={() => setIsDiscussionBgmMuted((prev) => !prev)}
+          onExit={() => requestReturn()}
+          voiceSlot={voiceSlot}
+        />
+        <ReturnConfirmModal
+          open={showReturnConfirm}
+          title={returnConfirmTitle}
+          description={returnConfirmDescription}
+          confirmLabel={returnConfirmLabel}
+          confirmTone={returnIntent === "lobby" ? "red" : "cyan"}
+          onCancel={closeReturnConfirm}
+          onConfirm={confirmReturn}
+        />
+      </>
     );
   }
 

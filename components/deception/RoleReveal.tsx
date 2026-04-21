@@ -15,7 +15,7 @@ const ROLE_META: Record<
     color: string;
     team: string;
     title: string;
-    desc: string;
+    quote: string;
     image: string;
   }
 > = {
@@ -23,35 +23,35 @@ const ROLE_META: Record<
     color: "var(--deception-cyan)",
     team: "PHE ĐIỀU TRA",
     title: "PHÁP Y",
-    desc: "Bạn là Nhà Khoa Học Pháp Y. Dẫn dắt điều tra bằng dấu hiện trường.",
+    quote: '"Xác chết không bao giờ nói dối, chỉ có kẻ thủ ác mới chối cãi."',
     image: forensicRoleImage.src,
   },
   Murderer: {
     color: "var(--deception-red)",
     team: "PHE SÁT NHÂN",
     title: "SÁT NHÂN",
-    desc: "Bạn là Kẻ Giết Người. Chọn hung khí và manh mối để che giấu tội ác.",
+    quote: '"Một tội ác hoàn hảo không tồn tại, chỉ là thám tử chưa đủ vĩ đại."',
     image: murdererRoleImage.src,
   },
   Accomplice: {
-    color: "var(--deception-purple)",
+    color: "var(--deception-red)",
     team: "PHE SÁT NHÂN",
     title: "ĐỒNG PHẠM",
-    desc: "Bạn là Đồng Phạm. Hỗ trợ hung thủ và đánh lạc hướng điều tra.",
+    quote: '"Bóng tối là đồng minh tốt nhất, và sự thật là kẻ thù phải bị che khuất."',
     image: accompliceRoleImage.src,
   },
   Witness: {
-    color: "var(--deception-witness)",
+    color: "#10b981",
     team: "PHE ĐIỀU TRA",
     title: "NHÂN CHỨNG",
-    desc: "Bạn là Nhân Chứng. Biết hung thủ, nhưng phải sống sót để chiến thắng.",
+    quote: '"Đôi mắt tôi đã thấy những gì không nên thấy, sự im lặng là cái giá của sinh tồn."',
     image: witnessRoleImage.src,
   },
   Investigator: {
-    color: "var(--deception-amber)",
+    color: "#10b981",
     team: "PHE ĐIỀU TRA",
     title: "ĐIỀU TRA VIÊN",
-    desc: "Bạn là Điều Tra Viên. Phân tích dữ kiện, truy tìm hung thủ.",
+    quote: '"Khi ta loại trừ những điều không thể, phần còn lại, dù khó tin đến đâu, cũng là sự thật."',
     image: investigatorRoleImage.src,
   },
 };
@@ -104,6 +104,8 @@ export default function RoleReveal({
 
   const roleStyle = {
     "--deception-role-accent": meta?.color ?? "var(--deception-cyan)",
+    WebkitTouchCallout: "none",
+    WebkitUserSelect: "none",
   } as CSSProperties;
 
   return (
@@ -131,12 +133,12 @@ export default function RoleReveal({
 
           <div className="deception-card deception-role-centered-card deception-role-fit-card relative z-10 rounded-2xl border border-(--deception-border) p-4 sm:p-5 transition-all duration-300">
             <div className="deception-role-dossier-head">
-              <span className="deception-role-dossier-chip">Authentic Dossier</span>
+              <span className="deception-role-dossier-chip font-bold">HỒ SƠ TUYỆT MẬT</span>
               <ShieldCheck className="h-5 w-5 text-(--deception-role-accent)/70" />
             </div>
 
-            <p className="deception-role-security-note mt-2">
-              Press & Hold To Declassify
+            <p className="deception-role-security-note mt-2 font-bold tracking-widest uppercase">
+              Nhấn Giữ Để Giải Mật
             </p>
 
             <div className="deception-role-main mt-2 min-h-0">
@@ -157,7 +159,7 @@ export default function RoleReveal({
                         loading="eager"
                         decoding="async"
                         draggable={false}
-                        className={`deception-role-portrait h-full w-full object-contain transition-all duration-200 ${
+                        className={`deception-role-portrait pointer-events-none select-none h-full w-full object-contain transition-all duration-200 ${
                           isRevealing
                             ? ""
                             : "blur-xl saturate-0 brightness-[0.08] contrast-50"
@@ -176,8 +178,7 @@ export default function RoleReveal({
 
                   {!isRevealing && (
                     <div className="deception-role-mask-overlay">
-                      <span className="deception-role-seal-stamp">SEALED</span>
-
+                      <span className="deception-role-seal-stamp">NIÊM PHONG</span>
                     </div>
                   )}
 
@@ -199,46 +200,48 @@ export default function RoleReveal({
                       isRevealing ? "" : "blur-[10px] opacity-20"
                     }`}
                   >
-                    <h1 className="deception-role-reveal-title text-[clamp(1.28rem,2.2vw,1.95rem)] leading-[0.95] font-black uppercase tracking-[0.05em] wrap-break-word">
-                      {meta?.title || "UNKNOWN"}
+                    <h1 className="deception-role-reveal-title text-[clamp(1.75rem,3.5vw,2.75rem)] leading-[0.95] font-black uppercase tracking-[0.05em] wrap-break-word">
+                      {meta?.title || "VÔ DANH"}
                     </h1>
-                    <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-(--on-surface-variant)">
-                      {meta?.team || "Đang xác thực vai trò"}
+                    <p className="mt-1.5 text-sm font-bold uppercase tracking-[0.25em] text-(--on-surface-variant)">
+                      {meta?.team || "Đang xác thực hồ sơ..."}
                     </p>
-                    <p className="mt-2 text-xs leading-snug text-(--on-surface-variant)">
-                      {meta?.desc || "Đang chờ máy chủ cấp quyền vai trò..."}
-                    </p>
+                    <div className="mt-4 space-y-2">
+                      <p className="text-sm font-bold italic leading-relaxed text-(--deception-role-accent)">
+                        {meta?.quote || "Đang kết nối cơ sở dữ liệu tội phạm..."}
+                      </p>
+                    </div>
                   </div>
 
                   {!isRevealing && (
                     <div className="deception-role-mask-overlay p-3">
-                      <span className="deception-role-seal-stamp deception-role-seal-stamp-sm">SEALED</span>
+                      <span className="deception-role-seal-stamp deception-role-seal-stamp-sm">NIÊM PHONG</span>
                     </div>
                   )}
                 </section>
 
                 <section
-                  className="deception-role-related-card relative overflow-hidden rounded-lg border border-(--deception-border) bg-[rgba(0,0,0,0.22)] p-3"
+                  className="deception-role-related-card relative overflow-hidden flex flex-col flex-1 rounded-lg border border-(--deception-border) bg-[rgba(0,0,0,0.22)] p-3"
                   onPointerDown={() => setIsRevealing(true)}
                   onPointerUp={() => setIsRevealing(false)}
                   onPointerLeave={() => setIsRevealing(false)}
                   onPointerCancel={() => setIsRevealing(false)}
                 >
                   <div
-                    className={`deception-role-related-content transition-all duration-200 ${
+                    className={`deception-role-related-content flex flex-col flex-1 min-h-0 transition-all duration-200 ${
                       isRevealing ? "" : "blur-[10px] opacity-20"
                     }`}
                   >
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-(--deception-cyan)">Related Parties</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-(--deception-cyan)">Liên Đới</p>
                     {relatedIntel.length === 0 ? (
-                      <p className="mt-1 text-xs leading-snug text-(--on-surface-variant)">Chưa có dữ kiện liên quan ở giai đoạn này.</p>
+                      <p className="mt-1 text-sm font-semibold leading-snug text-(--on-surface-variant)">Hồ sơ trắng. Không có phần tử liên quan.</p>
                     ) : (
-                      <ul className="deception-role-related-list mt-1.5 space-y-1.5">
+                      <ul className="deception-role-related-list mt-2 space-y-2 flex-1 overflow-y-auto min-h-0 pr-1">
                         {relatedIntel.map((intel) => (
-                          <li key={intel.userId} className="rounded-md border border-(--deception-border) bg-[rgba(255,255,255,0.02)] px-2 py-1.5">
-                            <div className="flex items-center justify-between gap-2 text-xs">
-                              <span className="truncate font-semibold text-(--on-surface)">{intel.name}</span>
-                              <span className="shrink-0 uppercase tracking-[0.14em] text-(--deception-cyan)">{intel.roleTitle}</span>
+                          <li key={intel.userId} className="rounded-md border border-(--deception-border) bg-[rgba(255,255,255,0.02)] px-2.5 py-2">
+                            <div className="flex w-full items-center justify-between gap-2 text-sm">
+                              <span className="min-w-0 flex-1 truncate font-bold text-(--on-surface)">{intel.name}</span>
+                              <span className="shrink-0 text-[11px] font-black uppercase tracking-[0.18em] text-(--deception-cyan)">{intel.roleTitle}</span>
                             </div>
                           </li>
                         ))}
@@ -248,7 +251,7 @@ export default function RoleReveal({
 
                   {!isRevealing && (
                     <div className="deception-role-mask-overlay p-3">
-                      <span className="deception-role-seal-stamp deception-role-seal-stamp-sm">SEALED</span>
+                      <span className="deception-role-seal-stamp deception-role-seal-stamp-sm">NIÊM PHONG</span>
                     </div>
                   )}
                 </section>
@@ -267,9 +270,9 @@ export default function RoleReveal({
               </aside>
             </div>
 
-            <footer className="deception-role-foot flex items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.08)] pt-2 text-[9px] uppercase tracking-[0.18em] text-(--on-surface-variant)">
-              <span>Case Ref: #{gameState.id}-HK</span>
-              <span>Access: Level 5</span>
+            <footer className="deception-role-foot flex items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.08)] pt-2 text-[9px] font-bold uppercase tracking-[0.18em] text-(--on-surface-variant)">
+              <span className="truncate">Chuyên án: #{gameState.id}-HK</span>
+              <span className="shrink-0">Mức Độ: Tối Cao</span>
             </footer>
           </div>
         </section>

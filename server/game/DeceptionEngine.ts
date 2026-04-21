@@ -1065,9 +1065,7 @@ export class DeceptionEngine {
     this.voicePolicyNoticeCooldown.set(noticeKey, now);
 
     let text = `${player.name}: quyền voice bị giới hạn bởi hệ thống.`;
-    if (reason === "forensic-muted") {
-      text = `${player.name}: Pháp y không được bật mic trong giai đoạn thảo luận.`;
-    } else if (reason === "spectator") {
+    if (reason === "spectator") {
       text = `${player.name}: Spectator chỉ có thể nghe, không thể nói.`;
     } else if (reason === "disconnected") {
       text = `${player.name}: Mất kết nối, không thể bật voice publish.`;

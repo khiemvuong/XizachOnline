@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
-import { ArrowLeft, Fingerprint, MoonStar, ShieldAlert, UserSearch } from "lucide-react";
+import { ArrowLeft, Fingerprint, EyeOff, ShieldAlert, UserSearch } from "lucide-react";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import { usePreloadCardImages } from "@/hooks/usePreloadCardImages";
 import type { ClueCard, DeceptionPlayer, DeceptionRoom, MeansCard } from "@/server/game/DeceptionTypes";
@@ -31,11 +31,12 @@ function MurdererCard({
   imageUrl: string;
 }) {
   const isMeans = tone === "means";
-  const accentColor = isMeans ? "#ffb84a" : "#00d4ff";
-  const accentBg    = isMeans ? "rgba(255,184,0,0.15)" : "rgba(0,212,255,0.14)";
-  const accentRing  = isMeans ? "rgba(255,184,0,0.5)"  : "rgba(0,212,255,0.45)";
-  const badgeClass  = isMeans ? "bg-[#392b17] text-[#ffcf7a]" : "bg-[#0a3948] text-[#9deeff]";
-  const accentTextClass = isMeans ? "text-[#ffb84a]" : "text-[#00d4ff]";
+  // Thematic colors: Crimson Red for Means, Vintage Amber for Clue
+  const accentColor = isMeans ? "#ef4444" : "#fbbf24";
+  const accentBg    = isMeans ? "rgba(239, 68, 68, 0.15)" : "rgba(251, 191, 36, 0.14)";
+  const accentRing  = isMeans ? "rgba(239, 68, 68, 0.5)"  : "rgba(251, 191, 36, 0.45)";
+  const badgeClass  = isMeans ? "bg-[#451212] text-[#fca5a5]" : "bg-[#453205] text-[#fde047]";
+  const accentTextClass = isMeans ? "text-[#ef4444]" : "text-[#fbbf24]";
 
   return (
     <button
@@ -180,12 +181,12 @@ export default function NightPhase({
         {/* Compact header */}
         <header className="flex shrink-0 items-center justify-between gap-3 px-3 py-1.5">
           <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#ff3d60]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#ff3d60]">
-              Night Phase
+            <span className="h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#ef4444]">
+              SỰ KIỆN TRONG ĐÊM
             </span>
             <span className="ml-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-              · Chọn hung khí &amp; manh mối
+              · DÀN DỰNG HIỆN TRƯỜNG ÁN MẠNG
             </span>
           </div>
           <button onClick={onExit} className="deception-icon-btn h-7 w-7" title="Thoát về sảnh">
@@ -194,12 +195,12 @@ export default function NightPhase({
         </header>
 
         {/* Background glow */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,45,85,0.16),transparent_40%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(239,68,68,0.2),transparent_40%)]" />
 
         {/* Card grids — flex-1 with no scroll */}
         <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-1.5 px-2 pb-1.5">
           {/* Means */}
-          <SectionDivider label="Means — Hung khí" color="#ffb84a" />
+          <SectionDivider label="HUNG KHÍ GÂY ÁN" color="#ef4444" />
 
           <div className="grid min-h-0 flex-1 grid-cols-4 gap-1.5">
             {meansCards.map((card) => (
@@ -215,7 +216,7 @@ export default function NightPhase({
           </div>
 
           {/* Clue */}
-          <SectionDivider label="Clue — Manh mối" color="#00d4ff" />
+          <SectionDivider label="MANH MỐI LÀM LỆCH HƯỚNG" color="#fbbf24" />
 
           <div className="grid min-h-0 flex-1 grid-cols-4 gap-1.5">
             {clueCards.map((card) => (
@@ -234,8 +235,8 @@ export default function NightPhase({
           <div className="flex shrink-0 items-center justify-between gap-3 pt-0.5">
             <p className="text-[9px] uppercase tracking-[0.14em] text-white/40">
               {selectedMeans && selectedClue
-                ? `✓ ${selectedMeans.english} + ${selectedClue.english}`
-                : "Chọn 1 hung khí và 1 manh mối"}
+                ? `✓ ${selectedMeans.vietnamese} + ${selectedClue.vietnamese}`
+                : "XÁC NHẬN CÔNG CỤ THEO ĐÚNG KẾ HOẠCH"}
             </p>
             <button
               onClick={() => {
@@ -245,7 +246,7 @@ export default function NightPhase({
               disabled={!selectedMeansId || !selectedClueId}
               className="deception-btn-red px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-45"
             >
-              Confirm Solution
+              CHỐT HIỆN TRƯỜNG GIẢ
             </button>
           </div>
         </main>
@@ -259,7 +260,7 @@ export default function NightPhase({
       <header className="deception-topbar">
         <div className="deception-brand">
           <span className="deception-logo-dot" />
-          <span className="deception-brand-text">Night Phase</span>
+          <span className="deception-brand-text">MÀN ĐÊM BUÔNG XUỐNG</span>
         </div>
         <button onClick={onExit} className="deception-icon-btn" title="Thoát về sảnh">
           <ArrowLeft className="h-4 w-4" />
@@ -282,59 +283,69 @@ export default function NightPhase({
             <section className="deception-card h-full w-full rounded-2xl px-8 py-8">
               <div className="mx-auto flex h-full max-w-3xl flex-col justify-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(255,45,85,0.15)] text-(--deception-red)">
-                  <MoonStar className="h-9 w-9" />
+                  <EyeOff className="h-9 w-9" />
                 </div>
-                <h1 className="mt-5 text-center text-5xl font-black uppercase tracking-[0.16em] text-(--on-surface)">
-                  Đêm xuống...
+                <h1 className="mt-5 text-center text-4xl sm:text-5xl font-black uppercase tracking-[0.16em] text-(--on-surface)">
+                  Sương mù che lấp Luân Đôn...
                 </h1>
                 <p className="mx-auto mt-4 max-w-[56ch] text-center text-lg leading-relaxed text-(--on-surface-variant)">
-                  Nhắm mắt lại. Đang chờ kẻ sát nhân chọn hung khí và manh mối.
+                  Hãy nhắm mắt. Kẻ thủ ác đang âm thầm dàn dựng hiện trường tội ác trong bóng tối.
                 </p>
 
                 {isWitness && (
-                  <div className="mt-8 rounded-xl border border-(--deception-red) bg-[rgba(255,45,85,0.08)] p-5">
-                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--deception-red-soft)">Intel: Witness</p>
+                  <div className="relative mt-8 rounded-xl border border-(--deception-red) bg-[rgba(255,45,85,0.08)] p-5">
+                    {/* Corner accents */}
+                    <div className="absolute -left-px -top-px h-3 w-3 border-l-2 border-t-2 border-(--deception-red)" />
+                    <div className="absolute -right-px -bottom-px h-3 w-3 border-b-2 border-r-2 border-(--deception-red)" />
+                    
+                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--deception-red-soft)">Báo cáo mật: Mục tiêu cần đề phòng</p>
                     {knownEvil.length === 0 ? (
-                      <p className="mt-3 text-base text-(--on-surface-variant)">Chưa xác định được phe sát nhân.</p>
+                      <p className="mt-3 text-base text-(--on-surface-variant)">Hồ sơ rỗng. Không có kẻ tình nghi.</p>
                     ) : (
                       <ul className="mt-4 space-y-3">
                         {knownEvil.map((player) => (
-                          <li key={player.userId} className="flex items-center justify-between rounded-md border border-(--deception-border) px-4 py-3">
+                          <li key={player.userId} className="flex items-center justify-between rounded-md border border-(--deception-border) bg-black/40 px-4 py-3">
                             <span className="text-lg font-bold uppercase tracking-[0.08em] text-(--on-surface)">{player.name}</span>
-                            <span className="text-sm uppercase tracking-[0.16em] text-(--deception-red-soft)">{roleLabel(player.role)}</span>
+                            <span className="text-sm font-black uppercase tracking-[0.16em] text-(--deception-red-soft)">{roleLabel(player.role)}</span>
                           </li>
                         ))}
                       </ul>
                     )}
-                    <p className="mt-4 text-xs uppercase tracking-[0.14em] text-(--deception-red-soft)">
-                      Giữ bí mật. Nếu lộ thân phận, bạn sẽ bị truy sát ở Witness Hunt.
+                    <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-(--deception-red-soft)">
+                      Giấu kín danh tính của mình. Bọn chúng sẽ tẩu thoát nếu phát hiện ra bạn.
                     </p>
                   </div>
                 )}
 
                 {isAccomplice && (
-                  <div className="mt-8 rounded-xl border border-(--deception-purple) bg-[rgba(139,92,246,0.12)] p-5">
-                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--deception-purple)">Intel: Accomplice</p>
+                  <div className="relative mt-8 rounded-xl border border-(--deception-purple) bg-[rgba(139,92,246,0.12)] p-5">
+                    <div className="absolute -left-px -top-px h-3 w-3 border-l-2 border-t-2 border-(--deception-purple)" />
+                    <div className="absolute -right-px -bottom-px h-3 w-3 border-b-2 border-r-2 border-(--deception-purple)" />
+
+                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-(--deception-purple)">Chỉ lệnh đồng lõa: Hỗ trợ kẻ thủ ác</p>
                     <p className="mt-3 text-base text-(--on-surface)">
-                      Kẻ giết người: <span className="font-bold uppercase tracking-[0.08em]">{murderer?.name || "Đang xác định"}</span>
+                      Kẻ Chủ Mưu: <span className="font-bold uppercase tracking-[0.08em] text-(--deception-purple-light)">{murderer?.name || "Đang xác định"}</span>
                     </p>
                     <p className="mt-3 text-xs uppercase tracking-[0.14em] text-(--on-surface-variant)">
-                      Chờ hung thủ xác nhận bộ lời giải để chuyển sang Scene Setup.
+                      Chờ kẻ chủ mưu chốt phương án gây án. Hãy bảo vệ hắn trước điều tra viên.
                     </p>
                   </div>
                 )}
 
                 {!isWitness && !isAccomplice && (
-                  <div className="mt-8 flex items-center justify-center gap-3 rounded-lg border border-(--deception-border) p-4 text-sm uppercase tracking-[0.16em] text-(--on-surface-variant)">
+                  <div className="relative mt-8 flex items-center justify-center gap-3 rounded-lg border border-(--deception-border) p-5 text-sm uppercase tracking-[0.16em] text-(--on-surface-variant)">
+                    <div className="absolute -left-px -top-px h-3 w-3 border-l-2 border-t-2 border-(--deception-border)" />
+                    <div className="absolute -right-px -bottom-px h-3 w-3 border-b-2 border-r-2 border-(--deception-border)" />
+
                     <ShieldAlert className="h-5 w-5 text-(--deception-cyan)" />
-                    Giữ im lặng và quan sát. Cuộc điều tra sẽ bắt đầu ngay sau đêm tối.
+                    Giữ im lặng. Mọi bí ẩn sẽ được định đoạt khi bình minh lên.
                   </div>
                 )}
 
-                <div className="mt-8 flex justify-center">
+                <div className="mt-10 flex justify-center">
                   <span className="inline-flex items-center gap-2 text-sm uppercase tracking-[0.16em] text-(--deception-cyan)">
                     <UserSearch className="h-4 w-4" />
-                    Chờ murderer hành động...
+                    Đang chờ sát nhân hành động...
                   </span>
                 </div>
               </div>
