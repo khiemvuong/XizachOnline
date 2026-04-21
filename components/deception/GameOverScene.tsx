@@ -70,8 +70,6 @@ export default function GameOverScene({
     : undefined;
   const hasWitnessHunt = Boolean(gameState.witnessHuntTarget || gameState.witnessHuntResult);
   const primaryReturnAction = canReturnToLobby && onReturnToLobby ? onReturnToLobby : onExit;
-  const primaryReturnLabel = canReturnToLobby ? "Quay về lobby" : "Về sảnh Deception";
-
   const sortedByTeam = [...gameState.players].sort((a, b) => {
     const score = (player: DeceptionPlayer) => {
       if (player.role === "Murderer" || player.role === "Accomplice") return 0;
@@ -218,12 +216,6 @@ export default function GameOverScene({
           </section>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={primaryReturnAction}
-              className="deception-btn-outline px-4 py-2 text-xs uppercase tracking-[0.16em]"
-            >
-              {primaryReturnLabel}
-            </button>
             {canReturnToLobby && onReturnToLobby && (
               <button
                 onClick={onReturnToLobby}

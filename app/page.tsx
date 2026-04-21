@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Fingerprint, Search, Settings, Shield, Swords, User } from "lucide-react";
+import { Fingerprint, Search, Shield, Swords } from "lucide-react";
 import useScreenWakeLock from "@/hooks/useScreenWakeLock";
 
 const AVALON_BG =
@@ -149,26 +149,6 @@ export default function HomePage() {
           }
         }
       `}</style>
-
-      <header className="game-hub-topbar fixed top-0 z-50 flex w-full items-center justify-between bg-linear-to-b from-black/40 to-transparent px-6 py-4 uppercase tracking-widest text-[#ff2d55]">
-        <div className="game-hub-logo text-2xl font-black tracking-tight">ARCHIVE NEXUS</div>
-        <div className="flex gap-4">
-          <button
-            type="button"
-            className="cursor-pointer p-2 text-slate-500 transition-colors hover:bg-white/5 hover:text-slate-200"
-            aria-label="Account"
-          >
-            <User className="h-6 w-6" />
-          </button>
-          <button
-            type="button"
-            className="cursor-pointer p-2 text-slate-500 transition-colors hover:bg-white/5 hover:text-slate-200"
-            aria-label="Settings"
-          >
-            <Settings className="h-6 w-6" />
-          </button>
-        </div>
-      </header>
 
       <main className="game-hub-main flex w-full flex-col md:flex-row">
         <section

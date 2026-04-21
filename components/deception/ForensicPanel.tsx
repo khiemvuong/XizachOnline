@@ -137,7 +137,7 @@ export default function ForensicPanel({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-(--deception-cyan) sm:gap-2 sm:text-sm sm:tracking-[0.18em]">
                     <Microscope className="h-5 w-5" />
-                    Forensic Scientist Panel
+                    BÀN PHÂN TÍCH PHÁP Y
                   </div>
 
                   <div className="flex items-center gap-2 mr-10 sm:mr-12 xl:hidden">
@@ -147,7 +147,7 @@ export default function ForensicPanel({
                         onClick={() => socket?.emit("confirmSceneSetup")}
                         className="deception-btn-red deception-primary-action px-5 py-2.5 text-[11px] font-black uppercase tracking-[0.16em] shadow-[0_8px_24px_rgba(255,81,103,0.3)] disabled:cursor-not-allowed disabled:opacity-45"
                       >
-                        Xác nhận
+                        NIÊM PHONG
                       </button>
                     )}
 
@@ -156,7 +156,7 @@ export default function ForensicPanel({
                         onClick={() => socket?.emit("startDiscussion")}
                         className="deception-btn-cyan deception-primary-action px-5 py-2.5 text-[11px] font-black uppercase tracking-[0.16em]"
                       >
-                        Bắt đầu
+                        PHÁN QUYẾT
                       </button>
                     )}
                   </div>
@@ -173,7 +173,7 @@ export default function ForensicPanel({
                     <div className="flex items-center gap-2 border-b border-(--deception-red)/20 pb-2">
                       <div className="h-2 w-2 rounded-full bg-(--deception-red) animate-pulse shadow-[0_0_8px_rgba(255,81,103,0.8)]" />
                       <p className="text-[11px] font-black uppercase tracking-[0.25em] text-(--deception-red-soft) sm:text-xs text-shadow-sm">
-                        Solution Data
+                        BỘ HỒ SƠ TỘI ÁC MẬT
                       </p>
                     </div>
 
@@ -183,7 +183,7 @@ export default function ForensicPanel({
                       ) : (
                         <div className="flex h-20 w-full items-center justify-center rounded-md border-2 border-dashed border-(--deception-amber)/30 bg-(--deception-amber)/5">
                           <div className="hidden items-center gap-2 text-(--deception-amber)/50 sm:flex">
-                             <CookingPot className="h-5 w-5" /> Đang chờ chọn Hung Khí
+                             <CookingPot className="h-5 w-5" /> Đang trích xuất Mẫu Cơ Khí... (Chờ Hung Khí)
                           </div>
                           <CookingPot className="h-5 w-5 text-(--deception-amber)/50 sm:hidden" />
                         </div>
@@ -194,7 +194,7 @@ export default function ForensicPanel({
                       ) : (
                         <div className="flex h-20 w-full items-center justify-center rounded-md border-2 border-dashed border-(--deception-cyan)/30 bg-(--deception-cyan)/5">
                            <div className="hidden items-center gap-2 text-(--deception-cyan)/50 sm:flex">
-                             <Fingerprint className="h-5 w-5" /> Đang chờ chọn Vật Chứng
+                             <Fingerprint className="h-5 w-5" /> Đang thu thập Dấu Vết... (Chờ Manh Mối)
                           </div>
                           <Fingerprint className="h-5 w-5 text-(--deception-cyan)/50 sm:hidden" />
                         </div>
@@ -206,8 +206,8 @@ export default function ForensicPanel({
                     <p className="flex items-center gap-2">
                       <span className="inline-block h-1 w-1 bg-(--on-surface-variant) opacity-50" />
                       {awaitingReplacementChoice
-                        ? "Đang chờ chọn gợi ý thay"
-                        : "Đánh dấu đủ 6 thẻ để xác nhận"}
+                        ? "Giai đoạn cập nhật Hồ Sơ Hiện Trường"
+                        : "Cần hoàn tất 6 báo cáo trước khi niêm phong"}
                     </p>
                   </div>
                 </div>
@@ -236,7 +236,7 @@ export default function ForensicPanel({
                     onClick={() => socket?.emit("confirmSceneSetup")}
                     className="deception-btn-red deception-primary-action px-12 py-4 text-sm font-black uppercase tracking-[0.2em] shadow-[0_10px_40px_rgba(255,81,103,0.35)] disabled:cursor-not-allowed disabled:opacity-45"
                   >
-                    {awaitingReplacementChoice ? "Đang chờ chọn gợi ý thay" : "Finish Marking"}
+                    {awaitingReplacementChoice ? "ĐANG TIẾP NHẬN MANH MỐI MỚI" : "NIÊM PHONG TOÀN BỘ HỒ SƠ"}
                   </button>
                 )}
 
@@ -245,7 +245,7 @@ export default function ForensicPanel({
                     onClick={() => socket?.emit("startDiscussion")}
                     className="deception-btn-cyan deception-primary-action px-8 py-4 text-sm font-black uppercase tracking-[0.2em]"
                   >
-                    Start Discussion
+                    MỞ CUỘC ĐIỀU TRA
                   </button>
                 )}
               </section>
@@ -255,7 +255,7 @@ export default function ForensicPanel({
               <section className="deception-card deception-forensic-summary rounded-xl border border-(--deception-border) bg-[rgba(14,16,23,0.84)]">
                 <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant) sm:gap-2 sm:text-[11px]">
                   <EyeOff className="h-3.5 w-3.5 text-(--deception-cyan) sm:h-4 sm:w-4" />
-                  Pháp y đang điều khiển hiện trường
+                  PHÁP Y ĐANG DỰNG LẠI HIỆN TRƯỜNG VÀ KIỂM ĐỊNH CHỨNG CỨ...
                 </div>
               </section>
 
@@ -273,10 +273,10 @@ export default function ForensicPanel({
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <section className="deception-card w-full max-w-3xl rounded-2xl border border-(--deception-border) bg-[rgba(10,13,20,0.96)] p-4 sm:p-5">
             <h2 className="text-2xl font-black uppercase tracking-[0.12em] text-(--on-surface)">
-              Replace Clue
+              TIẾT LỘ GỢI Ý MỚI
             </h2>
             <p className="mt-2 text-[11px] uppercase tracking-[0.14em] text-(--on-surface-variant)">
-              Chọn 1 gợi ý vàng để thay bằng ô mới cho round hiện tại.
+              Thay thế 1 báo cáo cũ bằng chứng cứ bám sát nhất sự thật.
             </p>
 
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -296,13 +296,13 @@ export default function ForensicPanel({
                     <div className="mt-1 flex w-full items-center gap-2 rounded-md bg-black/40 px-2.5 py-1.5">
                       <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--deception-cyan)" />
                       <p className="truncate text-xs font-semibold text-(--on-surface)">
-                        Đang chọn: <span className="text-(--deception-cyan)">{tile.selectedOption.textVi}</span>
+                        Dấu vết chốt: <span className="text-(--deception-cyan)">{tile.selectedOption.textVi}</span>
                       </p>
                     </div>
                   ) : (
                     <div className="mt-1 flex w-full items-center gap-2 rounded-md bg-black/40 px-2.5 py-1.5">
                       <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--on-surface-variant)" />
-                      <p className="truncate text-xs text-(--on-surface-variant)">Chưa chọn</p>
+                      <p className="truncate text-xs text-(--on-surface-variant)">Khuyết phân tích</p>
                     </div>
                   )}
 
@@ -323,11 +323,11 @@ export default function ForensicPanel({
         <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/72 p-4 backdrop-blur-sm">
           <section className="deception-card w-full max-w-md rounded-2xl p-5 sm:p-6">
             <h2 className="text-center text-2xl font-black uppercase tracking-[0.12em] text-(--on-surface)">
-              Confirm Replace
+              PHÊ CHUẨN THAY ĐỔI
             </h2>
 
             <p className="mt-3 text-center text-sm text-(--on-surface-variant)">
-              Thay gợi ý <span className="font-bold text-(--deception-amber)">#{pendingReplacementTile.index + 1} {pendingReplacementTile.nameVi}</span> bằng ô mới?
+              Bạn có chắc muốn đào thải hồ sơ <span className="font-bold text-(--deception-amber)">#{pendingReplacementTile.index + 1} {pendingReplacementTile.nameVi}</span> để bốc manh mối mới không? Dữ liệu cũ sẽ bị tiêu hủy vĩnh viễn.
             </p>
 
             <div className="mt-5 grid grid-cols-2 gap-3">

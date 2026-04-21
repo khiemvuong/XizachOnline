@@ -34,13 +34,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Avalon – The Resistance",
-  description: "Trò chơi nhập vai chiến lược nhiều người chơi: The Resistance: Avalon",
+  title: "PanGames",
+  description: "Trò chơi nhập vai chiến lược nhiều người chơi",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Avalon",
+    title: "PanGames",
   },
   other: {
     "mobile-web-app-capable": "yes",

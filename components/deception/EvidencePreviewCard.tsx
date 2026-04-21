@@ -13,6 +13,7 @@ interface EvidencePreviewCardProps {
   evidenceNum: string;
   imageUrl: string;
   onLongPress?: (card: EvidenceCard, tone: "means" | "clue", imageUrl: string) => void;
+  onLongPressEnd?: () => void;
   onSelect?: (card: EvidenceCard, tone: "means" | "clue", imageUrl: string) => void;
 }
 
@@ -25,6 +26,7 @@ export default function EvidencePreviewCard({
   evidenceNum,
   imageUrl,
   onLongPress,
+  onLongPressEnd,
   onSelect,
 }: EvidencePreviewCardProps) {
   const isMeans = tone === "means";
@@ -103,25 +105,49 @@ export default function EvidencePreviewCard({
   const finishPress = () => {
     cancelPress();
     const wasLongPress = longPressTriggeredRef.current;
+    if (wasLongPress && onLongPressEnd) {
+      onLongPressEnd();
+    }
     longPressTriggeredRef.current = false;
     return wasLongPress;
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (event.currentTarget.setPointerCapture) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
     startPress();
   };
 
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (event.currentTarget.releasePointerCapture) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     const wasLongPress = finishPress();
     if (wasLongPress || !onSelect) return;
 
     onSelect(card, tone, loadedImageSrcRef.current || imageUrl);
   };
 
-  const handlePointerCancel = () => {
+  const handlePointerCancel = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.releasePointerCapture) {
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // Ignore if capture was already released
+      }
+    }
     finishPress();
+  };
+
+  const handlePointerLeave = () => {
+    if (longPressTriggeredRef.current) {
+      // If modal is already open, do not close it untill they release the pointer
+      return;
+    }
+    cancelPress();
   };
 
   return (
@@ -129,12 +155,13 @@ export default function EvidencePreviewCard({
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
-      onPointerLeave={handlePointerCancel}
+      onPointerLeave={handlePointerLeave}
       onContextMenu={(e) => {
         // Prevent default context menu on long press for touch devices to allow custom long press
         if (onLongPress) e.preventDefault();
       }}
-      className={`group relative h-full min-h-0 overflow-visible rounded-sm border p-1.5 shadow-[5px_5px_14px_rgba(0,0,0,0.45)] transition-transform duration-200 origin-top ${rotationClass} ${
+      style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
+      className={`group relative h-full min-h-0 overflow-visible rounded-sm border p-1 md:p-1.5 shadow-[5px_5px_14px_rgba(0,0,0,0.45)] transition-transform duration-200 origin-top select-none ${rotationClass} ${
         highlighted
           ? tone === "means"
             ? "border-(--deception-amber) bg-[rgba(255,184,0,0.12)] shadow-[0_0_0_1px_rgba(255,184,0,0.24),5px_5px_16px_rgba(0,0,0,0.5)]"
@@ -148,17 +175,17 @@ export default function EvidencePreviewCard({
         }`}
     >
       <div
-        className={`absolute left-1/2 top-1 z-10 flex h-4 w-4 -translate-x-1/2 items-center justify-center rounded-full shadow-inner ${pinOuterClass}`}
+        className={`absolute left-1/2 top-0.5 md:top-1 z-10 flex h-3 w-3 md:h-4 md:w-4 -translate-x-1/2 items-center justify-center rounded-full shadow-inner ${pinOuterClass}`}
       >
         <div className={`h-1 w-1 rounded-full ${pinInnerClass}`} />
       </div>
 
       <div
-        className={`grid h-full min-h-0 grid-rows-[5fr_auto] rounded-sm p-1 ${tonePaperClass}`}
+        className={`grid h-full min-h-0 grid-rows-[4.5fr_auto] md:grid-rows-[5fr_auto] rounded-sm p-0.5 md:p-1 ${tonePaperClass}`}
       >
-        <div className="relative mt-1 min-h-0 overflow-hidden rounded-sm border border-slate-900/15">
+        <div className="relative mt-0.5 md:mt-1 min-h-0 overflow-hidden rounded-sm border border-slate-900/15">
           <div
-            className={`pointer-events-none absolute left-1 top-1 z-20 rounded px-1.5 py-0.5 text-[7px] font-black uppercase tracking-widest ${toneBadgeClass}`}
+            className={`pointer-events-none absolute left-0.5 top-0.5 md:left-1 md:top-1 z-20 rounded px-1 py-0 md:px-1.5 md:py-0.5 text-[5px] md:text-[7px] font-black uppercase tracking-widest ${toneBadgeClass}`}
           >
             {isMeans ? "Means" : "Clue"}
           </div>
@@ -176,7 +203,7 @@ export default function EvidencePreviewCard({
                   loadedImageSrcRef.current = currentSrc;
                 }
               }}
-              className={imageFilterClass}
+              className={`${imageFilterClass} pointer-events-none select-none`}
             />
           ) : (
             <div
@@ -187,9 +214,9 @@ export default function EvidencePreviewCard({
           )}
         </div>
 
-        <div className="min-h-0 px-1 pb-0.5 pt-1 text-slate-900">
+        <div className="min-h-0 px-1 pb-0.5 pt-1 md:pb-0.5 md:pt-1 text-slate-900">
           <p
-            className="w-full line-clamp-2 text-left text-[15px] font-semibold italic leading-tight text-slate-800"
+            className="w-full line-clamp-2 text-left text-[12px] leading-[1.15] font-bold italic md:text-[15px] md:leading-tight md:font-semibold text-slate-800"
             style={{
               fontFamily: "var(--font-cormorant), var(--font-headline), serif",
             }}
@@ -201,14 +228,14 @@ export default function EvidencePreviewCard({
       </div>
 
       <div
-        className={`pointer-events-none absolute -bottom-2 -right-2 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${toneTagClass}`}
+        className={`pointer-events-none absolute -bottom-1.5 -right-1 md:-bottom-2 md:-right-2 px-1 py-0 md:px-2 md:py-0.5 text-[6px] md:text-[8px] font-black uppercase tracking-widest shadow-sm ${toneTagClass}`}
       >
         {isMeans ? "Means" : "Clue"} #{evidenceNum}
       </div>
 
       {selected && (
         <div
-          className={`pointer-events-none absolute -left-1 -top-1 z-25 rounded-md border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] ${
+          className={`pointer-events-none absolute -left-1 -top-1 z-25 rounded-md border px-1 md:px-1.5 py-0 md:py-0.5 text-[6px] md:text-[8px] font-black uppercase tracking-[0.12em] ${
             isMeans
               ? "border-(--deception-amber) bg-(--deception-amber) text-black"
               : "border-(--deception-cyan) bg-(--deception-cyan) text-black"

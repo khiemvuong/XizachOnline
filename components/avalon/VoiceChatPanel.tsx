@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
     Room as LiveKitRoom,
     RoomEvent,
@@ -23,6 +24,8 @@ interface VoiceChatPanelProps {
     userId: string;
     playerName: string;
     players: VoicePlayer[];
+    position?: 'bottom-left' | 'bottom-right' | 'header-dropdown';
+    themeClass?: string;
 }
 
 type MicPermissionState = PermissionState | 'unknown';
@@ -54,7 +57,7 @@ async function fetchToken(roomId: string, userId: string, name: string): Promise
     return data.token;
 }
 
-export default function VoiceChatPanel({ roomId, userId, playerName, players }: VoiceChatPanelProps) {
+export default function VoiceChatPanel({ roomId, userId, playerName, players, position = 'bottom-left', themeClass = '' }: VoiceChatPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [hasJoinedVoice, setHasJoinedVoice] = useState(false);
     const [isMicOn, setIsMicOn] = useState(false);
@@ -69,6 +72,9 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
     const speakingListenerCleanupRef = useRef<Map<string, () => void>>(new Map());
     // Guard against double-click race condition on toggleMic
     const isTogglingMicRef = useRef(false);
+    // For header-dropdown: ref to the wrapper div to calculate fixed position
+    const wrapperRef = useRef<HTMLDivElement | null>(null);
+    const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
 
     const cleanupMicPipeline = useCallback(() => {
         if (rawMicTrackRef.current) {
@@ -406,24 +412,32 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                 ? 'Tắt mic'
                 : 'Bật mic';
 
-    return (
-        <>
-            {/* Collapsed pill */}
-            <div className="fixed bottom-3 left-3 z-50 pointer-events-auto">
-                <button
-                    onClick={() => setIsOpen(p => !p)}
-                    className={`flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-lg backdrop-blur-md transition-all cursor-pointer text-xs font-bold tracking-wide ${
-                        isConnected
-                            ? 'bg-black/50 border-(--primary)/35 text-(--primary)'
-                            : 'bg-black/40 border-(--outline-variant)/30 text-(--on-surface-variant)'
-                    }`}
-                    title="Voice Chat"
-                    aria-label="Mở bảng điều khiển giọng nói"
-                >
-                    {isMicOn
-                        ? <Mic className={`w-3.5 h-3.5 ${iAmSpeaking ? 'animate-pulse text-green-400' : ''}`} />
-                        : <MicOff className="w-3.5 h-3.5 opacity-50" />
-                    }
+    const triggerBtn = (
+        <button
+            onClick={() => {
+                if (position === 'header-dropdown' && wrapperRef.current) {
+                    const rect = wrapperRef.current.getBoundingClientRect();
+                    setDropdownPos({
+                        top: rect.bottom + 6,
+                        right: window.innerWidth - rect.right,
+                    });
+                }
+                setIsOpen(p => !p);
+            }}
+            className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 transition-all cursor-pointer text-xs font-bold tracking-wide shrink-0 ${
+                isConnected
+                    ? 'bg-black/40 border-(--primary)/35 text-(--primary) hover:bg-(--primary)/10'
+                    : 'bg-black/30 border-(--outline-variant)/30 text-(--on-surface-variant) hover:bg-white/5'
+            } ${position !== 'header-dropdown' ? 'shadow-lg backdrop-blur-md rounded-full px-3' : 'h-8 w-8 justify-center p-0'}`}
+            title="Voice Chat"
+            aria-label="Mở bảng điều khiển giọng nói"
+        >
+            {isMicOn
+                ? <Mic className={`w-3.5 h-3.5 ${iAmSpeaking ? 'animate-pulse text-green-400' : ''}`} />
+                : <MicOff className="w-3.5 h-3.5 opacity-50" />
+            }
+            {position !== 'header-dropdown' && (
+                <>
                     <span>Voice</span>
                     {!hasJoinedVoice ? (
                         <span className="text-[9px] font-bold uppercase text-amber-400/90 ml-1">(Chưa vào)</span>
@@ -436,162 +450,211 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players }: 
                         </span>
                     )}
                     <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
-                </button>
+                </>
+            )}
+            {position === 'header-dropdown' && !hasJoinedVoice && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 border border-black" />
+            )}
+        </button>
+    );
+
+    // Inner content shared between both modes
+    const panelInner = (
+        <>
+            {/* Header */}
+            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-(--primary)/15">
+                <div className="flex items-center gap-2">
+                    <Volume2 className="w-4 h-4 text-(--primary)" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-(--primary)">Voice Chat</span>
+                    <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={toggleMic}
+                        disabled={isMicToggleDisabled}
+                        className={`min-w-11 min-h-11 flex items-center justify-center rounded-full border transition-all ${
+                            isMicOn
+                                ? 'bg-(--primary)/20 border-(--primary)/50 text-(--primary)'
+                                : 'bg-white/5 border-white/10 text-slate-400 hover:border-(--primary)/30'
+                        } ${isMicToggleDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                        title={micToggleTitle}
+                        aria-label={micToggleTitle}
+                    >
+                        {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                    </button>
+                    <button
+                        onClick={resetMic}
+                        disabled={isResetDisabled}
+                        className={`min-w-11 min-h-11 flex items-center justify-center rounded-full border transition-all ${
+                            isResetDisabled
+                                ? 'bg-white/5 border-white/10 text-slate-600 cursor-not-allowed'
+                                : 'bg-white/5 border-white/10 text-slate-300 hover:border-(--primary)/30 cursor-pointer'
+                        } ${isResettingMic ? 'opacity-70' : ''}`}
+                        title={isResettingMic ? 'Đang reset mic...' : 'Reset mic'}
+                        aria-label={isResettingMic ? 'Đang reset mic' : 'Reset mic'}
+                    >
+                        <RotateCcw className={`w-4 h-4 ${isResettingMic ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="p-1 rounded-full text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        aria-label="Đóng bảng voice"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
 
-            {/* Full panel */}
-            {isOpen && (
-                <div className="fixed inset-0 z-60 flex flex-col items-start justify-end pointer-events-none pb-14 pl-3 pt-4">
-                    <div
-                        className="pointer-events-auto w-[min(280px,90vw)] flex flex-col rounded-2xl border border-(--primary)/20 shadow-2xl overflow-hidden max-h-full"
-                        style={{ backgroundColor: 'rgba(8,16,30,0.96)', backdropFilter: 'blur(16px)' }}
-                    >
-                        {/* Header */}
-                        <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-(--primary)/15">
-                            <div className="flex items-center gap-2">
-                                <Volume2 className="w-4 h-4 text-(--primary)" />
-                                <span className="text-xs font-bold uppercase tracking-widest text-(--primary)">Voice Chat</span>
-                                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={toggleMic}
-                                    disabled={isMicToggleDisabled}
-                                    className={`min-w-11 min-h-11 flex items-center justify-center rounded-full border transition-all ${
-                                        isMicOn
-                                            ? 'bg-(--primary)/20 border-(--primary)/50 text-(--primary)'
-                                            : 'bg-white/5 border-white/10 text-slate-400 hover:border-(--primary)/30'
-                                    } ${isMicToggleDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-                                    title={micToggleTitle}
-                                    aria-label={micToggleTitle}
-                                >
-                                    {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-                                </button>
-                                <button
-                                    onClick={resetMic}
-                                    disabled={isResetDisabled}
-                                    className={`min-w-11 min-h-11 flex items-center justify-center rounded-full border transition-all ${
-                                        isResetDisabled
-                                            ? 'bg-white/5 border-white/10 text-slate-600 cursor-not-allowed'
-                                            : 'bg-white/5 border-white/10 text-slate-300 hover:border-(--primary)/30 cursor-pointer'
-                                    } ${isResettingMic ? 'opacity-70' : ''}`}
-                                    title={isResettingMic ? 'Đang reset mic...' : 'Reset mic'}
-                                    aria-label={isResettingMic ? 'Đang reset mic' : 'Reset mic'}
-                                >
-                                    <RotateCcw className={`w-4 h-4 ${isResettingMic ? 'animate-spin' : ''}`} />
-                                </button>
-                                <button
-                                    onClick={() => setIsOpen(false)}
-                                    className="p-1 rounded-full text-slate-400 hover:text-white transition-colors cursor-pointer"
-                                    aria-label="Đóng bảng voice"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
+            {/* Player list */}
+            {hasJoinedVoice ? (
+                <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+                    {players.map(player => {
+                        const isSpeaking = speakingIds.has(player.userId);
+                        const isMe = player.userId === userId;
+                        const vol = volumes[player.userId] ?? 100;
 
-                        {/* Player list */}
-                        {hasJoinedVoice ? (
-                            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-                                {players.map(player => {
-                                    const isSpeaking = speakingIds.has(player.userId);
-                                    const isMe = player.userId === userId;
-                                    const vol = volumes[player.userId] ?? 100;
-
-                                    return (
-                                        <div
-                                            key={player.userId}
-                                            className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all ${
-                                                isSpeaking
-                                                    ? 'bg-(--primary)/10 border border-(--primary)/25'
-                                                    : 'bg-white/3'
-                                            }`}
-                                        >
-                                            {/* Avatar */}
-                                            <div className="relative shrink-0">
-                                                <div
-                                                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
-                                                        isSpeaking
-                                                            ? 'border-green-400 bg-green-400/15 text-green-400'
-                                                            : 'border-(--outline-variant)/30 bg-white/5 text-(--on-surface-variant)'
-                                                    }`}
-                                                >
-                                                    {player.name.charAt(0).toUpperCase()}
-                                                </div>
-                                                {isSpeaking && (
-                                                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border border-black animate-pulse" />
-                                                )}
-                                            </div>
-
-                                            {/* Name */}
-                                            <div className="flex-1 min-w-0">
-                                                <p className={`text-[11px] font-bold truncate ${isSpeaking ? 'text-(--primary)' : 'text-(--on-surface)'}`}>
-                                                    {player.name}{isMe && ' (Bạn)'}
-                                                </p>
-                                                {isSpeaking && (
-                                                    <p className="text-[9px] text-green-400 uppercase tracking-wider">đang nói...</p>
-                                                )}
-                                            </div>
-
-                                            {/* Volume slider (others only) */}
-                                            {!isMe ? (
-                                                <div className="flex items-center gap-1.5 shrink-0">
-                                                    <input
-                                                        type="range"
-                                                        min={0}
-                                                        max={100}
-                                                        value={vol}
-                                                        onChange={e => setParticipantVolume(player.userId, Number(e.target.value))}
-                                                        className="w-16 h-1 accent-(--primary) cursor-pointer"
-                                                        aria-label={`Âm lượng ${player.name}`}
-                                                    />
-                                                    <span className="text-[9px] text-(--on-surface-variant) w-6 text-right">{vol}</span>
-                                                </div>
-                                            ) : (
-                                                <div className="shrink-0">
-                                                    {isMicOn
-                                                        ? <Mic className="w-3.5 h-3.5 text-(--primary)" />
-                                                        : <MicOff className="w-3.5 h-3.5 text-slate-600" />
-                                                    }
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center space-y-4">
-                                <div className="w-12 h-12 rounded-full bg-(--primary)/10 flex items-center justify-center shrink-0">
-                                    <Volume2 className="w-6 h-6 text-(--primary)" />
+                        return (
+                            <div
+                                key={player.userId}
+                                className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all ${
+                                    isSpeaking
+                                        ? 'bg-(--primary)/10 border border-(--primary)/25'
+                                        : 'bg-white/3'
+                                }`}
+                            >
+                                <div className="relative shrink-0">
+                                    <div
+                                        className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
+                                            isSpeaking
+                                                ? 'border-green-400 bg-green-400/15 text-green-400'
+                                                : 'border-(--outline-variant)/30 bg-white/5 text-(--on-surface-variant)'
+                                        }`}
+                                    >
+                                        {player.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    {isSpeaking && (
+                                        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border border-black animate-pulse" />
+                                    )}
                                 </div>
-                                <div className="space-y-1.5">
-                                    <h3 className="text-sm font-bold text-(--on-surface) tracking-wide">Bạn chưa vào Voice</h3>
-                                    <p className="text-[11px] text-(--on-surface-variant) leading-relaxed">
-                                        Hãy tham gia để nghe người khác biện luận.
+
+                                <div className="flex-1 min-w-0">
+                                    <p className={`text-[11px] font-bold truncate ${isSpeaking ? 'text-(--primary)' : 'text-(--on-surface)'}`}>
+                                        {player.name}{isMe && ' (Bạn)'}
                                     </p>
+                                    {isSpeaking && (
+                                        <p className="text-[9px] text-green-400 uppercase tracking-wider">Đang nói...</p>
+                                    )}
                                 </div>
-                                <button
-                                    onClick={() => setHasJoinedVoice(true)}
-                                    className="px-5 py-2.5 bg-(--primary) text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-[0_10px_20px_rgba(0,0,0,0.28)] hover:scale-105 active:scale-95 transition-all cursor-pointer mt-2"
-                                >
-                                    Tham Gia Ngay
-                                </button>
-                            </div>
-                        )}
 
-                        <div className="shrink-0 px-4 py-2 border-t border-(--primary)/10">
-                            {micPermission === 'denied' && (
-                                <p className="text-[9px] text-amber-300/90 uppercase tracking-wider text-center mb-1">
-                                    Trinh duyet dang chan microphone
-                                </p>
-                            )}
-                            <p className="text-[9px] text-(--on-surface-variant) uppercase tracking-wider text-center opacity-50">
-                                Powered by LiveKit
-                            </p>
-                        </div>
+                                {!isMe ? (
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={100}
+                                            value={vol}
+                                            onChange={e => setParticipantVolume(player.userId, Number(e.target.value))}
+                                            className="w-16 h-1 accent-(--primary) cursor-pointer"
+                                            aria-label={`Âm lượng ${player.name}`}
+                                        />
+                                        <span className="text-[9px] text-(--on-surface-variant) w-6 text-right">{vol}</span>
+                                    </div>
+                                ) : (
+                                    <div className="shrink-0">
+                                        {isMicOn
+                                            ? <Mic className="w-3.5 h-3.5 text-(--primary)" />
+                                            : <MicOff className="w-3.5 h-3.5 text-slate-600" />
+                                        }
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-(--primary)/10 flex items-center justify-center shrink-0">
+                        <Volume2 className="w-6 h-6 text-(--primary)" />
                     </div>
+                    <div className="space-y-1.5">
+                        <h3 className="text-sm font-bold text-(--on-surface) tracking-wide">Bạn chưa vào Voice</h3>
+                        <p className="text-[11px] text-(--on-surface-variant) leading-relaxed">
+                            Hãy tham gia để nghe người khác biện luận.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setHasJoinedVoice(true)}
+                        className="px-5 py-2.5 bg-(--primary) text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-[0_10px_20px_rgba(0,0,0,0.28)] hover:scale-105 active:scale-95 transition-all cursor-pointer mt-2"
+                    >
+                        Tham Gia Ngay
+                    </button>
                 </div>
             )}
+
+            {/* Footer */}
+            <div className="shrink-0 px-4 py-2 border-t border-(--primary)/10">
+                {micPermission === 'denied' && (
+                    <p className="text-[9px] text-amber-300/90 uppercase tracking-wider text-center mb-1">
+                        Trình duyệt đang chặn microphone
+                    </p>
+                )}
+                <p className="text-[9px] text-(--on-surface-variant) uppercase tracking-wider text-center opacity-50">
+                    Powered by LiveKit
+                </p>
+            </div>
         </>
     );
+
+    // Shared rounded card shell
+    const panelCard = (
+        <div
+            className="pointer-events-auto flex flex-col rounded-2xl border border-(--primary)/20 shadow-2xl overflow-hidden max-h-[min(480px,80vh)]"
+            style={{ backgroundColor: 'rgba(8,16,30,0.96)', backdropFilter: 'blur(16px)' }}
+        >
+            {panelInner}
+        </div>
+    );
+
+    if (position === 'header-dropdown') {
+        const portalPanel = isOpen && dropdownPos
+            ? createPortal(
+                <div
+                    className={themeClass}
+                    style={{
+                        position: 'fixed',
+                        top: dropdownPos.top,
+                        right: dropdownPos.right,
+                        width: 'min(280px, 90vw)',
+                        zIndex: 99999,
+                        pointerEvents: 'auto',
+                    }}
+                >
+                    {panelCard}
+                </div>,
+                document.body,
+            )
+            : null;
+
+        return (
+            <div ref={wrapperRef} className={`${themeClass} relative`}>
+                {triggerBtn}
+                {portalPanel}
+            </div>
+        );
+    }
+
+    return (
+        <div className={themeClass}>
+            {/* Collapsed pill - fixed bottom position */}
+            <div className={`fixed bottom-3 z-50 pointer-events-auto ${position === 'bottom-right' ? 'right-3' : 'left-3'}`}>
+                {triggerBtn}
+            </div>
+            {isOpen && (
+                <div className={`fixed inset-0 z-60 flex flex-col justify-end pointer-events-none pb-14 pt-4 ${position === 'bottom-right' ? 'items-end pr-3' : 'items-start pl-3'}`}>
+                    {panelCard}
+                </div>
+            )}
+        </div>
+    );
 }
+
