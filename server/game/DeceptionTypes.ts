@@ -138,4 +138,6 @@ export interface DeceptionRoom {
   winner?: "Investigator" | "Murderer" | "Abandoned";
   witnessHuntTarget?: string;
   witnessHuntResult?: "correct" | "incorrect";
+  
+  lastForensicScientistUserId?: string | null;
 }

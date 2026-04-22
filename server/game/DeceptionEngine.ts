@@ -141,18 +141,39 @@ export class DeceptionEngine {
     if (enableWitness) roles.push("Witness");
     for (let i = 0; i < investigators; i++) roles.push("Investigator");
 
-    shuffle(roles);
+    // Remove ForensicScientist from shuffle pool to manually assign
+    const nonForensicRoles = roles.filter((r) => r !== "ForensicScientist");
+    shuffle(nonForensicRoles);
 
     const roleToTeam = (role: DeceptionRole): DeceptionTeam => {
       if (role === "Murderer" || role === "Accomplice") return "Murderer";
       return "Investigator";
     };
 
+    // Determine Forensic Scientist
+    let forensicIndex = 0; // fallback
+    if (!room.lastForensicScientistUserId) {
+       // First game -> Host
+       const hostPlayer = activePlayers.findIndex(p => p.isHost);
+       forensicIndex = hostPlayer !== -1 ? hostPlayer : 0;
+    } else {
+       // Next game -> sequential
+       const prevIndex = activePlayers.findIndex(p => p.userId === room.lastForensicScientistUserId);
+       forensicIndex = (Math.max(0, prevIndex) + 1) % numPlayers;
+    }
+
+    const forensicPlayer = activePlayers[forensicIndex];
+    room.lastForensicScientistUserId = forensicPlayer.userId;
+
     activePlayers.forEach((p, i) => {
-      p.role = roles[i];
-      p.team = roleToTeam(roles[i]);
+      if (i === forensicIndex) {
+        p.role = "ForensicScientist";
+      } else {
+        p.role = nonForensicRoles.pop()!;
+      }
+      p.team = roleToTeam(p.role);
       p.isReady = false;
-      p.hasBadge = roles[i] !== "ForensicScientist"; // Everyone except forensic gets a badge
+      p.hasBadge = p.role !== "ForensicScientist"; // Everyone except forensic gets a badge
     });
   }
 
@@ -392,6 +413,7 @@ export class DeceptionEngine {
       solvingAttempts: [],
       activeSolvingAttempt: null,
       solvingResolutionNotice: null,
+      lastForensicScientistUserId: null,
     });
 
     this.syncVoiceAccess(this.rooms.get(roomId)!);
