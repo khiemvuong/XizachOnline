@@ -3,11 +3,9 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { ArrowLeft, Check, Fingerprint, ShieldCheck } from "lucide-react";
 import type { DeceptionPlayer, DeceptionRole, DeceptionRoom } from "@/server/game/DeceptionTypes";
-import forensicRoleImage from "@/public/deception_roles/forensic.jpeg";
-import murdererRoleImage from "@/public/deception_roles/murderer.jpeg";
-import accompliceRoleImage from "@/public/deception_roles/accomplice.jpeg";
-import witnessRoleImage from "@/public/deception_roles/witness.jpeg";
-import investigatorRoleImage from "@/public/deception_roles/investigator.jpeg";
+
+const ROLE_IMG_BASE =
+  "https://raw.githubusercontent.com/khiemvuong/deception-assets/main/deception_roles";
 
 const ROLE_META: Record<
   DeceptionRole,
@@ -24,35 +22,35 @@ const ROLE_META: Record<
     team: "PHE ĐIỀU TRA",
     title: "PHÁP Y",
     quote: '"Xác chết không bao giờ nói dối, chỉ có kẻ thủ ác mới chối cãi."',
-    image: forensicRoleImage.src,
+    image: `${ROLE_IMG_BASE}/forensic.jpeg`,
   },
   Murderer: {
     color: "var(--deception-red)",
     team: "PHE SÁT NHÂN",
     title: "SÁT NHÂN",
     quote: '"Một tội ác hoàn hảo không tồn tại, chỉ là thám tử chưa đủ vĩ đại."',
-    image: murdererRoleImage.src,
+    image: `${ROLE_IMG_BASE}/murderer.jpeg`,
   },
   Accomplice: {
     color: "var(--deception-red)",
     team: "PHE SÁT NHÂN",
     title: "ĐỒNG PHẠM",
     quote: '"Bóng tối là đồng minh tốt nhất, và sự thật là kẻ thù phải bị che khuất."',
-    image: accompliceRoleImage.src,
+    image: `${ROLE_IMG_BASE}/accomplice.jpeg`,
   },
   Witness: {
     color: "#10b981",
     team: "PHE ĐIỀU TRA",
     title: "NHÂN CHỨNG",
     quote: '"Đôi mắt tôi đã thấy những gì không nên thấy, sự im lặng là cái giá của sinh tồn."',
-    image: witnessRoleImage.src,
+    image: `${ROLE_IMG_BASE}/witness.jpeg`,
   },
   Investigator: {
     color: "#10b981",
     team: "PHE ĐIỀU TRA",
     title: "ĐIỀU TRA VIÊN",
     quote: '"Khi ta loại trừ những điều không thể, phần còn lại, dù khó tin đến đâu, cũng là sự thật."',
-    image: investigatorRoleImage.src,
+    image: `${ROLE_IMG_BASE}/investigator.jpeg`,
   },
 };
 
@@ -151,7 +149,7 @@ export default function RoleReveal({
                   onPointerCancel={() => setIsRevealing(false)}
                 >
                   {!imageFailed && meta && roleImageSource ? (
-                    <div className="deception-role-reveal-image relative mx-auto aspect-4/3 w-full max-w-none overflow-hidden">
+                    <div className="deception-role-reveal-image relative mx-auto overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={roleImageSource}
@@ -159,7 +157,7 @@ export default function RoleReveal({
                         loading="eager"
                         decoding="async"
                         draggable={false}
-                        className={`deception-role-portrait pointer-events-none select-none h-full w-full object-contain transition-all duration-200 ${
+                        className={`deception-role-portrait pointer-events-none select-none h-full w-full object-cover transition-all duration-200 ${
                           isRevealing
                             ? ""
                             : "blur-xl saturate-0 brightness-[0.08] contrast-50"
@@ -168,7 +166,7 @@ export default function RoleReveal({
                       />
                     </div>
                   ) : (
-                    <div className="deception-role-reveal-image mx-auto flex aspect-4/3 w-full max-w-none flex-col items-center justify-center gap-2 text-center text-(--deception-cyan)">
+                    <div className="deception-role-reveal-image mx-auto flex flex-col items-center justify-center gap-2 text-center text-(--deception-cyan)">
                       <Fingerprint className="h-14 w-14 opacity-70" />
                       <p className="px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-(--on-surface-variant)">
                         Không thể tải ảnh vai trò
