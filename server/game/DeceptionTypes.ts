@@ -140,4 +140,5 @@ export interface DeceptionRoom {
   witnessHuntResult?: "correct" | "incorrect";
   
   lastForensicScientistUserId?: string | null;
+  lastMurdererUserId?: string | null;
 }

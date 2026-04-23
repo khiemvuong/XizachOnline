@@ -28,7 +28,6 @@ interface DiscussionHeaderProps {
   clearPendingSolveSelection: () => void;
   selectedMeansTitle: string;
   selectedClueTitle: string;
-  voiceSlot?: React.ReactNode;
 }
 
 export default function DiscussionHeader({
@@ -55,7 +54,6 @@ export default function DiscussionHeader({
   clearPendingSolveSelection,
   selectedMeansTitle,
   selectedClueTitle,
-  voiceSlot,
 }: DiscussionHeaderProps) {
   return (
     <section
@@ -87,6 +85,10 @@ export default function DiscussionHeader({
             />
             {selectedEvidenceCount}/2
           </button>
+          
+          <div className="rounded border border-indigo-500/30 bg-indigo-500/10 px-2 py-1.5 text-[10px] font-mono font-black tracking-widest text-indigo-300 sm:px-2.5 sm:text-[11px] ml-1">
+            #{gameState.id}
+          </div>
         </div>
 
         <div className="flex min-w-0 justify-center">
@@ -139,8 +141,6 @@ export default function DiscussionHeader({
             </button>
           )}
 
-          {/* Voice Chat trigger mounted here from parent */}
-          {voiceSlot}
 
           <button
             onClick={onExit}

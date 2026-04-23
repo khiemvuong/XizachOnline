@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { History, EyeOff, VolumeX, Volume2, ArrowLeft, CookingPot, Fingerprint, BadgeCheck } from "lucide-react";
 import type { DeceptionRoom, DeceptionPlayer, MeansCard, ClueCard, SceneTile } from "@/server/game/DeceptionTypes";
 import type { Socket } from "socket.io-client";
@@ -6,6 +6,34 @@ import type { RoleTone, PlayerEvidenceView } from "../DiscussionBoard";
 import TimerBar from "@/components/deception/TimerBar";
 import EvidencePreviewCard from "@/components/deception/EvidencePreviewCard";
 import SceneBoard from "@/components/deception/SceneBoard";
+import { getResolvedMeansImageUrl, getResolvedClueImageUrl } from "@/utils/deceptionAssets";
+import Image from "next/image";
+
+const FullCardDetail = ({ card, tone }: { card: MeansCard | ClueCard, tone: "means"|"clue" }) => {
+  const isMeans = tone === "means";
+  const imageUrl = isMeans ? getResolvedMeansImageUrl(card.id) : getResolvedClueImageUrl(card.id);
+  const Icon = isMeans ? CookingPot : Fingerprint;
+  
+  return (
+    <div className={`flex w-full overflow-hidden rounded-lg border-l-4 bg-[rgba(10,14,20,0.6)] border ${isMeans ? 'border-l-(--deception-amber) border-white/5' : 'border-l-(--deception-cyan) border-white/5'}`}>
+      <div className="relative w-20 sm:w-24 shrink-0 border-r border-white/5 bg-black/40 p-1">
+        <div className="relative aspect-2/3 w-full overflow-hidden rounded-md">
+           <Image src={imageUrl} alt={card.english} fill unoptimized className="object-cover opacity-90" />
+        </div>
+        <div className={`absolute left-0 top-0 rounded-br-lg bg-[#0a0d14]/90 p-1 drop-shadow-md ${isMeans ? 'text-(--deception-amber)' : 'text-(--deception-cyan)'}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <div className="flex flex-col py-2 px-3 sm:px-4 flex-1 min-w-0">
+        <h4 className="truncate text-sm sm:text-base font-bold text-white uppercase tracking-wider">{card.vietnamese}</h4>
+        <h5 className="truncate text-[10px] sm:text-xs font-mono text-(--on-surface-variant)/60 uppercase tracking-widest">{card.english}</h5>
+        <div className="mt-auto pt-2 sm:pt-3 border-t border-white/5">
+          <p className="line-clamp-2 text-[11px] sm:text-xs text-(--on-surface-variant) italic leading-relaxed">&quot;{card.description}&quot;</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface ForensicSectionProps {
   forensicTab: "hints" | "players";
@@ -71,49 +99,66 @@ export default function ForensicSection({
   forensicHintTiles,
   socket,
 }: ForensicSectionProps) {
+  const [showPauseModal, setShowPauseModal] = useState(false);
+
   return (
     <div className="min-h-0 flex-1 space-y-2 overflow-auto sm:space-y-3">
       <section className="rounded-xl border border-white/10 bg-slate-900/82 p-3 shadow-2xl backdrop-blur-xl sm:p-4">
         <div className="flex flex-col gap-2.5 sm:gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="inline-flex items-center gap-1 rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-1">
-              <button
-                onClick={() => setForensicTab("hints")}
-                className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${
-                  forensicTab === "hints"
-                    ? "bg-rose-600 text-white"
-                    : "text-(--on-surface-variant) hover:bg-rose-500/15 hover:text-rose-200"
-                }`}
-              >
-                6 Viên Đạn
-              </button>
-              <button
-                onClick={() => setForensicTab("players")}
-                className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${
-                  forensicTab === "players"
-                    ? "bg-cyan-600 text-white"
-                    : "text-(--on-surface-variant) hover:bg-cyan-500/15 hover:text-cyan-200"
-                }`}
-              >
-                Người chơi
-              </button>
+          {/* Header row: Tabs, Timer, Tools */}
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
+            <div className="flex shrink-0 items-center gap-1.5">
+              <div className="inline-flex items-center gap-1 rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-1">
+                <button
+                  onClick={() => setForensicTab("hints")}
+                  className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${
+                    forensicTab === "hints"
+                      ? "bg-rose-600 text-white"
+                      : "text-(--on-surface-variant) hover:bg-rose-500/15 hover:text-rose-200"
+                  }`}
+                >
+                  6 Viên Đạn
+                </button>
+                <button
+                  onClick={() => setForensicTab("players")}
+                  className={`rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px] ${
+                    forensicTab === "players"
+                      ? "bg-cyan-600 text-white"
+                      : "text-(--on-surface-variant) hover:bg-cyan-500/15 hover:text-cyan-200"
+                  }`}
+                >
+                  Người chơi
+                </button>
+              </div>
+              <div className="rounded border border-indigo-500/30 bg-indigo-500/10 px-2 py-1.5 text-[10px] font-mono font-black tracking-widest text-indigo-300 sm:px-2.5 sm:text-[11px]">
+                #{gameState.id}
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
+
+            <div className="flex min-w-0 justify-center">
+              <div className={`shrink-0 ${isCompactViewport ? "origin-center scale-90" : ""}`}>
+                <TimerBar
+                  currentRound={gameState.currentRound}
+                  timerEndAt={gameState.timerEndAt}
+                  timerPausedRemaining={gameState.timerPausedRemaining}
+                  roundDurationSeconds={gameState.settings.discussionTimeSeconds}
+                />
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 onClick={() => setShowSolvingHistory(true)}
-                className={`deception-btn-outline rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px]`}
+                className="deception-btn-outline shrink-0 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px]"
                 title="Lịch sử Tố Cáo"
               >
-                <span className="flex items-center gap-1.5">
-                  <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  Lịch sử
-                  {gameState.solvingAttempts.length > 0 &&
-                    ` (${gameState.solvingAttempts.length})`}
-                </span>
+                <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                Lịch sử
+                {gameState.solvingAttempts.length > 0 && ` (${gameState.solvingAttempts.length})`}
               </button>
               <button
                 onClick={onToggleRoleMask}
-                className="deception-icon-btn"
+                className="deception-icon-btn shrink-0"
                 title={hideRolesUi ? "Hiện lại role thật" : "Ẩn role thật"}
               >
                 <EyeOff className="h-4 w-4" />
@@ -121,7 +166,7 @@ export default function ForensicSection({
               {canToggleDiscussionAudio && (
                 <button
                   onClick={onToggleBgm}
-                  className="deception-icon-btn"
+                  className="deception-icon-btn shrink-0"
                   title={bgmMuted ? "Bật nhạc nền" : "Tắt nhạc nền"}
                 >
                   {bgmMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -129,68 +174,82 @@ export default function ForensicSection({
               )}
               <button
                 onClick={onExit}
-                className="deception-icon-btn"
+                className="deception-icon-btn shrink-0"
                 title="Thoát về sảnh"
               >
                 <ArrowLeft className="h-4 w-4" />
               </button>
             </div>
           </div>
-          <div className="w-full rounded-md border-l-4 border-rose-500/60 bg-[rgba(255,255,255,0.04)] px-2.5 py-2 sm:px-3 sm:py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Solution</p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-100 sm:gap-2.5 sm:text-sm">
-              {hideRolesUi ? (
-                <span className="text-[10px] uppercase tracking-[0.14em] text-(--on-surface-variant) sm:text-[11px] sm:tracking-[0.16em]">
-                  Ẩn theo chế độ ngụy trang
-                </span>
-              ) : (
-                <>
-                  <span className="inline-flex min-w-0 items-center gap-1.5">
-                    <CookingPot className="h-4 w-4 shrink-0 text-cyan-300" />
-                    <span className="truncate">
-                      {selectedMeansForensic
-                        ? `${selectedMeansForensic.english} (${selectedMeansForensic.vietnamese})`
-                        : "Đang chờ"}
-                    </span>
-                  </span>
-                  <span className="text-slate-500">+</span>
-                  <span className="inline-flex min-w-0 items-center gap-1.5">
-                    <Fingerprint className="h-4 w-4 shrink-0 text-rose-300" />
-                    <span className="truncate">
-                      {selectedClueForensic
-                        ? `${selectedClueForensic.english} (${selectedClueForensic.vietnamese})`
-                        : "Đang chờ"}
-                    </span>
-                  </span>
-                </>
-              )}
+
+          <div className="mt-1 rounded-xl border border-(--deception-red)/30 bg-[linear-gradient(145deg,rgba(255,81,103,0.08),rgba(255,81,103,0.02))] p-3 shadow-[inset_0_2px_20px_rgba(255,81,103,0.05)] sm:p-5 relative overflow-hidden">
+            <div className="absolute -right-4 -top-4 text-[120px] leading-none text-(--deception-red) opacity-[0.03] pointer-events-none select-none font-black tracking-tighter">
+              SO
             </div>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <div className={isCompactViewport ? "origin-left scale-90" : ""}>
-              <TimerBar
-                currentRound={gameState.currentRound}
-                timerEndAt={gameState.timerEndAt}
-                timerPausedRemaining={gameState.timerPausedRemaining}
-                roundDurationSeconds={gameState.settings.discussionTimeSeconds}
-              />
-            </div>
-            <div className="flex items-center gap-1.5">
-              {gameState.state === "DISCUSSION" && !gameState.timerEndAt && (
-                <button
-                  onClick={() => socket?.emit("startDiscussion")}
-                  className="deception-btn-cyan px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] sm:px-3 sm:py-2 sm:text-[11px] sm:tracking-[0.16em]"
-                >
-                  Bắt đầu
-                </button>
-              )}
-              <button
-                onClick={() => setForensicTab("players")}
-                className="deception-icon-btn hidden lg:inline-flex"
-                title="Xem thẻ người chơi"
-              >
-                <History className="h-4 w-4" />
-              </button>
+            <div className="absolute left-0 top-0 h-full w-1 bg-linear-to-b from-(--deception-red)/50 to-transparent" />
+            
+            <div className="relative z-10 flex flex-col gap-3 sm:gap-4">
+              <div className="flex items-center justify-between border-b border-(--deception-red)/20 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-(--deception-red) animate-pulse shadow-[0_0_8px_rgba(255,81,103,0.8)]" />
+                  <p className="text-[11px] font-black uppercase tracking-[0.25em] text-(--deception-red-soft) sm:text-xs text-shadow-sm">
+                    BỘ HỒ SƠ TỘI ÁC MẬT
+                  </p>
+                </div>
+                {gameState.state === "DISCUSSION" && (
+                  <>
+                    {!gameState.timerEndAt ? (
+                      <button
+                        onClick={() => socket?.emit("startDiscussion")}
+                        className="deception-btn-cyan px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] sm:px-3 sm:py-2 sm:text-[11px] sm:tracking-[0.16em]"
+                      >
+                        Tiếp tục
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowPauseModal(true)}
+                        className="deception-btn-outline border-rose-500/50 text-rose-300 hover:bg-rose-500/20 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] sm:px-3 sm:py-2 sm:text-[11px] sm:tracking-[0.16em]"
+                      >
+                        Tạm dừng
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {hideRolesUi ? (
+                   <div className="flex h-20 w-full items-center justify-center rounded-md border-2 border-dashed border-(--on-surface-variant)/30 bg-(--on-surface-variant)/5">
+                     <div className="flex items-center gap-2 text-(--on-surface-variant)/50 text-[11px] font-bold uppercase tracking-[0.14em]">
+                       <EyeOff className="h-5 w-5" /> Ẩn theo chế độ ngụy trang
+                     </div>
+                   </div>
+                ) : (
+                  <>
+                    {selectedMeansForensic ? (
+                      <FullCardDetail card={selectedMeansForensic} tone="means" />
+                    ) : (
+                      <div className="flex h-20 w-full items-center justify-center rounded-md border-2 border-dashed border-(--deception-amber)/30 bg-(--deception-amber)/5">
+                        <div className="hidden items-center gap-2 text-(--deception-amber)/50 sm:flex text-[11px] font-bold uppercase tracking-widest">
+                          <CookingPot className="h-5 w-5" /> Đang trích xuất Mẫu Cơ Khí... (Chờ Hung Khí)
+                        </div>
+                        <CookingPot className="h-5 w-5 text-(--deception-amber)/50 sm:hidden" />
+                      </div>
+                    )}
+
+                    {selectedClueForensic ? (
+                      <FullCardDetail card={selectedClueForensic} tone="clue" />
+                    ) : (
+                      <div className="flex h-20 w-full items-center justify-center rounded-md border-2 border-dashed border-(--deception-cyan)/30 bg-(--deception-cyan)/5">
+                         <div className="hidden items-center gap-2 text-(--deception-cyan)/50 sm:flex text-[11px] font-bold uppercase tracking-widest">
+                           <Fingerprint className="h-5 w-5" /> Đang thu thập Dấu Vết... (Chờ Manh Mối)
+                        </div>
+                        <Fingerprint className="h-5 w-5 text-(--deception-cyan)/50 sm:hidden" />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -357,6 +416,34 @@ export default function ForensicSection({
             </div>
           </article>
         </section>
+      )}
+
+      {showPauseModal && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-rose-500/30 bg-slate-900 p-5 shadow-2xl">
+            <h3 className="mb-2 text-lg font-bold text-slate-100">Tạm dừng thời gian?</h3>
+            <p className="mb-6 text-sm text-slate-400">
+              Bạn có chắc muốn tạm dừng thời gian thảo luận hiện tại không?
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowPauseModal(false)}
+                className="rounded-lg px-4 py-2 text-sm font-bold text-slate-300 hover:bg-white/5 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  socket?.emit("pauseDiscussion");
+                  setShowPauseModal(false);
+                }}
+                className="deception-btn-cyan rounded-lg px-4 py-2 text-sm font-bold shadow-lg"
+              >
+                Tạm dừng
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

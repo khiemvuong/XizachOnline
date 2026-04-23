@@ -13,11 +13,7 @@ import {
   shuffle,
   generateSceneTiles,
 } from "./DeceptionData";
-import {
-  type DeceptionVoicePolicyReason,
-  removeDeceptionVoiceRoom,
-  upsertDeceptionVoiceRoom,
-} from "./DeceptionVoiceRegistry";
+
 
 export class DeceptionEngine {
   private rooms: Map<string, DeceptionRoom> = new Map();
@@ -97,24 +93,12 @@ export class DeceptionEngine {
       this.clearDiscussionTimer(roomId);
       this.clearSolvingNoticeTimer(roomId);
       this.rooms.delete(roomId);
-      removeDeceptionVoiceRoom(roomId);
     }, 15000);
 
     this.emptyRoomCleanupTimers.set(roomId, timer);
   }
 
-  private syncVoiceAccess(room: DeceptionRoom) {
-    upsertDeceptionVoiceRoom({
-      roomId: room.id,
-      state: room.state,
-      players: room.players.map((player) => ({
-        userId: player.userId,
-        role: player.role,
-        status: player.status,
-        isSpectator: Boolean(player.isSpectator),
-      })),
-    });
-  }
+
 
   // ─── Role Assignment ───
 
@@ -136,14 +120,12 @@ export class DeceptionEngine {
     const { enableAccomplice, enableWitness, investigators } =
       this.getRoleCounts(numPlayers, room.settings);
 
-    const roles: DeceptionRole[] = ["ForensicScientist", "Murderer"];
+    const roles: DeceptionRole[] = [];
     if (enableAccomplice) roles.push("Accomplice");
     if (enableWitness) roles.push("Witness");
     for (let i = 0; i < investigators; i++) roles.push("Investigator");
 
-    // Remove ForensicScientist from shuffle pool to manually assign
-    const nonForensicRoles = roles.filter((r) => r !== "ForensicScientist");
-    shuffle(nonForensicRoles);
+    shuffle(roles);
 
     const roleToTeam = (role: DeceptionRole): DeceptionTeam => {
       if (role === "Murderer" || role === "Accomplice") return "Murderer";
@@ -165,16 +147,95 @@ export class DeceptionEngine {
     const forensicPlayer = activePlayers[forensicIndex];
     room.lastForensicScientistUserId = forensicPlayer.userId;
 
+    // Determine Murderer
+    let murdererIndex = 0;
+    if (!room.lastMurdererUserId) {
+       // First game -> next person
+       murdererIndex = (forensicIndex + 1) % numPlayers;
+    } else {
+       // Next game -> sequential
+       const prevIndex = activePlayers.findIndex(p => p.userId === room.lastMurdererUserId);
+       murdererIndex = (Math.max(0, prevIndex) + 1) % numPlayers;
+       if (murdererIndex === forensicIndex) {
+         murdererIndex = (murdererIndex + 1) % numPlayers;
+       }
+    }
+    const murdererPlayer = activePlayers[murdererIndex];
+    room.lastMurdererUserId = murdererPlayer.userId;
+
     activePlayers.forEach((p, i) => {
       if (i === forensicIndex) {
         p.role = "ForensicScientist";
+      } else if (i === murdererIndex) {
+        p.role = "Murderer";
       } else {
-        p.role = nonForensicRoles.pop()!;
+        p.role = roles.pop()!;
       }
       p.team = roleToTeam(p.role);
       p.isReady = false;
       p.hasBadge = p.role !== "ForensicScientist"; // Everyone except forensic gets a badge
     });
+  }
+
+  private getFairCards<T extends { group?: string }>(
+    allCards: T[],
+    numReceivers: number,
+    cardsPerPlayer: number
+  ): T[][] {
+    const totalNeeded = numReceivers * cardsPerPlayer;
+    const shuffled = shuffle([...allCards]);
+    
+    // 1. Build a globally balanced pool
+    const uniqueGroups = new Set(shuffled.map(c => c.group || "unknown")).size;
+    // Tương đối: Giới hạn tối đa số lượng thẻ của 1 nhóm xuất hiện trong ván
+    const globalLimit = Math.ceil(totalNeeded / Math.max(1, uniqueGroups)) + 1;
+
+    const globalPool: T[] = [];
+    const globalCounts: Record<string, number> = {};
+    const rejects: T[] = [];
+
+    for (const card of shuffled) {
+      if (globalPool.length >= totalNeeded) break;
+      const g = card.group || "unknown";
+      if ((globalCounts[g] || 0) < globalLimit) {
+        globalPool.push(card);
+        globalCounts[g] = (globalCounts[g] || 0) + 1;
+      } else {
+        rejects.push(card);
+      }
+    }
+    
+    // Nếu thiếu bài (rất hiếm), bổ sung từ rejects
+    while (globalPool.length < totalNeeded && rejects.length > 0) {
+      globalPool.push(rejects.shift()!);
+    }
+
+    const finalPool = shuffle(globalPool);
+
+    // 2. Chia bài cho người chơi (giới hạn cục bộ để 1 người không ôm hết 1 nhóm)
+    const playerHands: T[][] = Array.from({ length: numReceivers }, () => []);
+    const localLimit = Math.ceil(cardsPerPlayer / 2); // vd: 4 lá -> max 2 lá cùng nhóm
+
+    for (let round = 0; round < cardsPerPlayer; round++) {
+      for (let p = 0; p < numReceivers; p++) {
+        const hand = playerHands[p];
+        const localCounts: Record<string, number> = {};
+        hand.forEach(c => {
+          const g = c.group || "unknown";
+          localCounts[g] = (localCounts[g] || 0) + 1;
+        });
+
+        // Tìm lá bài không vi phạm localLimit
+        let foundIndex = finalPool.findIndex(c => (localCounts[c.group || "unknown"] || 0) < localLimit);
+        if (foundIndex === -1) {
+          foundIndex = 0; // Fallback
+        }
+
+        hand.push(finalPool.splice(foundIndex, 1)[0]);
+      }
+    }
+
+    return playerHands;
   }
 
   // ─── Card Dealing ───
@@ -188,16 +249,12 @@ export class DeceptionEngine {
       (p) => !p.isSpectator && p.role !== "ForensicScientist",
     );
 
-    const totalMeansNeeded = receivers.length * cardsPerPlayer;
-    const totalCluesNeeded = receivers.length * cluesPerPlayer;
-
-    // Shuffle and deal from pools
-    const meansPool = shuffle([...MEANS_CARDS]).slice(0, totalMeansNeeded);
-    const cluePool = shuffle([...CLUE_CARDS]).slice(0, totalCluesNeeded);
+    const meansHands = this.getFairCards(MEANS_CARDS, receivers.length, cardsPerPlayer);
+    const clueHands = this.getFairCards(CLUE_CARDS, receivers.length, cluesPerPlayer);
 
     receivers.forEach((p, i) => {
-      p.meansCards = meansPool.slice(i * cardsPerPlayer, (i + 1) * cardsPerPlayer);
-      p.clueCards = cluePool.slice(i * cluesPerPlayer, (i + 1) * cluesPerPlayer);
+      p.meansCards = meansHands[i];
+      p.clueCards = clueHands[i];
     });
 
     // FS gets no cards
@@ -303,10 +360,17 @@ export class DeceptionEngine {
         }
       });
 
-      // Forensic starts discussion timer
+      // Forensic starts/resumes discussion timer
       socket.on("startDiscussion", () => {
         if (socket.data.roomId && socket.data.userId) {
           this.startDiscussion(socket.data.roomId, socket.data.userId);
+        }
+      });
+
+      // Forensic pauses discussion timer
+      socket.on("pauseDiscussion", () => {
+        if (socket.data.roomId && socket.data.userId) {
+          this.pauseDiscussion(socket.data.roomId, socket.data.userId);
         }
       });
 
@@ -353,15 +417,7 @@ export class DeceptionEngine {
         }
       });
 
-      socket.on("voicePolicyDenied", (payload: { reason?: string }) => {
-        if (socket.data.roomId && socket.data.userId) {
-          this.reportVoicePolicyDenied(
-            socket.data.roomId,
-            socket.data.userId,
-            payload?.reason,
-          );
-        }
-      });
+
 
       socket.on("toggleSpectatorLobby", () => {
         if (socket.data.roomId && socket.data.userId) {
@@ -414,9 +470,10 @@ export class DeceptionEngine {
       activeSolvingAttempt: null,
       solvingResolutionNotice: null,
       lastForensicScientistUserId: null,
+      lastMurdererUserId: null,
     });
 
-    this.syncVoiceAccess(this.rooms.get(roomId)!);
+
   }
 
   public joinRoom(
@@ -700,7 +757,21 @@ export class DeceptionEngine {
     if (!allMarked) return;
 
     room.state = "DISCUSSION";
-    this.addSystemMessage(room, `Hiện trường đã sẵn sàng! Pháp y hãy bấm "Bắt đầu thảo luận".`);
+    
+    // Auto-start timer
+    const durationMs = room.settings.discussionTimeSeconds * 1000;
+    room.timerEndAt = Date.now() + durationMs;
+    this.clearDiscussionTimer(roomId);
+    this.clearSolvingNoticeTimer(roomId);
+    this.discussionTimers.set(
+      roomId,
+      setTimeout(() => this.onDiscussionTimeout(roomId), durationMs),
+    );
+
+    this.addSystemMessage(
+      room,
+      `Hiện trường đã được niêm phong. Round ${room.currentRound} bắt đầu! Thời gian: ${room.settings.discussionTimeSeconds}s`,
+    );
     this.broadcastState(roomId);
   }
 
@@ -713,10 +784,21 @@ export class DeceptionEngine {
     const player = this.findPlayer(room, userId);
     if (!player || player.role !== "ForensicScientist") return;
 
-    // Only start if timer hasn't been started yet this round
-    if (room.timerEndAt) return;
+    if (room.timerEndAt) return; // Already running
 
-    const durationMs = room.settings.discussionTimeSeconds * 1000;
+    let durationMs: number;
+    if (room.timerPausedRemaining != null) {
+      durationMs = room.timerPausedRemaining;
+      room.timerPausedRemaining = null;
+      this.addSystemMessage(room, `Thời gian thảo luận được tiếp tục.`);
+    } else {
+      durationMs = room.settings.discussionTimeSeconds * 1000;
+      this.addSystemMessage(
+        room,
+        `Round ${room.currentRound} bắt đầu! Thời gian: ${room.settings.discussionTimeSeconds}s`,
+      );
+    }
+    
     room.timerEndAt = Date.now() + durationMs;
 
     this.clearDiscussionTimer(roomId);
@@ -726,10 +808,22 @@ export class DeceptionEngine {
       setTimeout(() => this.onDiscussionTimeout(roomId), durationMs),
     );
 
-    this.addSystemMessage(
-      room,
-      `Round ${room.currentRound} bắt đầu! Thời gian: ${room.settings.discussionTimeSeconds}s`,
-    );
+    this.broadcastState(roomId);
+  }
+
+  public pauseDiscussion(roomId: string, userId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room || room.state !== "DISCUSSION") return;
+
+    const player = this.findPlayer(room, userId);
+    if (!player || player.role !== "ForensicScientist") return;
+
+    if (!room.timerEndAt) return; // Not running
+
+    room.timerPausedRemaining = Math.max(0, room.timerEndAt - Date.now());
+    room.timerEndAt = null;
+    this.clearDiscussionTimer(roomId);
+    this.addSystemMessage(room, `Pháp y đã tạm dừng thời gian thảo luận.`);
     this.broadcastState(roomId);
   }
 
@@ -1066,49 +1160,17 @@ export class DeceptionEngine {
     this.broadcastState(roomId);
   }
 
-  private reportVoicePolicyDenied(
-    roomId: string,
-    userId: string,
-    reasonRaw?: string,
-  ) {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
 
-    const player = this.findPlayer(room, userId);
-    if (!player) return;
-
-    const reason = (reasonRaw ?? "unknown-user") as DeceptionVoicePolicyReason;
-    const noticeKey = `${roomId}:${userId}:${reason}`;
-    const now = Date.now();
-    const lastAt = this.voicePolicyNoticeCooldown.get(noticeKey) ?? 0;
-
-    // Avoid flooding game log when client reconnects/retries token repeatedly.
-    if (now - lastAt < 15000) return;
-    this.voicePolicyNoticeCooldown.set(noticeKey, now);
-
-    let text = `${player.name}: quyền voice bị giới hạn bởi hệ thống.`;
-    if (reason === "spectator") {
-      text = `${player.name}: Spectator chỉ có thể nghe, không thể nói.`;
-    } else if (reason === "disconnected") {
-      text = `${player.name}: Mất kết nối, không thể bật voice publish.`;
-    } else if (reason === "unknown-user") {
-      text = `${player.name}: Phiên voice chưa hợp lệ với phòng hiện tại.`;
-    }
-
-    this.addSystemMessage(room, text);
-    this.broadcastState(roomId);
-  }
 
   // ─── Broadcast (role-based information hiding) ───
 
   private broadcastState(roomId: string) {
     const room = this.rooms.get(roomId);
     if (!room) {
-      removeDeceptionVoiceRoom(roomId);
       return;
     }
 
-    this.syncVoiceAccess(room);
+
 
     const sockets = this.io.in(roomId);
 

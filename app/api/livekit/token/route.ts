@@ -1,6 +1,5 @@
 import { AccessToken } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
-import { getDeceptionVoiceAccessPolicy } from '@/server/game/DeceptionVoiceRegistry';
 
 const API_KEY = process.env.LIVEKIT_API_KEY;
 const API_SECRET = process.env.LIVEKIT_API_SECRET;
@@ -24,12 +23,10 @@ export async function GET(req: NextRequest) {
         ttl: '4h',
     });
 
-    const voicePolicy = getDeceptionVoiceAccessPolicy(room, userId);
-
     at.addGrant({
         roomJoin: true,
         room,
-        canPublish: voicePolicy.canPublish,
+        canPublish: true,
         canSubscribe: true,
         canPublishData: true,
     });
@@ -37,7 +34,7 @@ export async function GET(req: NextRequest) {
     const token = await at.toJwt();
     return NextResponse.json({
         token,
-        canPublish: voicePolicy.canPublish,
-        policyReason: voicePolicy.reason,
+        canPublish: true,
+        policyReason: "Bật mic xuyên suốt",
     });
 }
