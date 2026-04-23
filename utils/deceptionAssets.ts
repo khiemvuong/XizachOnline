@@ -28,7 +28,7 @@ export function getMeansImageUrl(id: number): string {
  * All clue images are .jpeg.
  */
 export function getClueImageUrl(id: number): string {
-  if (id < 1 || id > 70) return "";
+  if (id < 1 || id > 200) return "";
   return `${BASE}/deception_clue/${id}.jpeg`;
 }
 

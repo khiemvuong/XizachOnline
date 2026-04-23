@@ -67,7 +67,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<DeceptionRoom | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [roleMaskEnabled, setRoleMaskEnabled] = useState(false);
+  const [roleMaskEnabled, setRoleMaskEnabled] = useState(true);
   const [isDiscussionBgmMuted, setIsDiscussionBgmMuted] = useState(() => {
     if (typeof window === "undefined") return false;
     return sessionStorage.getItem("deception_bgm_muted") === "1";
@@ -339,28 +339,16 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   }
 
   if (gameState.state === "LOBBY") {
-    return (
-      <>
-        <DeceptionLobby
-          gameState={gameState}
-          me={me}
-          socket={socket}
-          roomId={roomId}
-          playerPings={playerPings}
-          setPlayerPings={setPlayerPings}
-          onBackHome={() => router.push("/deception")}
-          voiceSlot={me ? (
-            <VoiceChatPanel
-              roomId={gameState.id}
-              userId={me.userId}
-              playerName={me.name}
-              players={connectedVoicePlayers}
-              position="header-dropdown"
-              themeClass="[--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
-            />
-          ) : undefined}
-        />
-      </>
+    return withReturnConfirm(
+      <DeceptionLobby
+        gameState={gameState}
+        me={me}
+        socket={socket}
+        roomId={roomId}
+        playerPings={playerPings}
+        setPlayerPings={setPlayerPings}
+        onBackHome={() => router.push("/deception")}
+      />
     );
   }
 
@@ -399,41 +387,18 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   }
 
   if (gameState.state === "DISCUSSION" || gameState.state === "SOLVING_ATTEMPT") {
-    const voiceSlot = me ? (
-      <VoiceChatPanel
-        roomId={gameState.id}
-        userId={me.userId}
-        playerName={me.name}
-        players={connectedVoicePlayers}
-        position="header-dropdown"
-        themeClass="[--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
+    return withReturnConfirm(
+      <DiscussionBoard
+        gameState={gameState}
+        me={me}
+        socket={socket}
+        playerPings={playerPings}
+        roleMaskEnabled={roleMaskEnabled}
+        bgmMuted={isDiscussionBgmMuted}
+        onToggleRoleMask={() => setRoleMaskEnabled((prev) => !prev)}
+        onToggleBgm={() => setIsDiscussionBgmMuted((prev) => !prev)}
+        onExit={() => requestReturn()}
       />
-    ) : undefined;
-
-    return (
-      <>
-        <DiscussionBoard
-          gameState={gameState}
-          me={me}
-          socket={socket}
-          playerPings={playerPings}
-          roleMaskEnabled={roleMaskEnabled}
-          bgmMuted={isDiscussionBgmMuted}
-          onToggleRoleMask={() => setRoleMaskEnabled((prev) => !prev)}
-          onToggleBgm={() => setIsDiscussionBgmMuted((prev) => !prev)}
-          onExit={() => requestReturn()}
-          voiceSlot={voiceSlot}
-        />
-        <ReturnConfirmModal
-          open={showReturnConfirm}
-          title={returnConfirmTitle}
-          description={returnConfirmDescription}
-          confirmLabel={returnConfirmLabel}
-          confirmTone={returnIntent === "lobby" ? "red" : "cyan"}
-          onCancel={closeReturnConfirm}
-          onConfirm={confirmReturn}
-        />
-      </>
     );
   }
 
@@ -460,49 +425,39 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
     );
   }
 
-  return (
-    <div className="deception-room-bg flex h-dvh items-center justify-center px-4 py-8">
-      <div className="deception-card w-full max-w-2xl rounded-2xl p-8 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[rgba(255,45,85,0.15)] text-(--deception-red)">
-          <ShieldAlert className="h-7 w-7" />
-        </div>
-        <h2 className="mt-4 text-2xl font-black uppercase tracking-[0.14em] text-(--on-surface)">
-          {getStateLabel(gameState.state)}
-        </h2>
-        <p className="mx-auto mt-3 max-w-[48ch] text-sm leading-relaxed text-(--on-surface-variant)">
-          UI cho phase này sẽ được triển khai ở phase kế tiếp của kế hoạch. Hiện tại đã có luồng đầy đủ tới
-          discussion và solving, còn witness hunt/game over sẽ nối tiếp sau.
-        </p>
+    return withReturnConfirm(
+      <div className="deception-room-bg flex h-dvh items-center justify-center px-4 py-8">
+        <div className="deception-card w-full max-w-2xl rounded-2xl p-8 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[rgba(255,45,85,0.15)] text-(--deception-red)">
+            <ShieldAlert className="h-7 w-7" />
+          </div>
+          <h2 className="mt-4 text-2xl font-black uppercase tracking-[0.14em] text-(--on-surface)">
+            {getStateLabel(gameState.state)}
+          </h2>
+          <p className="mx-auto mt-3 max-w-[48ch] text-sm leading-relaxed text-(--on-surface-variant)">
+            UI cho phase này sẽ được triển khai ở phase kế tiếp của kế hoạch. Hiện tại đã có luồng đầy đủ tới
+            discussion và solving, còn witness hunt/game over sẽ nối tiếp sau.
+          </p>
 
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <button onClick={() => requestReturn()} className="deception-btn-outline px-4 py-2 text-xs uppercase tracking-[0.2em]">
-            <span className="inline-flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Về sảnh Deception
-            </span>
-          </button>
-          {me?.isHost && (
-            <button
-              onClick={() => requestReturn("lobby")}
-              className="deception-btn-red px-4 py-2 text-xs uppercase tracking-[0.2em]"
-            >
-              Quay lại lobby
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <button onClick={() => requestReturn()} className="deception-btn-outline px-4 py-2 text-xs uppercase tracking-[0.2em]">
+              <span className="inline-flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Về sảnh Deception
+              </span>
             </button>
-          )}
+            {me?.isHost && (
+              <button
+                onClick={() => requestReturn("lobby")}
+                className="deception-btn-red px-4 py-2 text-xs uppercase tracking-[0.2em]"
+              >
+                Quay lại lobby
+              </button>
+            )}
+          </div>
+
+          {errorMsg && <p className="mt-4 text-sm text-(--deception-red-soft)">{errorMsg}</p>}
         </div>
-
-        {errorMsg && <p className="mt-4 text-sm text-(--deception-red-soft)">{errorMsg}</p>}
       </div>
-
-      <ReturnConfirmModal
-        open={showReturnConfirm}
-        title={returnConfirmTitle}
-        description={returnConfirmDescription}
-        confirmLabel={returnConfirmLabel}
-        confirmTone={returnIntent === "lobby" ? "red" : "cyan"}
-        onCancel={closeReturnConfirm}
-        onConfirm={confirmReturn}
-      />
-    </div>
-  );
+    );
 }

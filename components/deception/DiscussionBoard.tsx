@@ -234,7 +234,6 @@ export default function DiscussionBoard({
   onToggleRoleMask,
   onToggleBgm,
   onExit,
-  voiceSlot,
 }: {
   gameState: DeceptionRoom;
   me?: DeceptionPlayer;
@@ -245,7 +244,6 @@ export default function DiscussionBoard({
   onToggleRoleMask: () => void;
   onToggleBgm: () => void;
   onExit: () => void;
-  voiceSlot?: React.ReactNode;
 }) {
   const [showChat, setShowChat] = useState(false);
   const [chatText, setChatText] = useState("");
@@ -724,7 +722,6 @@ export default function DiscussionBoard({
           clearPendingSolveSelection={clearPendingSolveSelection}
           selectedMeansTitle={selectedMeansTitle}
           selectedClueTitle={selectedClueTitle}
-          voiceSlot={voiceSlot}
         />
       )}
 
