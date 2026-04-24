@@ -82,6 +82,7 @@ export interface DeceptionPlayer {
   clueCards: ClueCard[];
   hasBadge: boolean;
   isHandRaised?: boolean;
+  isMurdererHint?: boolean;
 }
 
 export interface DeceptionSettings {
@@ -140,5 +141,5 @@ export interface DeceptionRoom {
   witnessHuntResult?: "correct" | "incorrect";
   
   lastForensicScientistUserId?: string | null;
-  lastMurdererUserId?: string | null;
+  lastWitnessUserId?: string | null;
 }

@@ -339,6 +339,17 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   }
 
   if (gameState.state === "LOBBY") {
+    const voiceChatNode = me ? (
+      <VoiceChatPanel
+        roomId={gameState?.id ?? roomId}
+        userId={me.userId}
+        playerName={me.name}
+        players={connectedVoicePlayers}
+        position="header-dropdown"
+        themeClass="deception-theme [--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
+      />
+    ) : null;
+
     return withReturnConfirm(
       <DeceptionLobby
         gameState={gameState}
@@ -348,7 +359,9 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         playerPings={playerPings}
         setPlayerPings={setPlayerPings}
         onBackHome={() => router.push("/deception")}
-      />
+        voiceChatNode={voiceChatNode}
+      />,
+      "none"
     );
   }
 

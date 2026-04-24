@@ -124,6 +124,8 @@ export default function NonForensicSection({
                   ? roleToneByRole(undefined)
                   : roleToneByRole(player.role);
 
+                const isMurderer = player.role === "Murderer" || player.isMurdererHint;
+
                 return (
                   <button
                     key={player.userId}
@@ -132,7 +134,7 @@ export default function NonForensicSection({
                       setFocusedPlayerUserId(player.userId);
                     }}
                     title="Xem bộ thẻ người chơi"
-                    className={`relative overflow-hidden rounded-lg border text-left transition ${active ? roleTone.activeCardClass : roleTone.idleCardClass} ${isDesktopWideViewport ? "min-w-[10.8rem] p-1.5" : "p-2"}`}
+                    className={`relative overflow-hidden rounded-lg border text-left transition ${isMurderer ? "rounded-br-none" : ""} ${active ? roleTone.activeCardClass : roleTone.idleCardClass} ${isDesktopWideViewport ? "min-w-[10.8rem] p-1.5" : "p-2"}`}
                   >
 
                     <div className="flex items-center gap-2">
