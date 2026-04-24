@@ -120,60 +120,90 @@ export class DeceptionEngine {
     const { enableAccomplice, enableWitness, investigators } =
       this.getRoleCounts(numPlayers, room.settings);
 
-    const roles: DeceptionRole[] = [];
-    if (enableAccomplice) roles.push("Accomplice");
-    if (enableWitness) roles.push("Witness");
-    for (let i = 0; i < investigators; i++) roles.push("Investigator");
-
-    shuffle(roles);
+    // Reset all player roles
+    activePlayers.forEach(p => p.role = undefined);
 
     const roleToTeam = (role: DeceptionRole): DeceptionTeam => {
       if (role === "Murderer" || role === "Accomplice") return "Murderer";
       return "Investigator";
     };
 
-    // Determine Forensic Scientist
-    let forensicIndex = 0; // fallback
+    // 1. Determine Forensic Scientist (Sequential)
+    let forensicIndex = 0;
     if (!room.lastForensicScientistUserId) {
-       // First game -> Host
-       const hostPlayer = activePlayers.findIndex(p => p.isHost);
-       forensicIndex = hostPlayer !== -1 ? hostPlayer : 0;
+      const hostPlayer = activePlayers.findIndex(p => p.isHost);
+      forensicIndex = hostPlayer !== -1 ? hostPlayer : 0;
     } else {
-       // Next game -> sequential
-       const prevIndex = activePlayers.findIndex(p => p.userId === room.lastForensicScientistUserId);
-       forensicIndex = (Math.max(0, prevIndex) + 1) % numPlayers;
+      const prevIndex = activePlayers.findIndex(p => p.userId === room.lastForensicScientistUserId);
+      forensicIndex = (Math.max(0, prevIndex) + 1) % numPlayers;
     }
-
     const forensicPlayer = activePlayers[forensicIndex];
     room.lastForensicScientistUserId = forensicPlayer.userId;
+    forensicPlayer.role = "ForensicScientist";
 
-    // Determine Murderer
-    let murdererIndex = 0;
-    if (!room.lastMurdererUserId) {
-       // First game -> next person
-       murdererIndex = (forensicIndex + 1) % numPlayers;
-    } else {
-       // Next game -> sequential
-       const prevIndex = activePlayers.findIndex(p => p.userId === room.lastMurdererUserId);
-       murdererIndex = (Math.max(0, prevIndex) + 1) % numPlayers;
-       if (murdererIndex === forensicIndex) {
-         murdererIndex = (murdererIndex + 1) % numPlayers;
-       }
+    // 2. Determine Murderer (Random with name restriction)
+    const murdererCandidates = activePlayers.filter(p => p.role !== "ForensicScientist");
+    const restrictedNames = ["khim", "minhtu"];
+    
+    let allowedCandidates = murdererCandidates.filter(p => {
+      const normalized = p.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "")
+        .toLowerCase();
+      return !restrictedNames.includes(normalized);
+    });
+
+    // If everyone is restricted, fallback to all candidates
+    if (allowedCandidates.length === 0) allowedCandidates = murdererCandidates;
+
+    const murdererPlayer = allowedCandidates[Math.floor(Math.random() * allowedCandidates.length)];
+    murdererPlayer.role = "Murderer";
+
+    // 3. Determine Witness (Sequential)
+    if (enableWitness) {
+      const witnessCandidates = activePlayers.filter(p => p.role !== "ForensicScientist" && p.role !== "Murderer");
+      if (witnessCandidates.length > 0) {
+        let witnessIndex = -1;
+        if (room.lastWitnessUserId) {
+          const prevIdx = activePlayers.findIndex(p => p.userId === room.lastWitnessUserId);
+          if (prevIdx !== -1) {
+            // Find next available in rotation
+            for (let i = 1; i <= numPlayers; i++) {
+              const next = (prevIdx + i) % numPlayers;
+              if (activePlayers[next].role === undefined) {
+                witnessIndex = next;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (witnessIndex === -1) {
+          witnessIndex = activePlayers.findIndex(p => p.role === undefined);
+        }
+
+        if (witnessIndex !== -1) {
+          const witnessPlayer = activePlayers[witnessIndex];
+          witnessPlayer.role = "Witness";
+          room.lastWitnessUserId = witnessPlayer.userId;
+        }
+      }
     }
-    const murdererPlayer = activePlayers[murdererIndex];
-    room.lastMurdererUserId = murdererPlayer.userId;
 
-    activePlayers.forEach((p, i) => {
-      if (i === forensicIndex) {
-        p.role = "ForensicScientist";
-      } else if (i === murdererIndex) {
-        p.role = "Murderer";
-      } else {
-        p.role = roles.pop()!;
+    // 4. Assign remaining roles (Accomplice and Investigators)
+    const remainingRoles: DeceptionRole[] = [];
+    if (enableAccomplice) remainingRoles.push("Accomplice");
+    for (let i = 0; i < investigators; i++) remainingRoles.push("Investigator");
+    shuffle(remainingRoles);
+
+    activePlayers.forEach((p) => {
+      if (p.role === undefined) {
+        p.role = remainingRoles.pop()!;
       }
       p.team = roleToTeam(p.role);
       p.isReady = false;
-      p.hasBadge = p.role !== "ForensicScientist"; // Everyone except forensic gets a badge
+      p.hasBadge = p.role !== "ForensicScientist";
     });
   }
 
@@ -470,7 +500,7 @@ export class DeceptionEngine {
       activeSolvingAttempt: null,
       solvingResolutionNotice: null,
       lastForensicScientistUserId: null,
-      lastMurdererUserId: null,
+      lastWitnessUserId: null,
     });
 
 
@@ -1223,6 +1253,11 @@ export class DeceptionEngine {
     // ─── Obfuscate player roles ───
     if (isGameActive) {
       clone.players.forEach((p) => {
+        // Set murderer hint (always visible)
+        if (p.role === "Murderer") {
+          p.isMurdererHint = true;
+        }
+
         if (!me || p.userId !== me.userId) {
           // What can current viewer see about this player?
           const myRole = me?.role;

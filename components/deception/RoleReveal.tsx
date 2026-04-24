@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, useEffect, type CSSProperties } from "react";
 import { ArrowLeft, Check, Fingerprint, ShieldCheck } from "lucide-react";
 import type { DeceptionPlayer, DeceptionRole, DeceptionRoom } from "@/server/game/DeceptionTypes";
 import { getRoleImageUrl } from "@/utils/deceptionAssets";
@@ -71,6 +71,17 @@ export default function RoleReveal({
 }) {
   const [isRevealing, setIsRevealing] = useState(false);
   const [failedImageSource, setFailedImageSource] = useState<string | null>(null);
+  
+  // Prevent zooming on mobile
+  useEffect(() => {
+    const handleGestureStart = (e: Event) => {
+      e.preventDefault();
+    };
+    document.addEventListener("gesturestart", handleGestureStart, { capture: true });
+    return () => {
+      document.removeEventListener("gesturestart", handleGestureStart, { capture: true });
+    };
+  }, []);
 
   const connectedPlayers = gameState.players.filter(
     (player) => player.status === "connected" && !player.isSpectator,
@@ -105,7 +116,7 @@ export default function RoleReveal({
   } as CSSProperties;
 
   return (
-    <div className="deception-room-bg deception-role-reveal-shell flex h-dvh flex-col overflow-hidden">
+    <div className="deception-room-bg deception-role-reveal-shell flex h-dvh flex-col overflow-hidden touch-none">
       <div className="deception-role-backdrop-layer" aria-hidden />
 
       <button
