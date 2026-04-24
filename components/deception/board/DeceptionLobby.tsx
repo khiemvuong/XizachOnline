@@ -97,8 +97,8 @@ export default function DeceptionLobby({
         </div>
 
         <div className="deception-lobby-room-chip hidden min-w-0 items-center gap-2 md:flex">
-          <span className="text-[10px] uppercase tracking-[0.18em] text-(--on-surface-variant)">Room Code</span>
-          <span className="truncate text-sm font-black uppercase tracking-[0.14em] text-(--on-surface)">PHONG: {roomId}</span>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-(--on-surface-variant)">Room Code:</span>
+          <span className="truncate text-sm font-black uppercase tracking-[0.14em] text-(--on-surface)">{roomId}</span>
           <button onClick={copyRoomCode} className="deception-icon-btn h-8 w-8" title="Chia sẻ mã phòng">
             <Share2 className="h-4 w-4" />
           </button>
@@ -464,11 +464,6 @@ export default function DeceptionLobby({
               <span>Start Investigation</span>
               <Play className="h-4 w-4" fill="currentColor" />
             </button>
-            {!canStart && (
-              <p className="text-[11px] uppercase tracking-[0.14em] text-(--on-surface-variant)">
-                Cần 4-12 người chơi.
-              </p>
-            )}
           </div>
         </div>
       </footer>
