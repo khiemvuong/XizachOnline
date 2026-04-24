@@ -1,78 +1,98 @@
 /**
- * Deception card image URLs from GitHub raw CDN.
- * Repo: https://github.com/khiemvuong/deception-assets
- *   • deception_mean/  (1–90) — all .jpeg
- *   • deception_clue/  (1–70) — all .jpeg
+ * Deception card image URLs.
+ * Switched from GitHub to ImageKit for better performance/management.
  */
 
-const BASE =
-  "https://raw.githubusercontent.com/khiemvuong/deception-assets/main";
+// TODO: Replace with your actual ImageKit ID (e.g. "ik_user_123")
+const IMAGEKIT_ID = "khiemvuong"; 
+const BASE = `https://ik.imagekit.io/${IMAGEKIT_ID}/deception_card/deception_asset`;
 
-// Runtime cache: source URL -> object URL blob.
-// This avoids repeated network requests when cards are remounted/switched.
-const warmedBlobUrlBySource = new Map<string, string>();
+// Runtime cache: set of source URLs that have been "warmed" (loaded into browser cache).
+const warmedSources = new Set<string>();
 const inflightWarmBySource = new Map<string, Promise<void>>();
-
-// ─── Means: all .jpeg ───
 
 // ─── Public helpers ───
 
-/** Returns the GitHub raw URL for a Means card by its numeric ID (1–90). */
+// Default transformation for cards: width 400px, quality 70%
+const CARD_TR = "tr=w-400,q-70";
+// For roles/backgrounds: width 800px, quality 80%
+const LARGE_TR = "tr=w-800,q-80";
+
+/** Returns the URL for a Means card by its numeric ID (1–90). */
 export function getMeansImageUrl(id: number): string {
   if (id < 1 || id > 90) return "";
-  return `${BASE}/deception_mean/${id}.jpeg`;
+  return `${BASE}/deception_mean/${id}.jpeg?${CARD_TR}`;
 }
 
 /**
- * Returns the GitHub raw URL for a Clue card by its numeric ID (1–70).
+ * Returns the URL for a Clue card by its numeric ID (1–70).
  * All clue images are .jpeg.
  */
 export function getClueImageUrl(id: number): string {
   if (id < 1 || id > 200) return "";
-  return `${BASE}/deception_clue/${id}.jpeg`;
+  return `${BASE}/deception_clue/${id}.jpeg?${CARD_TR}`;
 }
 
-function resolveSourceUrl(sourceUrl: string): string {
-  return warmedBlobUrlBySource.get(sourceUrl) || sourceUrl;
+/**
+ * Returns the URL for a Role card (forensic, murderer, accomplice, witness, investigator).
+ */
+export function getRoleImageUrl(roleKey: string): string {
+  return `${BASE}/deception_roles/${roleKey.toLowerCase()}.jpeg?${CARD_TR}`;
 }
 
-async function warmSourceUrl(sourceUrl: string): Promise<void> {
+/**
+ * Returns the URL for background images (avalon, deception).
+ */
+export function getBackgroundUrl(name: string): string {
+  return `${BASE}/background/${name}.jpeg?${LARGE_TR}`;
+}
+
+async function warmSourceUrl(sourceUrl: string, retryCount = 0): Promise<void> {
   if (!sourceUrl || typeof window === "undefined") return;
-  if (warmedBlobUrlBySource.has(sourceUrl)) return;
+  if (warmedSources.has(sourceUrl)) return;
 
   const inflight = inflightWarmBySource.get(sourceUrl);
   if (inflight) return inflight;
 
-  const job = fetch(sourceUrl, { cache: "force-cache" })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`Image warm failed: ${response.status}`);
+  const job = (async () => {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          warmedSources.add(sourceUrl);
+          resolve();
+        };
+        img.onerror = () => reject(new Error("Load failed"));
+        img.src = sourceUrl;
+      });
+    } catch {
+      if (retryCount < 2) {
+        // Retry after a delay
+        await new Promise(r => setTimeout(r, 800 * (retryCount + 1)));
+        return warmSourceUrl(sourceUrl, retryCount + 1);
+      } else {
+        // If it still fails after all retries, we still mark as warmed
+        // to let the UI proceed (otherwise the Skeleton/Progress bar will hang).
+        warmedSources.add(sourceUrl);
+        console.warn(`[Assets] Failed to warm image after retries: ${sourceUrl}`);
       }
-      return response.blob();
-    })
-    .then((blob) => {
-      if (!warmedBlobUrlBySource.has(sourceUrl)) {
-        const blobUrl = URL.createObjectURL(blob);
-        warmedBlobUrlBySource.set(sourceUrl, blobUrl);
-      }
-    })
-    .catch(() => {
-      // Ignore warm failures and keep original source URL as fallback.
-    })
-    .finally(() => {
-      inflightWarmBySource.delete(sourceUrl);
-    });
+
+    }
+  })().finally(() => {
+    inflightWarmBySource.delete(sourceUrl);
+  });
 
   inflightWarmBySource.set(sourceUrl, job);
   return job;
 }
 
+
 export function getResolvedMeansImageUrl(id: number): string {
-  return resolveSourceUrl(getMeansImageUrl(id));
+  return getMeansImageUrl(id);
 }
 
 export function getResolvedClueImageUrl(id: number): string {
-  return resolveSourceUrl(getClueImageUrl(id));
+  return getClueImageUrl(id);
 }
 
 export function warmMeansImageUrl(id: number): Promise<void> {
@@ -84,9 +104,9 @@ export function warmClueImageUrl(id: number): Promise<void> {
 }
 
 export function isMeansImageWarmed(id: number): boolean {
-  return warmedBlobUrlBySource.has(getMeansImageUrl(id));
+  return warmedSources.has(getMeansImageUrl(id));
 }
 
 export function isClueImageWarmed(id: number): boolean {
-  return warmedBlobUrlBySource.has(getClueImageUrl(id));
+  return warmedSources.has(getClueImageUrl(id));
 }

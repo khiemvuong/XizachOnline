@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, ChevronDown, FileText, History, Eye, EyeOff, VolumeX, Volume2, ArrowLeft } from "lucide-react";
+import { Search, ChevronDown, History, Eye, EyeOff, VolumeX, Volume2, ArrowLeft } from "lucide-react";
 import TimerBar from "@/components/deception/TimerBar";
 import type { DeceptionRoom, DeceptionPlayer } from "@/server/game/DeceptionTypes";
 import type { PendingSolveSelection } from "../DiscussionBoard";
@@ -28,6 +28,7 @@ interface DiscussionHeaderProps {
   clearPendingSolveSelection: () => void;
   selectedMeansTitle: string;
   selectedClueTitle: string;
+  voiceChatNode?: React.ReactNode;
 }
 
 export default function DiscussionHeader({
@@ -40,7 +41,6 @@ export default function DiscussionHeader({
   setIsSolveSelectionDetailsOpen,
   selectedEvidenceCount,
   gameState,
-  setShowForensicClueBoard,
   setShowSolvingHistory,
   onToggleRoleMask,
   hideRolesUi,
@@ -54,12 +54,13 @@ export default function DiscussionHeader({
   clearPendingSolveSelection,
   selectedMeansTitle,
   selectedClueTitle,
+  voiceChatNode,
 }: DiscussionHeaderProps) {
   return (
     <section
       className={`deception-card relative z-40 overflow-visible rounded-xl ${isCompactViewport ? "p-1.5" : "p-2"}`}
     >
-      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5">
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             onClick={openSolveConfirmModal}
@@ -104,15 +105,6 @@ export default function DiscussionHeader({
 
         <div className="flex shrink-0 items-center gap-1">
           <button
-            onClick={() => setShowForensicClueBoard(true)}
-            className="deception-btn-outline shrink-0 inline-flex h-8 w-8 items-center justify-center p-0"
-            title="Mở Scene Board"
-            aria-label="Mở Scene Board"
-          >
-            <FileText className="h-3.5 w-3.5" />
-          </button>
-
-          <button
             onClick={() => setShowSolvingHistory(true)}
             className="deception-btn-outline shrink-0 inline-flex h-8 w-8 items-center justify-center p-0"
             title="Lịch sử Tố Cáo"
@@ -150,6 +142,11 @@ export default function DiscussionHeader({
           >
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
+          {voiceChatNode && (
+            <div className="ml-1 shrink-0">
+              {voiceChatNode}
+            </div>
+          )}
         </div>
       </div>
 

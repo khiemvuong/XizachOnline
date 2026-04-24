@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { Skull } from "lucide-react";
 import type { ClueCard, MeansCard } from "@/server/game/DeceptionTypes";
 
 type EvidenceCard = MeansCard | ClueCard;
@@ -168,9 +169,7 @@ export default function EvidencePreviewCard({
             : "border-(--deception-cyan) bg-[rgba(0,212,255,0.12)] shadow-[0_0_0_1px_rgba(0,212,255,0.22),5px_5px_16px_rgba(0,0,0,0.5)]"
           : "border-(--deception-border) bg-[rgba(10,14,22,0.5)]"
       } ${selected
-          ? isMeans
-            ? "ring-2 ring-(--deception-amber) shadow-[0_0_0_1px_rgba(255,184,0,0.46),0_0_16px_rgba(255,184,0,0.3),5px_5px_16px_rgba(0,0,0,0.5)]"
-            : "ring-2 ring-(--deception-cyan) shadow-[0_0_0_1px_rgba(0,212,255,0.42),0_0_16px_rgba(0,212,255,0.3),5px_5px_16px_rgba(0,0,0,0.5)]"
+          ? "ring-2 ring-red-500 shadow-[0_0_0_1px_rgba(239,68,68,0.46),0_0_16px_rgba(239,68,68,0.3),5px_5px_16px_rgba(0,0,0,0.5)]"
           : ""
         }`}
     >
@@ -235,13 +234,25 @@ export default function EvidencePreviewCard({
 
       {selected && (
         <div
-          className={`pointer-events-none absolute -left-1 -top-1 z-25 rounded-md border px-1 md:px-1.5 py-0 md:py-0.5 text-[6px] md:text-[8px] font-black uppercase tracking-[0.12em] ${
-            isMeans
-              ? "border-(--deception-amber) bg-(--deception-amber) text-black"
-              : "border-(--deception-cyan) bg-(--deception-cyan) text-black"
-          }`}
+          className="pointer-events-none absolute inset-0 z-25 flex items-center justify-center"
         >
-          Đã chọn
+          {/* Subtle red vignette at corners */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_60%,rgba(220,38,38,0.15)_100%)]" />
+          
+          <div className="relative flex flex-col items-center">
+             <div className="-rotate-12 rounded border-2 border-red-500/80 bg-slate-900/90 px-2 py-1 shadow-xl backdrop-blur-sm">
+                <div className="flex items-center gap-1.5 text-red-500">
+                  <Skull className="h-5 w-5" fill="currentColor" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Mục tiêu</span>
+                </div>
+             </div>
+          </div>
+
+          {/* Crosshair corners */}
+          <div className="absolute left-1.5 top-1.5 h-3 w-3 border-l-2 border-t-2 border-red-500/60" />
+          <div className="absolute right-1.5 top-1.5 h-3 w-3 border-r-2 border-t-2 border-red-500/60" />
+          <div className="absolute bottom-1.5 left-1.5 h-3 w-3 border-b-2 border-l-2 border-red-500/60" />
+          <div className="absolute bottom-1.5 right-1.5 h-3 w-3 border-b-2 border-r-2 border-red-500/60" />
         </div>
       )}
 

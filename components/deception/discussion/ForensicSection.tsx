@@ -68,6 +68,7 @@ interface ForensicSectionProps {
   warmProgressLabel: string;
   forensicHintTiles: SceneTile[];
   socket: Socket | null;
+  voiceChatNode?: React.ReactNode;
 }
 
 export default function ForensicSection({
@@ -94,10 +95,9 @@ export default function ForensicSection({
   roleToneByRole,
   me,
   playerEvidenceViews,
-  playerReadyMap,
-  warmProgressLabel,
   forensicHintTiles,
   socket,
+  voiceChatNode,
 }: ForensicSectionProps) {
   const [showPauseModal, setShowPauseModal] = useState(false);
 
@@ -106,7 +106,7 @@ export default function ForensicSection({
       <section className="rounded-xl border border-white/10 bg-slate-900/82 p-3 shadow-2xl backdrop-blur-xl sm:p-4">
         <div className="flex flex-col gap-2.5 sm:gap-3">
           {/* Header row: Tabs, Timer, Tools */}
-          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5">
             <div className="flex shrink-0 items-center gap-1.5">
               <div className="inline-flex items-center gap-1 rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-1">
                 <button
@@ -179,6 +179,11 @@ export default function ForensicSection({
               >
                 <ArrowLeft className="h-4 w-4" />
               </button>
+              {voiceChatNode && (
+                <div className="ml-1 shrink-0">
+                  {voiceChatNode}
+                </div>
+              )}
             </div>
           </div>
 
@@ -254,24 +259,27 @@ export default function ForensicSection({
           </div>
         </div>
       </section>
-      {forensicTab === "hints" ? (
-        <section className={`deception-card rounded-xl ${isCompactViewport ? "p-2.5 pb-20" : "p-4"}`}>
-          <SceneBoard
-            tiles={forensicHintTiles}
-            variant="forensicNotes"
-            readOnly={gameState.state === "SOLVING_ATTEMPT"}
-            replacedTileIndex={gameState.replacedTileIndex}
-            onSelectOption={(tileId: string, optionIndex: number) => {
-              if (gameState.state === "SOLVING_ATTEMPT") return;
-              socket?.emit("placeMarker", {
-                tileId,
-                optionIndex,
-              });
-            }}
-          />
-        </section>
-      ) : (
-        <section className={`deception-card rounded-xl ${isCompactViewport ? "p-2.5 pb-20" : "p-3.5"}`}>
+      <section className={`deception-card rounded-xl ${isCompactViewport ? "p-2.5 pb-20" : "p-4"} ${
+        forensicTab === "hints" ? "block" : "hidden"
+      }`}>
+        <SceneBoard
+          tiles={forensicHintTiles}
+          variant="forensicNotes"
+          readOnly={gameState.state === "SOLVING_ATTEMPT"}
+          replacedTileIndex={gameState.replacedTileIndex}
+          onSelectOption={(tileId: string, optionIndex: number) => {
+            if (gameState.state === "SOLVING_ATTEMPT") return;
+            socket?.emit("placeMarker", {
+              tileId,
+              optionIndex,
+            });
+          }}
+        />
+      </section>
+
+        <section className={`deception-card rounded-xl ${isCompactViewport ? "p-2.5 pb-20" : "p-3.5"} ${
+        forensicTab === "players" ? "block" : "hidden"
+      }`}>
           <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
             {[...activePlayers]
               .filter((p) => p.role !== "ForensicScientist")
@@ -341,8 +349,6 @@ export default function ForensicSection({
                 if (!view) return null;
                 const isActive = player.userId === resolvedFocusedPlayerUserId;
                 const playerHasNoCards = hideRolesUi && view.cardCount === 0;
-                const playerHasWarmCards = Boolean(playerReadyMap[player.userId]);
-                const playerNeedsWarmup = !playerHasNoCards && !playerHasWarmCards;
                 return (
                   <section
                     key={`forensic-players-view-${player.userId}`}
@@ -355,17 +361,8 @@ export default function ForensicSection({
                           Người chơi này không có bộ thẻ công khai.
                         </p>
                       </div>
-                    ) : playerNeedsWarmup ? (
-                      <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
-                        <div>
-                          <p className="text-base italic leading-tight text-(--on-surface-variant)" style={{ fontFamily: "var(--font-cormorant), var(--font-headline), serif" }}>
-                            Đang tải bộ chứng cứ của người chơi này. Dữ liệu người khác sẽ được nạp ngầm.
-                          </p>
-                          <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant)">Tiến độ warm cache: {warmProgressLabel} người chơi</p>
-                        </div>
-                      </div>
                     ) : (
-                      <div className="grid min-h-0 grid-cols-2 md:grid-cols-4 [@media(max-height:500px)]:grid-cols-4 gap-2 md:gap-3">
+                      <div className="grid min-h-0 grid-cols-2 sm:grid-cols-4 [@media(max-height:500px)]:grid-cols-4 gap-2 md:gap-3">
                         {view.means.map(({ card, imageUrl, rotationClass }) => {
                           const isMurderMeans =
                             player.role === "Murderer" && card.id === selectedMeansForensic?.id;
@@ -416,7 +413,6 @@ export default function ForensicSection({
             </div>
           </article>
         </section>
-      )}
 
       {showPauseModal && (
         <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
