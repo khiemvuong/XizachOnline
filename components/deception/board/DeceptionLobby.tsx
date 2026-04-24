@@ -319,7 +319,7 @@ export default function DeceptionLobby({
           <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center lg:grid-cols-[minmax(0,1fr)_auto_auto]">
             <div className="rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-2.5">
               <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-(--on-surface-variant)">
-                <span className="deception-lobby-slider-label inline-flex items-center gap-1.5">
+                <span className="deception-lobby-slider-label inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[9px] sm:gap-1.5 sm:text-[11px]">
                   <Clock3 className="h-3.5 w-3.5" />
                   Discussion Time
                 </span>

@@ -240,20 +240,25 @@ export default function RoleReveal({
                     }`}
                   >
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-(--deception-cyan)">Liên Đới</p>
-                    {relatedIntel.length === 0 ? (
-                      <p className="mt-1 text-sm font-semibold leading-snug text-(--on-surface-variant)">Hồ sơ trắng. Không có phần tử liên quan.</p>
-                    ) : (
-                      <ul className="deception-role-related-list mt-2 space-y-2 flex-1 overflow-y-auto min-h-0 pr-1">
-                        {relatedIntel.map((intel) => (
-                          <li key={intel.userId} className="rounded-md border border-(--deception-border) bg-[rgba(255,255,255,0.02)] px-2.5 py-2">
-                            <div className="flex w-full items-center justify-between gap-2 text-sm">
-                              <span className="min-w-0 flex-1 truncate font-bold text-(--on-surface)">{intel.name}</span>
-                              <span className="shrink-0 text-[11px] font-black uppercase tracking-[0.18em] text-(--deception-cyan)">{intel.roleTitle}</span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    <ul className="deception-role-related-list mt-2 space-y-2 flex-1 overflow-y-auto min-h-0 pr-1">
+                      {relatedIntel.map((intel) => (
+                        <li key={intel.userId} className="rounded-md border border-(--deception-border) bg-[rgba(255,255,255,0.02)] px-2.5 py-2">
+                          <div className="flex w-full items-center justify-between gap-2 text-sm">
+                            <span className="min-w-0 flex-1 truncate font-bold text-(--on-surface)">{intel.name}</span>
+                            <span className="shrink-0 text-[11px] font-black uppercase tracking-[0.18em] text-(--deception-cyan)">{intel.roleTitle}</span>
+                          </div>
+                        </li>
+                      ))}
+                      {/* Fill up to 3 items with placeholders for visual consistency */}
+                      {Array.from({ length: Math.max(0, 3 - relatedIntel.length) }).map((_, idx) => (
+                        <li key={`placeholder-${idx}`} className="rounded-md border border-dashed border-(--deception-border)/30 bg-transparent px-2.5 py-2 opacity-30">
+                          <div className="flex w-full items-center justify-between gap-2 text-sm">
+                            <span className="font-medium italic text-(--on-surface-variant)">Chưa xác định...</span>
+                            <span className="text-[10px] uppercase tracking-widest text-(--on-surface-variant)/50">---</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
                   {!isRevealing && (

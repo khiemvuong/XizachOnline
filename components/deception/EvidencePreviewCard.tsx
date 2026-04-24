@@ -59,7 +59,7 @@ export default function EvidencePreviewCard({
     ? "object-cover grayscale-28 opacity-90 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100"
     : "object-cover opacity-95 saturate-110 contrast-105 transition-all duration-300 group-hover:saturate-125 group-hover:contrast-110";
 
-  const LONG_PRESS_MS = 260;
+  const LONG_PRESS_MS = 320;
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef(false);
   const loadedImageSrcRef = useRef(imageUrl);
@@ -161,8 +161,8 @@ export default function EvidencePreviewCard({
         // Prevent default context menu on long press for touch devices to allow custom long press
         if (onLongPress) e.preventDefault();
       }}
-      style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
-      className={`group relative h-full min-h-0 overflow-visible rounded-sm border p-1 md:p-1.5 shadow-[5px_5px_14px_rgba(0,0,0,0.45)] transition-transform duration-200 origin-top select-none ${rotationClass} ${
+      style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}
+      className={`group relative h-full min-h-0 overflow-visible rounded-sm border p-1 md:p-1.5 shadow-[5px_5px_14px_rgba(0,0,0,0.45)] transition-all duration-200 origin-top select-none active:scale-[0.98] ${onSelect ? "cursor-pointer" : ""} ${rotationClass} ${
         highlighted
           ? tone === "means"
             ? "border-(--deception-amber) bg-[rgba(255,184,0,0.12)] shadow-[0_0_0_1px_rgba(255,184,0,0.24),5px_5px_16px_rgba(0,0,0,0.5)]"
