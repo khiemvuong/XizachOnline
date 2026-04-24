@@ -234,6 +234,7 @@ export default function DiscussionBoard({
   onToggleRoleMask,
   onToggleBgm,
   onExit,
+  voiceChatNode,
 }: {
   gameState: DeceptionRoom;
   me?: DeceptionPlayer;
@@ -244,6 +245,7 @@ export default function DiscussionBoard({
   onToggleRoleMask: () => void;
   onToggleBgm: () => void;
   onExit: () => void;
+  voiceChatNode?: React.ReactNode;
 }) {
   const [showChat, setShowChat] = useState(false);
   const [chatText, setChatText] = useState("");
@@ -297,7 +299,6 @@ export default function DiscussionBoard({
   const canChat = true;
   const {
     ready: playerCardsReady,
-    priorityReady: selfCardsReady,
     playerReadyMap,
   } = usePreloadCardImages(gameState.players, {
     priorityUserId: me?.userId,
@@ -306,7 +307,6 @@ export default function DiscussionBoard({
     me &&
     !isForensic &&
     me.hasBadge &&
-    selfCardsReady &&
     gameState.state === "DISCUSSION" &&
     !gameState.activeSolvingAttempt,
   );
@@ -490,11 +490,14 @@ export default function DiscussionBoard({
   ) => {
     withAccusedSelectionBase(accusedPlayer, (base) => ({
       ...base,
-      means: {
-        id: card.id,
-        card,
-        imageUrl,
-      },
+      means:
+        base.means?.id === card.id
+          ? null
+          : {
+              id: card.id,
+              card,
+              imageUrl,
+            },
     }));
   };
 
@@ -505,11 +508,14 @@ export default function DiscussionBoard({
   ) => {
     withAccusedSelectionBase(accusedPlayer, (base) => ({
       ...base,
-      clue: {
-        id: card.id,
-        card,
-        imageUrl,
-      },
+      clue:
+        base.clue?.id === card.id
+          ? null
+          : {
+              id: card.id,
+              card,
+              imageUrl,
+            },
     }));
   };
 
@@ -657,9 +663,9 @@ export default function DiscussionBoard({
   );
 
   const shouldScaleNonForensicLayout =
-    !isForensic && viewportWidth > 0 && viewportWidth <= 1200;
-  const isCompactViewport = viewportWidth > 0 && viewportWidth <= 1200;
-  const isDesktopWideViewport = viewportWidth > 1200;
+    !isForensic && viewportWidth > 0 && viewportWidth <= 1600;
+  const isCompactViewport = viewportWidth > 0 && viewportWidth <= 1400;
+  const isDesktopWideViewport = viewportWidth > 1400;
   const shouldShowSolveSelectionDetails = Boolean(isSolveSelectionDetailsOpen);
   const selectedMeansTitle = getEvidenceTitle(
     effectivePendingSolveSelection?.means?.card,
@@ -722,6 +728,7 @@ export default function DiscussionBoard({
           clearPendingSolveSelection={clearPendingSolveSelection}
           selectedMeansTitle={selectedMeansTitle}
           selectedClueTitle={selectedClueTitle}
+          voiceChatNode={voiceChatNode}
         />
       )}
 
@@ -755,6 +762,7 @@ export default function DiscussionBoard({
             playerReadyMap={playerReadyMap}
             warmProgressLabel={warmProgressLabel}
             setZoomedCard={setZoomedCard}
+            voiceChatNode={voiceChatNode}
           />
         ) : (
           <NonForensicSection

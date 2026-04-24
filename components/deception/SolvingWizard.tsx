@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Skull, X } from "lucide-react";
 import type { ClueCard, DeceptionPlayer, MeansCard } from "@/server/game/DeceptionTypes";
 import {
   getResolvedClueImageUrl,
@@ -73,13 +73,24 @@ function SelectableCard({
         {isMeans ? "Means" : "Clue"} #{String(id).padStart(2, "0")}
       </div>
 
-      {/* Selected checkmark */}
+      {/* Selected indicator */}
       {selected && (
         <div
-          className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full"
-          style={{ background: accentColor }}
+          className="absolute inset-0 z-20 flex items-center justify-center"
         >
-          <Check className="h-3 w-3 text-black" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_60%,rgba(220,38,38,0.15)_100%)]" />
+          
+          <div className="relative -rotate-12 rounded border-2 border-red-500/80 bg-slate-900/90 px-1.5 py-0.5 shadow-xl backdrop-blur-sm">
+             <div className="flex items-center gap-1 text-red-500">
+               <Skull className="h-4 w-4" fill="currentColor" />
+               <span className="text-[9px] font-black uppercase tracking-widest">Mục tiêu</span>
+             </div>
+          </div>
+
+          <div className="absolute left-1 top-1 h-2 w-2 border-l border-t border-red-500/60" />
+          <div className="absolute right-1 top-1 h-2 w-2 border-r border-t border-red-500/60" />
+          <div className="absolute bottom-1 left-1 h-2 w-2 border-b border-l border-red-500/60" />
+          <div className="absolute bottom-1 right-1 h-2 w-2 border-b border-r border-red-500/60" />
         </div>
       )}
 
@@ -189,7 +200,7 @@ export default function SolvingWizard({
                   return (
                     <button
                       key={player.userId}
-                      onClick={() => setAccusedUserId(player.userId)}
+                      onClick={() => setAccusedUserId(prev => prev === player.userId ? "" : player.userId)}
                       className="relative overflow-hidden rounded-xl border p-4 text-left transition-all duration-200"
                       style={{
                         borderColor: selected ? "#ff5a78" : "rgba(255,255,255,0.1)",
@@ -202,8 +213,8 @@ export default function SolvingWizard({
                       }}
                     >
                       {selected && (
-                        <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#ff5a78]">
-                          <Check className="h-3 w-3 text-white" />
+                        <div className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center">
+                          <Skull className="h-5 w-5 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" fill="currentColor" />
                         </div>
                       )}
                       <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-lg font-black text-white">
@@ -233,7 +244,7 @@ export default function SolvingWizard({
                     imageUrl={getResolvedMeansImageUrl(card.id)}
                     tone="means"
                     selected={meansId === card.id}
-                    onClick={() => setMeansId(card.id)}
+                    onClick={() => setMeansId(prev => prev === card.id ? null : card.id)}
                   />
                 ))}
               </div>
@@ -251,7 +262,7 @@ export default function SolvingWizard({
                     imageUrl={getResolvedClueImageUrl(card.id)}
                     tone="clue"
                     selected={clueId === card.id}
-                    onClick={() => setClueId(card.id)}
+                    onClick={() => setClueId(prev => prev === card.id ? null : card.id)}
                   />
                 ))}
               </div>

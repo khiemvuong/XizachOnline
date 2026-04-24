@@ -112,8 +112,9 @@ export function usePreloadCardImages(
         if (cancelled || player.userId === priorityUserId) continue;
 
         await new Promise<void>((resolve) => {
-          queueTick = setTimeout(resolve, 42);
+          queueTick = setTimeout(resolve, 150);
         });
+
 
         if (cancelled) return;
         await warmPlayer(player);

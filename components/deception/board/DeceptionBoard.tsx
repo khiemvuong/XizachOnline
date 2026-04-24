@@ -251,16 +251,16 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       : "Bạn có chắc muốn rời phòng hiện tại và quay về sảnh Deception không?";
   const returnConfirmLabel = returnIntent === "lobby" ? "Về lobby" : "Về sảnh";
 
-  const withReturnConfirm = (content: ReactNode, voicePosition: 'bottom-left' | 'bottom-right' = 'bottom-left') => (
+  const withReturnConfirm = (content: ReactNode, voicePosition: 'bottom-left' | 'bottom-right' | 'none' = 'bottom-left') => (
     <>
       {content}
-      {me && (
+      {me && voicePosition !== 'none' && (
         <VoiceChatPanel
           roomId={gameState?.id ?? roomId}
           userId={me.userId}
           playerName={me.name}
           players={connectedVoicePlayers}
-          position={voicePosition}
+          position={voicePosition as 'bottom-left' | 'bottom-right'}
           themeClass="[--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
         />
       )}
@@ -387,6 +387,17 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   }
 
   if (gameState.state === "DISCUSSION" || gameState.state === "SOLVING_ATTEMPT") {
+    const voiceChatNode = me ? (
+      <VoiceChatPanel
+        roomId={gameState?.id ?? roomId}
+        userId={me.userId}
+        playerName={me.name}
+        players={connectedVoicePlayers}
+        position="header-dropdown"
+        themeClass="deception-theme [--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
+      />
+    ) : null;
+
     return withReturnConfirm(
       <DiscussionBoard
         gameState={gameState}
@@ -398,7 +409,9 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         onToggleRoleMask={() => setRoleMaskEnabled((prev) => !prev)}
         onToggleBgm={() => setIsDiscussionBgmMuted((prev) => !prev)}
         onExit={() => requestReturn()}
-      />
+        voiceChatNode={voiceChatNode}
+      />,
+      'none'
     );
   }
 

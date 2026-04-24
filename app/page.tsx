@@ -2,12 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import useScreenWakeLock from "@/hooks/useScreenWakeLock";
+import { getBackgroundUrl } from "@/utils/deceptionAssets";
 
-const AVALON_BG =
-  "https://raw.githubusercontent.com/khiemvuong/deception-assets/main/background/avalon.jpeg";
-
-const DECEPTION_BG =
-  "https://raw.githubusercontent.com/khiemvuong/deception-assets/main/background/deception.jpeg";
+const AVALON_BG = getBackgroundUrl("avalon");
+const DECEPTION_BG = getBackgroundUrl("deception");
 
 export default function HomePage() {
   const router = useRouter();

@@ -58,9 +58,6 @@ export default function NonForensicSection({
   setFocusedPlayerUserId,
   selectableEvidencePlayers,
   playerEvidenceViews,
-  playerReadyMap,
-  playerCardsReady,
-  warmProgressLabel,
   isForensic,
   knownMurderer,
   revealedMurderSelection,
@@ -77,7 +74,7 @@ export default function NonForensicSection({
       <div
         className={`flex h-full w-full ${
           shouldScaleNonForensicLayout
-            ? "items-start justify-center overflow-hidden"
+            ? "items-center justify-center overflow-hidden"
             : "items-stretch justify-stretch"
         }`}
       >
@@ -93,7 +90,7 @@ export default function NonForensicSection({
                   width: `${nonForensicSceneWidth}px`,
                   height: `${nonForensicSceneHeight}px`,
                   transform: `scale(${nonForensicScale})`,
-                  transformOrigin: "top center",
+                  transformOrigin: "center center",
                 }
               : undefined
           }
@@ -222,8 +219,6 @@ export default function NonForensicSection({
 
                   const isActive = player.userId === resolvedFocusedPlayerUserId;
                   const playerHasNoCards = hideRolesUi && view.cardCount === 0;
-                  const playerHasWarmCards = Boolean(playerReadyMap[player.userId]);
-                  const playerNeedsWarmup = !playerHasNoCards && !playerHasWarmCards;
                   const canSelectPlayerForSolve = isForensic || player.userId !== me?.userId;
                   const playerIsKnownMurderer = Boolean(knownMurderer && player.userId === knownMurderer.userId);
 
@@ -245,20 +240,6 @@ export default function NonForensicSection({
                           >
                             Người chơi này không có bộ thẻ công khai.
                           </p>
-                        </div>
-                      ) : playerNeedsWarmup ? (
-                        <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
-                          <div>
-                            <p
-                              className="text-base italic leading-tight text-(--on-surface-variant)"
-                              style={{ fontFamily: "var(--font-cormorant), var(--font-headline), serif" }}
-                            >
-                              Đang nạp dữ liệu chứng cứ cho người chơi này. Chuyển tab chỉ đổi view sau khi cache hoàn tất.
-                            </p>
-                            <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant)">
-                              {playerCardsReady ? "Toàn bộ dữ liệu đã sẵn sàng" : `Tiến độ warm cache: ${warmProgressLabel} người chơi`}
-                            </p>
-                          </div>
                         </div>
                       ) : (
                         <div className="grid h-full min-h-0 grid-cols-4 auto-rows-fr gap-3 overflow-visible">

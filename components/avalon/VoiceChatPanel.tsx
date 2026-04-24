@@ -426,7 +426,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players, po
             }}
             className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 transition-all cursor-pointer text-xs font-bold tracking-wide shrink-0 ${
                 isConnected
-                    ? 'bg-black/40 border-(--primary)/35 text-(--primary) hover:bg-(--primary)/10'
+                    ? 'bg-black/40 border-(--primary)/35-[var(--primary)] hover:bg-(--primary)/10'
                     : 'bg-black/30 border-(--outline-variant)/30 text-(--on-surface-variant) hover:bg-white/5'
             } ${position !== 'header-dropdown' ? 'shadow-lg backdrop-blur-md rounded-full px-3' : 'h-8 w-8 justify-center p-0'}`}
             title="Voice Chat"
@@ -584,7 +584,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players, po
                     </div>
                     <button
                         onClick={() => setHasJoinedVoice(true)}
-                        className="px-5 py-2.5 bg-(--primary) text-white font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-[0_10px_20px_rgba(0,0,0,0.28)] hover:scale-105 active:scale-95 transition-all cursor-pointer mt-2"
+                        className="px-6 py-3 bg-(--primary) text-slate-900 font-black text-[11px] uppercase tracking-widest rounded-xl shadow-[0_10px_25px_rgba(0,0,0,0.4)] hover:scale-105 hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-2"
                     >
                         Tham Gia Ngay
                     </button>
@@ -609,7 +609,7 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players, po
     const panelCard = (
         <div
             className="pointer-events-auto flex flex-col rounded-2xl border border-(--primary)/20 shadow-2xl overflow-hidden max-h-[min(480px,80vh)]"
-            style={{ backgroundColor: 'rgba(8,16,30,0.96)', backdropFilter: 'blur(16px)' }}
+            style={{ backgroundColor: 'rgba(8,16,30,0.98)', backdropFilter: 'blur(20px)' }}
         >
             {panelInner}
         </div>

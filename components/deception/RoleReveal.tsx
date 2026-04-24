@@ -3,9 +3,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { ArrowLeft, Check, Fingerprint, ShieldCheck } from "lucide-react";
 import type { DeceptionPlayer, DeceptionRole, DeceptionRoom } from "@/server/game/DeceptionTypes";
-
-const ROLE_IMG_BASE =
-  "https://raw.githubusercontent.com/khiemvuong/deception-assets/main/deception_roles";
+import { getRoleImageUrl } from "@/utils/deceptionAssets";
 
 const ROLE_META: Record<
   DeceptionRole,
@@ -22,35 +20,35 @@ const ROLE_META: Record<
     team: "PHE ĐIỀU TRA",
     title: "PHÁP Y",
     quote: '"Xác chết không bao giờ nói dối, chỉ có kẻ thủ ác mới chối cãi."',
-    image: `${ROLE_IMG_BASE}/forensic.jpeg`,
+    image: getRoleImageUrl("forensic"),
   },
   Murderer: {
     color: "var(--deception-red)",
     team: "PHE SÁT NHÂN",
     title: "SÁT NHÂN",
     quote: '"Một tội ác hoàn hảo không tồn tại, chỉ là thám tử chưa đủ vĩ đại."',
-    image: `${ROLE_IMG_BASE}/murderer.jpeg`,
+    image: getRoleImageUrl("murderer"),
   },
   Accomplice: {
     color: "var(--deception-red)",
     team: "PHE SÁT NHÂN",
     title: "ĐỒNG PHẠM",
     quote: '"Bóng tối là đồng minh tốt nhất, và sự thật là kẻ thù phải bị che khuất."',
-    image: `${ROLE_IMG_BASE}/accomplice.jpeg`,
+    image: getRoleImageUrl("accomplice"),
   },
   Witness: {
     color: "#10b981",
     team: "PHE ĐIỀU TRA",
     title: "NHÂN CHỨNG",
     quote: '"Đôi mắt tôi đã thấy những gì không nên thấy, sự im lặng là cái giá của sinh tồn."',
-    image: `${ROLE_IMG_BASE}/witness.jpeg`,
+    image: getRoleImageUrl("witness"),
   },
   Investigator: {
     color: "#10b981",
     team: "PHE ĐIỀU TRA",
     title: "ĐIỀU TRA VIÊN",
     quote: '"Khi ta loại trừ những điều không thể, phần còn lại, dù khó tin đến đâu, cũng là sự thật."',
-    image: `${ROLE_IMG_BASE}/investigator.jpeg`,
+    image: getRoleImageUrl("investigator"),
   },
 };
 
@@ -269,8 +267,8 @@ export default function RoleReveal({
             </div>
 
             <footer className="deception-role-foot flex items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.08)] pt-2 text-[9px] font-bold uppercase tracking-[0.18em] text-(--on-surface-variant)">
-              <span className="truncate">Chuyên án: #{gameState.id}-HK</span>
               <span className="shrink-0">Mức Độ: Tối Cao</span>
+              <span className="truncate">Chuyên án: #{gameState.id}-HK</span>
             </footer>
           </div>
         </section>
