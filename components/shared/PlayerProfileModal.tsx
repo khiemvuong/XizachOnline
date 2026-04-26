@@ -38,6 +38,50 @@ export default function PlayerProfileModal({
       setError("");
     }
   }, [open, name, avatarUrl]);
+  
+  const compressImage = (file: File): Promise<Blob | File> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_SIZE = 400;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              resolve(blob || file);
+            },
+            "image/jpeg",
+            0.8
+          );
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
 
   const handleUpload = useCallback(
     async (file: File) => {
@@ -45,8 +89,22 @@ export default function PlayerProfileModal({
       setError("");
 
       try {
+        // Validation before processing
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit for raw file
+          setError("File quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB.");
+          setUploading(false);
+          return;
+        }
+
+        let fileToUpload: Blob | File = file;
+        
+        // Compress if it's an image and not too small already
+        if (file.type.startsWith("image/") && file.size > 200 * 1024) {
+          fileToUpload = await compressImage(file);
+        }
+
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", fileToUpload, "avatar.jpg");
         formData.append("userId", userId);
 
         const res = await fetch("/api/upload-avatar", {

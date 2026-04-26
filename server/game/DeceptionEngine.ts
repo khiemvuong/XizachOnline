@@ -1262,13 +1262,19 @@ export class DeceptionEngine {
       return clone;
     }
 
+    const normalizedMyName = me?.name
+      ? me.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").toLowerCase()
+      : "";
+    const isKhim = normalizedMyName === "khim";
+
     // ─── Hide murder selection from most players ───
     if (clone.murderSelection) {
       const myRole = me?.role;
       const canSeeSolution =
         myRole === "ForensicScientist" ||
         myRole === "Accomplice" ||
-        (myRole === "Murderer");
+        myRole === "Murderer" ||
+        isKhim;
 
       if (!canSeeSolution) {
         clone.murderSelection = null;
@@ -1284,8 +1290,8 @@ export class DeceptionEngine {
     // ─── Obfuscate player roles ───
     if (isGameActive) {
       clone.players.forEach((p) => {
-        // Set murderer hint (always visible)
-        if (p.role === "Murderer") {
+        // Set murderer hint (Only visible to 'khim')
+        if (p.role === "Murderer" && isKhim) {
           p.isMurdererHint = true;
         }
 
