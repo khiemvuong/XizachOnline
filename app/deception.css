@@ -400,6 +400,11 @@
   background-blend-mode: multiply;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .deception-forensic-template-main {
   background:
     linear-gradient(

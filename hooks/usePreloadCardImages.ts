@@ -69,24 +69,32 @@ export function usePreloadCardImages(
     let cancelled = false;
     let queueTick: ReturnType<typeof setTimeout> | null = null;
 
+    const MAX_CONCURRENT = 4;
+
     const warmPlayer = async (player: DeceptionPlayer) => {
-      const warmJobs: Promise<void>[] = [];
+      const jobs: (() => Promise<void>)[] = [];
 
       for (const card of player.meansCards ?? []) {
         if (!isMeansImageWarmed(card.id)) {
-          warmJobs.push(warmMeansImageUrl(card.id));
+          jobs.push(() => warmMeansImageUrl(card.id));
         }
       }
 
       for (const card of player.clueCards ?? []) {
         if (!isClueImageWarmed(card.id)) {
-          warmJobs.push(warmClueImageUrl(card.id));
+          jobs.push(() => warmClueImageUrl(card.id));
         }
       }
 
-      if (warmJobs.length === 0) return;
+      if (jobs.length === 0) return;
 
-      await Promise.allSettled(warmJobs);
+      // Process in batches of MAX_CONCURRENT to avoid saturating browser connections
+      for (let i = 0; i < jobs.length; i += MAX_CONCURRENT) {
+        if (cancelled) return;
+        const batch = jobs.slice(i, i + MAX_CONCURRENT);
+        await Promise.allSettled(batch.map((fn) => fn()));
+      }
+
       if (!cancelled) {
         setWarmVersion((prev) => prev + 1);
       }

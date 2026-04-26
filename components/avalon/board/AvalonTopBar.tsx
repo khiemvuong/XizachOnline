@@ -1,7 +1,6 @@
 import { type AvalonPlayer } from "@/server/game/AvalonTypes";
 import { type Socket } from "socket.io-client";
 import {
-  Edit2,
   LogOut,
   BookText,
   Volume2,
@@ -9,7 +8,7 @@ import {
   VenetianMask,
   EyeOff,
   Eye,
-  // AlertTriangle,
+  Settings,
   Hand,
 } from "lucide-react";
 
@@ -25,7 +24,6 @@ export default function AvalonTopBar({
   isLobbyMusicEnabled,
   setIsLobbyMusicEnabled,
   setIsRoleHidden,
-  setNewNameInput,
   setShowNameEditModal,
   setShowRules,
   setShowMyRole,
@@ -43,7 +41,6 @@ export default function AvalonTopBar({
   isLobbyMusicEnabled: boolean;
   setIsLobbyMusicEnabled: (v: boolean | ((prev: boolean) => boolean)) => void;
   setIsRoleHidden: (v: boolean | ((prev: boolean) => boolean)) => void;
-  setNewNameInput: (name: string) => void;
   setShowNameEditModal: (v: boolean) => void;
   setShowRules: (v: boolean) => void;
   setShowMyRole: (v: boolean) => void;
@@ -52,17 +49,14 @@ export default function AvalonTopBar({
 }) {
   return (
     <div className="absolute top-3 right-3 z-70 flex items-center gap-2">
-      {/* Edit Name Button — Lobby only */}
+      {/* Profile Settings Button — Lobby only */}
       {isLobby && (
         <button
-          onClick={() => {
-            setNewNameInput(me?.name ?? "");
-            setShowNameEditModal(true);
-          }}
+          onClick={() => setShowNameEditModal(true)}
           className="p-2 bg-black/40 backdrop-blur-md border border-(--primary)/30 rounded-full hover:bg-(--primary)/10 text-(--primary) hover:text-white transition-colors shadow-lg cursor-pointer"
-          title="Đổi tên"
+          title="Hồ Sơ (Profile)"
         >
-          <Edit2 className="w-5 h-5" />
+          <Settings className="w-5 h-5" />
         </button>
       )}
 

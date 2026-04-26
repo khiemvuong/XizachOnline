@@ -72,6 +72,7 @@ export interface DeceptionPlayer {
   id: string;
   userId: string;
   name: string;
+  avatarUrl?: string;
   role?: DeceptionRole;
   team?: DeceptionTeam;
   isHost: boolean;
@@ -141,5 +142,5 @@ export interface DeceptionRoom {
   witnessHuntResult?: "correct" | "incorrect";
   
   lastForensicScientistUserId?: string | null;
-  lastWitnessUserId?: string | null;
+  witnessCycleUserIds?: string[];
 }

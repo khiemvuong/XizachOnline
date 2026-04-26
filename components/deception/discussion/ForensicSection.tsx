@@ -8,6 +8,8 @@ import EvidencePreviewCard from "@/components/deception/EvidencePreviewCard";
 import SceneBoard from "@/components/deception/SceneBoard";
 import { getResolvedMeansImageUrl, getResolvedClueImageUrl } from "@/utils/deceptionAssets";
 import Image from "next/image";
+import AvatarDisplay from "@/components/shared/AvatarDisplay";
+import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 
 const FullCardDetail = ({ card, tone }: { card: MeansCard | ClueCard, tone: "means"|"clue" }) => {
   const isMeans = tone === "means";
@@ -100,6 +102,27 @@ export default function ForensicSection({
   voiceChatNode,
 }: ForensicSectionProps) {
   const [showPauseModal, setShowPauseModal] = useState(false);
+  const knownMurderer = gameState.players.find((p) => p.role === "Murderer");
+
+  // Swipe gesture for mobile
+  const validPlayers = [...activePlayers].filter((p) => p.role !== "ForensicScientist");
+  const currentIndex = validPlayers.findIndex((p) => p.userId === resolvedFocusedPlayerUserId);
+
+  const { ref: swipeRef, onTouchStart, onTouchEnd } = useSwipeGesture<HTMLElement>({
+    onSwipeLeft: () => {
+      if (validPlayers.length > 0) {
+        const nextIndex = currentIndex < validPlayers.length - 1 ? currentIndex + 1 : 0;
+        setFocusedPlayerUserId(validPlayers[nextIndex].userId);
+      }
+    },
+    onSwipeRight: () => {
+      if (validPlayers.length > 0) {
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : validPlayers.length - 1;
+        setFocusedPlayerUserId(validPlayers[prevIndex].userId);
+      }
+    },
+    threshold: 40,
+  });
 
   return (
     <div className="min-h-0 flex-1 space-y-2 overflow-auto sm:space-y-3">
@@ -197,8 +220,13 @@ export default function ForensicSection({
               <div className="flex items-center justify-between border-b border-(--deception-red)/20 pb-2">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-(--deception-red) animate-pulse shadow-[0_0_8px_rgba(255,81,103,0.8)]" />
-                  <p className="text-[11px] font-black uppercase tracking-[0.25em] text-(--deception-red-soft) sm:text-xs text-shadow-sm">
+                  <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.25em] text-(--deception-red-soft) sm:text-xs text-shadow-sm">
                     BỘ HỒ SƠ TỘI ÁC MẬT
+                    {!hideRolesUi && knownMurderer && (
+                      <span className="text-white/60 tracking-normal capitalize ml-1 border-l border-(--deception-red)/30 pl-2">
+                        {knownMurderer.name}
+                      </span>
+                    )}
                   </p>
                 </div>
                 {gameState.state === "DISCUSSION" && (
@@ -283,17 +311,11 @@ export default function ForensicSection({
           <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
             {[...activePlayers]
               .filter((p) => p.role !== "ForensicScientist")
-              .sort((a, b) => {
-                if (a.userId === me?.userId) return -1;
-                if (b.userId === me?.userId) return 1;
-                return 0;
-              })
               .map((player) => {
               const showForensicBadge = !hideRolesUi && player.role === "ForensicScientist";
               const accusationTone = accusationBadgeTone(player.hasBadge);
               const active = player.userId === resolvedFocusedPlayerUserId;
               const isSelf = player.userId === me?.userId;
-              const initial = (player.name?.trim().charAt(0) || "?").toUpperCase();
               const displayName = clampPlayerName(player.name, isCompactViewport ? 11 : 14);
               const roleTone = hideRolesUi ? roleToneByRole(undefined) : roleToneByRole(player.role);
               return (
@@ -307,7 +329,11 @@ export default function ForensicSection({
                   className={`relative shrink-0 w-[180px] sm:w-[220px] overflow-hidden rounded-lg border p-1.5 md:p-2 text-left transition ${active ? roleTone.activeCardClass : roleTone.idleCardClass}`}
                 >
                   <div className="flex items-center gap-1.5 md:gap-2">
-                    <div className={`flex h-7 w-7 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-full border text-[10px] md:text-sm font-black uppercase tracking-[0.08em] ${roleTone.avatarClass}`}>{initial}</div>
+                    <AvatarDisplay
+                      avatarUrl={player.avatarUrl}
+                      name={player.name}
+                      className={`h-7 w-7 md:h-10 md:w-10 border text-[10px] md:text-sm tracking-[0.08em] ${roleTone.avatarClass}`}
+                    />
                     <div className="min-w-0">
                       <p className="truncate text-[10px] md:text-xs font-bold uppercase tracking-[0.08em] text-(--on-surface)">
                         {displayName}
@@ -340,20 +366,29 @@ export default function ForensicSection({
               );
             })}
           </div>
-          <article className="mt-3 min-h-0 rounded-xl border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-3">
+          <article 
+            className="mt-3 min-h-0 rounded-xl border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-3 touch-pan-y"
+            ref={swipeRef}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+          >
             <div className="relative min-h-48">
-              {[...activePlayers]
-                .filter((p) => p.role !== "ForensicScientist")
-                .map((player) => {
-                const view = playerEvidenceViews.get(player.userId);
+              {(() => {
+                const activePlayer = [...activePlayers]
+                  .filter((p) => p.role !== "ForensicScientist")
+                  .find((p) => p.userId === resolvedFocusedPlayerUserId);
+
+                if (!activePlayer) return null;
+
+                const view = playerEvidenceViews.get(activePlayer.userId);
                 if (!view) return null;
-                const isActive = player.userId === resolvedFocusedPlayerUserId;
+
                 const playerHasNoCards = hideRolesUi && view.cardCount === 0;
+
                 return (
                   <section
-                    key={`forensic-players-view-${player.userId}`}
-                    aria-hidden={!isActive}
-                    className={isActive ? "relative transition-opacity duration-200" : "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"}
+                    key={`forensic-players-view-${activePlayer.userId}`}
+                    className="relative animate-[fadeIn_200ms_ease-out]"
                   >
                     {playerHasNoCards ? (
                       <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
@@ -365,10 +400,10 @@ export default function ForensicSection({
                       <div className="grid min-h-0 grid-cols-2 sm:grid-cols-4 [@media(max-height:500px)]:grid-cols-4 gap-2 md:gap-3">
                         {view.means.map(({ card, imageUrl, rotationClass }) => {
                           const isMurderMeans =
-                            player.role === "Murderer" && card.id === selectedMeansForensic?.id;
+                            activePlayer.role === "Murderer" && card.id === selectedMeansForensic?.id;
 
                           return (
-                            <div className="relative h-44 md:h-48 xl:h-56 [@media(max-height:500px)]:h-[110px]" key={`forensic-players-means-${player.userId}-${card.id}`}>
+                            <div className="relative h-44 md:h-48 xl:h-56 [@media(max-height:500px)]:h-[110px]" key={`forensic-players-means-${activePlayer.userId}-${card.id}`}>
                               <EvidencePreviewCard
                                 card={card}
                                 tone="means"
@@ -386,10 +421,10 @@ export default function ForensicSection({
                         })}
                         {view.clues.map(({ card, imageUrl, rotationClass }) => {
                           const isMurderClue =
-                            player.role === "Murderer" && card.id === selectedClueForensic?.id;
+                            activePlayer.role === "Murderer" && card.id === selectedClueForensic?.id;
 
                           return (
-                            <div className="relative h-44 md:h-48 xl:h-56 [@media(max-height:500px)]:h-[110px]" key={`forensic-players-clue-${player.userId}-${card.id}`}>
+                            <div className="relative h-44 md:h-48 xl:h-56 [@media(max-height:500px)]:h-[110px]" key={`forensic-players-clue-${activePlayer.userId}-${card.id}`}>
                               <EvidencePreviewCard
                                 card={card}
                                 tone="clue"
@@ -409,7 +444,7 @@ export default function ForensicSection({
                     )}
                   </section>
                 );
-              })}
+              })()}
             </div>
           </article>
         </section>

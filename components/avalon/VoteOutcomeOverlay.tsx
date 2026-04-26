@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+
 import { CheckCircle2, ShieldAlert, XCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { type AvalonPlayer, type AvalonRoom } from "@/server/game/AvalonTypes";
 
@@ -110,12 +110,7 @@ function VoteOutcomeOverlayContent({ outcome }: { outcome: VoteOutcome }) {
     );
   }
 
-  const splashImageSrc =
-    outcome.result === "success"
-      ? "/Image/mission_success.png"
-      : outcome.result === "fail"
-        ? "/Image/mission_failed.png"
-        : null;
+  const hasQuestSplash = outcome.result === "success" || outcome.result === "fail";
 
   const splashGradientClass =
     outcome.result === "success"
@@ -158,23 +153,29 @@ function VoteOutcomeOverlayContent({ outcome }: { outcome: VoteOutcome }) {
 
   return (
     <>
-      {showQuestSplash && splashImageSrc && (
+      {showQuestSplash && hasQuestSplash && (
         <div className="fixed inset-0 z-85 overflow-hidden animate-in fade-in duration-200 pointer-events-none">
           <div className="absolute inset-0 bg-black" />
           <div className={`absolute inset-0 bg-linear-to-b ${splashGradientClass}`} />
           <div className={`absolute inset-0 ${splashGlowClass}`} />
 
-          <div className="relative flex h-dvh min-h-svh w-screen items-center justify-center px-2 py-[8svh] sm:px-6 sm:py-[10vh]">
-            <div className="relative h-[min(84svh,980px)] w-[min(100vw,1900px)] sm:h-[min(88vh,1080px)]">
-              <Image
-                src={splashImageSrc}
-                alt={outcome.result === "success" ? "MISSION SUCCESS" : "MISSION FAILED"}
-                fill
-                priority
-                sizes="100vw"
-                className="object-contain drop-shadow-[0_0_34px_rgba(255,255,255,0.2)]"
-              />
-            </div>
+          <div className="relative flex h-dvh min-h-svh w-screen flex-col items-center justify-center px-4 py-8">
+            <h1
+              className={`font-headline text-5xl sm:text-7xl md:text-8xl lg:text-[10rem] font-black uppercase tracking-[0.15em] drop-shadow-[0_0_34px_rgba(255,255,255,0.3)] text-center ${
+                outcome.result === "success" ? "text-cyan-300 drop-shadow-[0_0_20px_rgba(34,211,238,0.5)]" : "text-rose-500 drop-shadow-[0_0_20px_rgba(244,63,94,0.5)]"
+              }`}
+            >
+              {outcome.result === "success" ? "MISSION SUCCESS" : "MISSION FAILED"}
+            </h1>
+            {outcome.result === "success" ? (
+              <p className="mt-4 text-sm sm:text-lg md:text-2xl font-bold uppercase tracking-[0.4em] text-cyan-100/80 drop-shadow-[0_0_12px_rgba(34,211,238,0.3)]">
+                Nhiệm vụ hoàn thành
+              </p>
+            ) : (
+              <p className="mt-4 text-sm sm:text-lg md:text-2xl font-bold uppercase tracking-[0.4em] text-rose-200/80 drop-shadow-[0_0_12px_rgba(244,63,94,0.3)]">
+                Nhiệm vụ thất bại
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -1,8 +1,10 @@
 import React from "react";
 import { BadgeCheck } from "lucide-react";
 import EvidencePreviewCard from "@/components/deception/EvidencePreviewCard";
+import AvatarDisplay from "@/components/shared/AvatarDisplay";
 import type { DeceptionPlayer, MeansCard, ClueCard } from "@/server/game/DeceptionTypes";
 import { RoleTone, PendingSolveSelection, PlayerEvidenceView, HintTileView } from "../DiscussionBoard";
+import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 
 interface NonForensicSectionProps {
   shouldScaleNonForensicLayout: boolean;
@@ -66,6 +68,26 @@ export default function NonForensicSection({
   handleSelectClueForSolve,
   forensicHints,
 }: NonForensicSectionProps) {
+  // Swipe gesture for mobile
+  const validPlayers = [...selectableEvidencePlayers].filter((p) => p.role !== "ForensicScientist");
+  const currentIndex = validPlayers.findIndex((p) => p.userId === resolvedFocusedPlayerUserId);
+
+  const { ref: swipeRef, onTouchStart, onTouchEnd } = useSwipeGesture<HTMLElement>({
+    onSwipeLeft: () => {
+      if (validPlayers.length > 0) {
+        const nextIndex = currentIndex < validPlayers.length - 1 ? currentIndex + 1 : 0;
+        setFocusedPlayerUserId(validPlayers[nextIndex].userId);
+      }
+    },
+    onSwipeRight: () => {
+      if (validPlayers.length > 0) {
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : validPlayers.length - 1;
+        setFocusedPlayerUserId(validPlayers[prevIndex].userId);
+      }
+    },
+    threshold: 40,
+  });
+
   return (
     <section
       ref={nonForensicViewportRef}
@@ -105,17 +127,11 @@ export default function NonForensicSection({
             >
               {[...activePlayers]
                 .filter((p) => p.role !== "ForensicScientist")
-                .sort((a, b) => {
-                  if (a.userId === me?.userId) return -1;
-                  if (b.userId === me?.userId) return 1;
-                  return 0;
-                })
                 .map((player: DeceptionPlayer) => {
                 const showForensicBadge = !hideRolesUi && player.role === "ForensicScientist";
                 const accusationTone = accusationBadgeTone(player.hasBadge);
                 const active = player.userId === resolvedFocusedPlayerUserId;
                 const isSelf = player.userId === me?.userId;
-                const initial = (player.name?.trim().charAt(0) || "?").toUpperCase();
                 const displayName = clampPlayerName(
                   player.name,
                   isDesktopWideViewport ? 11 : isCompactViewport ? 11 : 14,
@@ -138,11 +154,13 @@ export default function NonForensicSection({
                   >
 
                     <div className="flex items-center gap-2">
-                      <div
-                        className={`flex shrink-0 items-center justify-center rounded-full border font-black uppercase tracking-[0.08em] ${roleTone.avatarClass} ${isDesktopWideViewport ? "h-9 w-9 text-xs" : "h-11 w-11 text-sm"}`}
-                      >
-                        {initial}
-                      </div>
+                      <AvatarDisplay
+                        avatarUrl={player.avatarUrl}
+                        name={player.name}
+                        className={`border tracking-[0.08em] ${roleTone.avatarClass} ${
+                          isDesktopWideViewport ? "h-9 w-9 text-xs" : "h-11 w-11 text-sm"
+                        }`}
+                      />
 
                       <div className="min-w-0">
                         <p
@@ -211,28 +229,31 @@ export default function NonForensicSection({
           <section
             className={`grid min-h-0 flex-1 ${isDesktopWideViewport ? "gap-3 grid-cols-[minmax(0,1fr)_22rem]" : "gap-4 grid-cols-[minmax(0,1fr)_21rem]"}`}
           >
-            <article className="deception-card min-h-0 overflow-visible rounded-xl p-3">
+            <article 
+              className="deception-card min-h-0 overflow-visible rounded-xl p-3 touch-pan-y"
+              ref={swipeRef}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            >
               <div className="relative h-full min-h-0">
-                {[...selectableEvidencePlayers]
-                  .filter((p) => p.role !== "ForensicScientist")
-                  .map((player: DeceptionPlayer) => {
-                  const view = playerEvidenceViews.get(player.userId);
+                {(() => {
+                  const activePlayer = [...selectableEvidencePlayers]
+                    .filter((p) => p.role !== "ForensicScientist")
+                    .find((p) => p.userId === resolvedFocusedPlayerUserId);
+
+                  if (!activePlayer) return null;
+
+                  const view = playerEvidenceViews.get(activePlayer.userId);
                   if (!view) return null;
 
-                  const isActive = player.userId === resolvedFocusedPlayerUserId;
                   const playerHasNoCards = hideRolesUi && view.cardCount === 0;
-                  const canSelectPlayerForSolve = isForensic || player.userId !== me?.userId;
-                  const playerIsKnownMurderer = Boolean(knownMurderer && player.userId === knownMurderer.userId);
+                  const canSelectPlayerForSolve = isForensic || activePlayer.userId !== me?.userId;
+                  const playerIsKnownMurderer = Boolean(knownMurderer && activePlayer.userId === knownMurderer.userId);
 
                   return (
                     <section
-                      key={`discussion-players-view-${player.userId}`}
-                      aria-hidden={!isActive}
-                      className={
-                        isActive
-                          ? "relative h-full transition-opacity duration-200"
-                          : "pointer-events-none absolute inset-0 h-full opacity-0 transition-opacity duration-200"
-                      }
+                      key={`discussion-players-view-${activePlayer.userId}`}
+                      className="relative h-full animate-[fadeIn_200ms_ease-out]"
                     >
                       {playerHasNoCards ? (
                         <div className="flex h-full items-center justify-center rounded-lg border border-(--deception-border) bg-[rgba(255,255,255,0.03)] p-4 text-center">
@@ -251,12 +272,12 @@ export default function NonForensicSection({
                               Boolean(revealedMurderSelection) &&
                               card.id === revealedMurderSelection?.meansId;
                             const isSelectedMeans =
-                              effectivePendingSolveSelection?.accusedUserId === player.userId &&
+                              effectivePendingSolveSelection?.accusedUserId === activePlayer.userId &&
                               effectivePendingSolveSelection.means?.id === card.id;
 
                             return (
                               <EvidencePreviewCard
-                                key={`means-${player.userId}-${card.id}`}
+                                key={`means-${activePlayer.userId}-${card.id}`}
                                 card={card}
                                 tone="means"
                                 highlighted={isMurderMeans}
@@ -266,7 +287,7 @@ export default function NonForensicSection({
                                 imageUrl={imageUrl}
                                 onSelect={
                                   canSelectPlayerForSolve
-                                    ? (_c: MeansCard, _t: "means" | "clue", img: string) => handleSelectMeansForSolve(player, card, img)
+                                    ? (_c: MeansCard, _t: "means" | "clue", img: string) => handleSelectMeansForSolve(activePlayer, card, img)
                                     : undefined
                                 }
                                 onLongPress={(c: MeansCard, t: "means" | "clue", img: string) =>
@@ -283,12 +304,12 @@ export default function NonForensicSection({
                               Boolean(revealedMurderSelection) &&
                               card.id === revealedMurderSelection?.clueId;
                             const isSelectedClue =
-                              effectivePendingSolveSelection?.accusedUserId === player.userId &&
+                              effectivePendingSolveSelection?.accusedUserId === activePlayer.userId &&
                               effectivePendingSolveSelection.clue?.id === card.id;
 
                             return (
                               <EvidencePreviewCard
-                                key={`clue-${player.userId}-${card.id}`}
+                                key={`clue-${activePlayer.userId}-${card.id}`}
                                 card={card}
                                 tone="clue"
                                 highlighted={isMurderClue}
@@ -298,7 +319,7 @@ export default function NonForensicSection({
                                 imageUrl={imageUrl}
                                 onSelect={
                                   canSelectPlayerForSolve
-                                    ? (_c: ClueCard, _t: "means" | "clue", img: string) => handleSelectClueForSolve(player, card, img)
+                                    ? (_c: ClueCard, _t: "means" | "clue", img: string) => handleSelectClueForSolve(activePlayer, card, img)
                                     : undefined
                                 }
                                 onLongPress={(c: ClueCard, t: "means" | "clue", img: string) =>
@@ -312,7 +333,7 @@ export default function NonForensicSection({
                       )}
                     </section>
                   );
-                })}
+                })()}
               </div>
             </article>
 

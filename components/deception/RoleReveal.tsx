@@ -72,14 +72,56 @@ export default function RoleReveal({
   const [isRevealing, setIsRevealing] = useState(false);
   const [failedImageSource, setFailedImageSource] = useState<string | null>(null);
   
-  // Prevent zooming on mobile
+  // Prevent zooming on mobile and reset any stuck zoom state
   useEffect(() => {
+    // Force viewport to reset zoom level and prevent future zooming
+    const viewportMeta = document.querySelector('meta[name="viewport"]');
+    const originalContent = viewportMeta?.getAttribute("content") ?? "";
+    const noZoomContent = "width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no";
+    if (viewportMeta) {
+      viewportMeta.setAttribute("content", noZoomContent);
+    } else {
+      const meta = document.createElement("meta");
+      meta.name = "viewport";
+      meta.content = noZoomContent;
+      document.head.appendChild(meta);
+    }
+
+    // Safari iOS: gesturestart
     const handleGestureStart = (e: Event) => {
       e.preventDefault();
     };
+
+    // Chrome Android / all browsers: block pinch-to-zoom via multi-touch
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    // Block double-tap zoom
+    let lastTap = 0;
+    const handleTouchEnd = (e: TouchEvent) => {
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        e.preventDefault();
+      }
+      lastTap = now;
+    };
+
     document.addEventListener("gesturestart", handleGestureStart, { capture: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false, capture: true });
+    document.addEventListener("touchend", handleTouchEnd, { passive: false, capture: true });
+
     return () => {
       document.removeEventListener("gesturestart", handleGestureStart, { capture: true });
+      document.removeEventListener("touchmove", handleTouchMove, { capture: true } as EventListenerOptions);
+      document.removeEventListener("touchend", handleTouchEnd, { capture: true } as EventListenerOptions);
+
+      // Restore original viewport meta
+      if (viewportMeta && originalContent) {
+        viewportMeta.setAttribute("content", originalContent);
+      }
     };
   }, []);
 

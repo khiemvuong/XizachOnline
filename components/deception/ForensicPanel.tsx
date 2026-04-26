@@ -47,6 +47,9 @@ export default function ForensicPanel({
   onExit: () => void;
     }) {
   const isForensic = me?.role === "ForensicScientist";
+  const showRolesUi = isForensic || me?.isSpectator || gameState.state === "GAME_OVER";
+  const knownMurderer = showRolesUi ? gameState.players.find((p) => p.role === "Murderer") : undefined;
+
   const [zoomedCard, setZoomedCard] = useState<{
     card: MeansCard | ClueCard;
     tone: "means" | "clue";
@@ -172,8 +175,13 @@ export default function ForensicPanel({
                   <div className="relative z-10 flex flex-col gap-4 sm:gap-5">
                     <div className="flex items-center gap-2 border-b border-(--deception-red)/20 pb-2">
                       <div className="h-2 w-2 rounded-full bg-(--deception-red) animate-pulse shadow-[0_0_8px_rgba(255,81,103,0.8)]" />
-                      <p className="text-[11px] font-black uppercase tracking-[0.25em] text-(--deception-red-soft) sm:text-xs text-shadow-sm">
+                      <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.25em] text-(--deception-red-soft) sm:text-xs text-shadow-sm">
                         BỘ HỒ SƠ TỘI ÁC MẬT
+                        {knownMurderer && (
+                          <span className="text-white/60 tracking-normal capitalize ml-1 border-l border-(--deception-red)/30 pl-2">
+                            {knownMurderer.name}
+                          </span>
+                        )}
                       </p>
                     </div>
 
