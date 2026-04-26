@@ -404,11 +404,11 @@ export class AvalonEngine {
         },
       );
 
-      socket.on("joinRoom", ({ roomId, playerName, userId }) => {
+      socket.on("joinRoom", ({ roomId, playerName, userId, avatarUrl }) => {
         if (!userId) return;
         this.joinRoom(
           roomId,
-          { id: socket.id, userId, name: playerName },
+          { id: socket.id, userId, name: playerName, avatarUrl },
           socket,
         );
         socket.data.roomId = roomId;
@@ -558,6 +558,12 @@ export class AvalonEngine {
         }
       });
 
+      socket.on("updateAvatar", (avatarUrl: string | null) => {
+        if (socket.data.roomId && socket.data.userId) {
+          this.updateAvatar(socket.data.roomId, socket.data.userId, avatarUrl);
+        }
+      });
+
       socket.on("toggleRaiseHand", (isRaised?: boolean) => {
         if (socket.data.roomId && socket.data.userId) {
           this.toggleRaiseHand(
@@ -653,7 +659,7 @@ export class AvalonEngine {
 
   public joinRoom(
     roomId: string,
-    pData: { id: string; userId: string; name: string },
+    pData: { id: string; userId: string; name: string; avatarUrl?: string },
     socket: Socket,
   ) {
     if (!this.rooms.has(roomId)) {
@@ -671,6 +677,7 @@ export class AvalonEngine {
       // Reconnect logic — keep existing role/team/spectator status
       existingPlayer.id = pData.id;
       existingPlayer.name = pData.name;
+      if (pData.avatarUrl !== undefined) existingPlayer.avatarUrl = pData.avatarUrl;
       existingPlayer.status = "connected";
 
       // In LOBBY: if this player lost host (e.g. disconnected earlier), push to bottom
@@ -689,6 +696,7 @@ export class AvalonEngine {
         id: pData.id,
         userId: pData.userId,
         name: pData.name,
+        avatarUrl: pData.avatarUrl,
         isHost: isHost && !isMidGame, // don't give host to mid-game joiners
         status: "connected",
         isHandRaised: false,
@@ -1797,6 +1805,17 @@ export class AvalonEngine {
     const player = room.players.find((p) => p.userId === userId);
     if (player) {
       player.name = newName;
+      this.broadcastState(roomId);
+    }
+  }
+
+  public updateAvatar(roomId: string, userId: string, avatarUrl: string | null) {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    const player = room.players.find((p) => p.userId === userId);
+    if (player) {
+      player.avatarUrl = avatarUrl ?? undefined;
       this.broadcastState(roomId);
     }
   }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
 import { ArrowLeft, Loader2, ShieldAlert } from "lucide-react";
 import type { DeceptionRoom } from "@/server/game/DeceptionTypes";
+import { usePlayerProfile } from "@/hooks/usePlayerProfile";
 import RoleReveal from "@/components/deception/RoleReveal";
 import NightPhase from "@/components/deception/NightPhase";
 import DiscussionBoard from "@/components/deception/DiscussionBoard";
@@ -14,6 +15,7 @@ import ReturnConfirmModal from "@/components/deception/ReturnConfirmModal";
 import VoiceChatPanel from "@/components/avalon/VoiceChatPanel";
 import DeceptionLobby from "./DeceptionLobby";
 import ForensicPanel from "../ForensicPanel";
+import PlayerProfileModal from "@/components/shared/PlayerProfileModal";
 
 const DECEPTION_BGM_SOURCE = "/deception_audio/deception_bg_audio.opt.ogg";
 const DECEPTION_BGM_DEFAULT_VOLUME = 0.38;
@@ -75,8 +77,10 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
   const [showReturnConfirm, setShowReturnConfirm] = useState(false);
   const [returnIntent, setReturnIntent] = useState<ReturnIntent>("home");
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const initialized = useRef(false);
+  const { profile, updateProfile } = usePlayerProfile();
 
   const persistentIdentity = useMemo(
     () => {
@@ -94,15 +98,16 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         sessionStorage.setItem("xz_userId", storedUserId);
       }
 
-      const storedPlayerName = sessionStorage.getItem("deception_playerName");
+      // Prefer shared profile name, fall back to legacy session key
+      const storedPlayerName = profile.name || sessionStorage.getItem("deception_playerName");
 
       return {
         userId: storedUserId,
-        storedName: storedPlayerName,
+        storedName: storedPlayerName || null,
         suggestedName: storedPlayerName || "",
       };
     },
-    [hydrated],
+    [hydrated, profile.name],
   );
 
   const userId = persistentIdentity.userId;
@@ -122,7 +127,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
     socketio.on("connect", () => {
       setErrorMsg("");
       setSocket(socketio);
-      socketio.emit("joinRoom", { roomId, playerName, userId });
+      socketio.emit("joinRoom", { roomId, playerName, userId, avatarUrl: profile.avatarUrl });
     });
 
     socketio.on("stateUpdate", (state: DeceptionRoom) => {
@@ -145,7 +150,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       socketio.disconnect();
       initialized.current = false;
     };
-  }, [hydrated, hasJoined, playerName, roomId, userId]);
+  }, [hydrated, hasJoined, playerName, roomId, userId, profile.avatarUrl]);
 
   const me = useMemo(() => {
     if (!gameState || !userId) return undefined;
@@ -251,6 +256,17 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       : "Bạn có chắc muốn rời phòng hiện tại và quay về sảnh Deception không?";
   const returnConfirmLabel = returnIntent === "lobby" ? "Về lobby" : "Về sảnh";
 
+  const handleProfileSave = (newName: string, newAvatarUrl: string | null) => {
+    updateProfile({ name: newName, avatarUrl: newAvatarUrl });
+    if (socket) {
+      socket.emit("changeName", newName);
+      socket.emit("updateAvatar", newAvatarUrl);
+    }
+    sessionStorage.setItem("deception_playerName", newName);
+    setJoinedName(newName);
+    setNameDraft(newName);
+  };
+
   const withReturnConfirm = (content: ReactNode, voicePosition: 'bottom-left' | 'bottom-right' | 'none' = 'bottom-left') => (
     <>
       {content}
@@ -272,6 +288,14 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         confirmTone={returnIntent === "lobby" ? "red" : "cyan"}
         onCancel={closeReturnConfirm}
         onConfirm={confirmReturn}
+      />
+      <PlayerProfileModal
+        open={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        name={playerName || ""}
+        avatarUrl={profile.avatarUrl}
+        userId={userId}
+        onSave={handleProfileSave}
       />
     </>
   );
@@ -309,6 +333,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
             onClick={() => {
               const finalName = playerName.trim();
               sessionStorage.setItem("deception_playerName", finalName);
+              updateProfile({ name: finalName });
               setJoinedName(finalName);
               setNameDraft(finalName);
             }}
@@ -360,6 +385,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         setPlayerPings={setPlayerPings}
         onBackHome={() => router.push("/deception")}
         voiceChatNode={voiceChatNode}
+        onOpenProfile={() => setShowProfileModal(true)}
       />,
       "none"
     );

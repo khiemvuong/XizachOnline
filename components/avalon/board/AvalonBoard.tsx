@@ -17,27 +17,27 @@ import MyRoleModal from "../MyRoleModal";
 import SharedChatDropdown, { type ChatTheme } from "@/components/shared/ChatDropdown";
 import VoiceChatPanel from "../VoiceChatPanel";
 import MinionCinematicOverlays from "../MinionCinematicOverlays";
-import { AlertTriangle, X, Moon, Edit2 } from "lucide-react";
+import { AlertTriangle, X, Moon } from "lucide-react";
 
 import { useAvalonAudio } from "@/hooks/useAvalonAudio";
 import AvalonEntryScreen from "./AvalonEntryScreen";
 import AvalonLobby from "./AvalonLobby";
-// import AvalonSidebar from "./AvalonSidebar";
 import AvalonAssetPreloader from "../AvalonAssetPreloader";
 import PhaseTransitionOverlay from "./PhaseTransitionOverlay";
 import { AnimatePresence, motion } from "framer-motion";
 import AvalonTopBar from "./AvalonTopBar";
+import { usePlayerProfile } from "@/hooks/usePlayerProfile";
+import PlayerProfileModal from "@/components/shared/PlayerProfileModal";
 
 export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<AvalonRoom | null>(null);
-  const [playerName, setPlayerName] = useState("");
   const [hasJoined, setHasJoined] = useState(false);
 
   // Modals & Overlays state
   const [showRules, setShowRules] = useState(false);
   const [showNameEditModal, setShowNameEditModal] = useState(false);
-  const [newNameInput, setNewNameInput] = useState("");
+  const { profile, updateProfile } = usePlayerProfile();
   const [showMyRole, setShowMyRole] = useState(false);
   const [isRoleHidden, setIsRoleHidden] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -97,7 +97,8 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
     socketio.on("connect", () => {
       setSocket(socketio);
-      socketio.emit("joinRoom", { roomId, playerName, userId });
+      const nameToUse = profile.name || `Knight_${Math.floor(Math.random() * 1000)}`;
+      socketio.emit("joinRoom", { roomId, playerName: nameToUse, userId, avatarUrl: profile.avatarUrl });
     });
 
     socketio.on("avalonGameState", (state: AvalonRoom) => {
@@ -112,7 +113,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       socketio.disconnect();
       initialized.current = false;
     };
-  }, [hasJoined, roomId, playerName]);
+  }, [hasJoined, roomId, profile.name, profile.avatarUrl]);
 
   // Handle external rule open
   useEffect(() => {
@@ -181,9 +182,9 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         <AvalonAssetPreloader />
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
         <AvalonEntryScreen
-          playerName={playerName}
-          setPlayerName={setPlayerName}
           onRulesClick={() => setShowRules(true)}
+          onOpenProfile={() => setShowNameEditModal(true)}
+          profile={profile}
           onJoin={() => {
             unlockAudio();
             setHasJoined(true);
@@ -271,7 +272,6 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         isLobbyMusicEnabled={isLobbyMusicEnabled}
         setIsLobbyMusicEnabled={setIsLobbyMusicEnabled}
         setIsRoleHidden={setIsRoleHidden}
-        setNewNameInput={setNewNameInput}
         setShowNameEditModal={setShowNameEditModal}
         setShowRules={setShowRules}
         setShowMyRole={setShowMyRole}
@@ -305,6 +305,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
               roomId={roomId}
               playerPings={playerPings}
               setPlayerPings={setPlayerPings}
+              onOpenProfile={() => setShowNameEditModal(true)}
             />
           )}
 
@@ -410,65 +411,22 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
       <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
 
-      {/* Name Edit Modal */}
-      {showNameEditModal && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
-          <div className="w-full max-w-sm rounded-2xl bg-surface-dim-avalon border border-(--primary)/30 shadow-2xl p-6 flex flex-col gap-6 relative">
-            <button
-              onClick={() => setShowNameEditModal(false)}
-              className="absolute top-4 right-4 p-2 text-(--on-surface-variant) hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="text-center space-y-2 mt-2">
-              <div className="w-12 h-12 rounded-full border border-(--primary)/30 bg-(--primary)/10 flex items-center justify-center mx-auto mb-4">
-                <Edit2 className="w-6 h-6 text-(--primary)" />
-              </div>
-              <h3 className="text-xl font-headline font-extrabold text-(--primary) tracking-widest uppercase">
-                Đổi Tên
-              </h3>
-              <p className="text-sm text-(--on-surface-variant) italic">
-                Hãy chọn danh xưng mới của bạn.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-4 mb-2">
-              <input
-                type="text"
-                value={newNameInput}
-                onChange={(e) => setNewNameInput(e.target.value)}
-                maxLength={12}
-                className="w-full bg-[#0f172a]/80 border border-(--outline-variant) focus:ring-1 focus:ring-(--primary) rounded-xl py-3 px-5 text-white placeholder:text-slate-500 font-sans text-center font-bold tracking-widest text-lg outline-none transition-colors"
-                placeholder="Nhập tên mới..."
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newNameInput.trim()) {
-                    socket?.emit("changeName", newNameInput.trim());
-                    setShowNameEditModal(false);
-                  }
-                }}
-              />
-              <button
-                onClick={() => {
-                  if (newNameInput.trim()) {
-                    socket?.emit("changeName", newNameInput.trim());
-                    setShowNameEditModal(false);
-                  }
-                }}
-                disabled={!newNameInput.trim()}
-                className={`py-3.5 rounded-xl font-headline font-extrabold text-sm uppercase tracking-widest transition-all ${
-                  newNameInput.trim()
-                    ? "bg-(--primary) text-surface-dim-avalon hover:brightness-110 shadow-lg cursor-pointer"
-                    : "bg-(--surface-container-high) text-(--on-surface-variant)/50 cursor-not-allowed border border-(--outline-variant)/50"
-                }`}
-              >
-                Xác Nhận
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Name Edit Modal -> Replaced with Profile Modal */}
+      <PlayerProfileModal
+        open={showNameEditModal}
+        onClose={() => setShowNameEditModal(false)}
+        name={me?.name || ""}
+        avatarUrl={me?.avatarUrl ?? null}
+        userId={userId}
+        onSave={(newName, newAvatarUrl) => {
+          updateProfile({ name: newName, avatarUrl: newAvatarUrl });
+          if (socket) {
+            socket.emit("changeName", newName);
+            socket.emit("updateAvatar", newAvatarUrl);
+          }
+          setShowNameEditModal(false);
+        }}
+      />
 
       {me && !isSpectator && (
         <MyRoleModal isOpen={showMyRole} onClose={() => setShowMyRole(false)} gameState={gameState} me={me} />

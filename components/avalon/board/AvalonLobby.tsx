@@ -2,8 +2,9 @@ import { useState } from "react";
 import { type AvalonRoom, type AvalonPlayer } from "@/server/game/AvalonTypes";
 import { type Socket } from "socket.io-client";
 import { Copy, Hourglass, ChevronsRight, Plus, Settings, Wand2, Eye, Flame, VenetianMask, CloudFog, Swords, Gavel, Camera, Shield, CheckCircle2, Sparkles } from "lucide-react";
-import PingIndicator from "./PingIndicator";
 import { type LucideIcon } from "lucide-react";
+import AvatarDisplay from "@/components/shared/AvatarDisplay";
+import PingIndicator from "./PingIndicator";
 
 function RoleCard({ label, icon: Icon, isOn, onToggle, disabled, type, tag }: { label: string, icon: LucideIcon, isOn: boolean, onToggle: () => void, disabled: boolean, type: "good" | "evil", tag?: string }) {
   const isGood = type === "good";
@@ -34,14 +35,16 @@ export default function AvalonLobby({
   socket, 
   roomId, 
   playerPings, 
-  setPlayerPings 
+  setPlayerPings,
+  onOpenProfile
 }: { 
   gameState: AvalonRoom, 
   me?: AvalonPlayer, 
   socket: Socket | null, 
   roomId: string, 
   playerPings: Record<string, number>, 
-  setPlayerPings: React.Dispatch<React.SetStateAction<Record<string, number>>> 
+  setPlayerPings: React.Dispatch<React.SetStateAction<Record<string, number>>>,
+  onOpenProfile?: () => void
 }) {
   const isHost = me?.isHost;
   const connectedCount = gameState.players.filter(p => p.status === "connected" && !p.isSpectator).length;
@@ -121,12 +124,31 @@ export default function AvalonLobby({
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <span className="block text-[10px] text-(--secondary)/60 uppercase tracking-widest mb-1">Sĩ Số Tham Gia</span>
-            <span className="text-3xl font-headline text-(--on-surface)">
-              {connectedCount < 10 ? `0${connectedCount}` : connectedCount}
-              <span className="text-(--primary)/30 text-xl font-body">/10</span>
-            </span>
+          <div className="flex flex-col items-end gap-3">
+            <div className="text-right">
+              <span className="block text-[10px] text-(--secondary)/60 uppercase tracking-widest mb-1">Sĩ Số Tham Gia</span>
+              <span className="text-3xl font-headline text-(--on-surface)">
+                {connectedCount < 10 ? `0${connectedCount}` : connectedCount}
+                <span className="text-(--primary)/30 text-xl font-body">/10</span>
+              </span>
+            </div>
+            {/* Profile Button */}
+            <button
+              onClick={onOpenProfile}
+              className="flex items-center gap-2 px-3 py-1.5 bg-black/40 backdrop-blur-md rounded-xl border border-(--primary)/20 shadow-lg hover:bg-(--primary)/10 transition-colors group cursor-pointer relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-linear-to-r from-(--primary)/0 via-(--primary)/10 to-(--primary)/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+              <AvatarDisplay 
+                avatarUrl={me?.avatarUrl} 
+                name={me?.name || ""} 
+                size={20} 
+                className="group-hover:scale-105 transition-transform" 
+              />
+              <span className="font-headline font-extrabold text-(--primary) text-xs sm:text-sm tracking-widest uppercase truncate max-w-[100px]">
+                {me?.name}
+              </span>
+              <Settings className="w-3 h-3 text-(--primary)/50 group-hover:text-(--primary) group-hover:rotate-45 transition-all duration-300 ml-0.5" />
+            </button>
           </div>
         </div>
 
@@ -193,9 +215,7 @@ export default function AvalonLobby({
                      {idx + 1}
                    </div>
                    <div className={`w-2 h-8 rounded-full ${player.status === "connected" ? (player.isHost ? "bg-(--tertiary)" : "bg-(--primary)") : "bg-gray-600"}`}></div>
-                   <div className="w-10 h-10 rounded-full bg-(--primary-container)/10 border border-(--primary)/30 flex items-center justify-center text-(--primary) font-bold">
-                     {player.name.charAt(0).toUpperCase()}
-                   </div>
+                   <AvatarDisplay avatarUrl={player.avatarUrl} name={player.name} size={40} className="shrink-0" />
                    <div>
                      <p className={`text-(--on-surface) font-bold text-sm tracking-wide flex items-center gap-1.5 ${player.status === "disconnected" ? "text-gray-500 line-through" : ""}`}>
                        {player.name} {player.userId === me?.userId && "(Bạn)"}

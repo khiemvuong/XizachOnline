@@ -160,34 +160,46 @@ export class DeceptionEngine {
     const murdererPlayer = allowedCandidates[Math.floor(Math.random() * allowedCandidates.length)];
     murdererPlayer.role = "Murderer";
 
-    // 3. Determine Witness (Sequential)
+    // 3. Determine Witness (Randomized Turn-based)
     if (enableWitness) {
-      const witnessCandidates = activePlayers.filter(p => p.role !== "ForensicScientist" && p.role !== "Murderer");
+      const witnessCandidates = activePlayers.filter(
+        (p) => p.role !== "ForensicScientist" && p.role !== "Murderer"
+      );
+
       if (witnessCandidates.length > 0) {
-        let witnessIndex = -1;
-        if (room.lastWitnessUserId) {
-          const prevIdx = activePlayers.findIndex(p => p.userId === room.lastWitnessUserId);
-          if (prevIdx !== -1) {
-            // Find next available in rotation
-            for (let i = 1; i <= numPlayers; i++) {
-              const next = (prevIdx + i) % numPlayers;
-              if (activePlayers[next].role === undefined) {
-                witnessIndex = next;
-                break;
-              }
-            }
-          }
-        }
-        
-        if (witnessIndex === -1) {
-          witnessIndex = activePlayers.findIndex(p => p.role === undefined);
+        if (!room.witnessCycleUserIds) room.witnessCycleUserIds = [];
+
+        // Filter candidates who haven't been Witness in the current cycle
+        let availableInCycle = witnessCandidates.filter(
+          (p) => !room.witnessCycleUserIds!.includes(p.userId)
+        );
+
+        // If cycle is complete or no available candidates in cycle, reset it
+        if (availableInCycle.length === 0) {
+          room.witnessCycleUserIds = [];
+          availableInCycle = witnessCandidates;
         }
 
-        if (witnessIndex !== -1) {
-          const witnessPlayer = activePlayers[witnessIndex];
-          witnessPlayer.role = "Witness";
-          room.lastWitnessUserId = witnessPlayer.userId;
+        // To break the "Witness this round -> Forensic next round" pattern,
+        // we try to avoid picking the person who is most likely to be Forensic next.
+        // The next forensic index is (forensicIndex + 1) % numPlayers.
+        const nextForensicIndex = (forensicIndex + 1) % numPlayers;
+        const nextForensicPlayer = activePlayers[nextForensicIndex];
+        
+        let finalSelectionPool = availableInCycle;
+        if (availableInCycle.length > 1) {
+          // Avoid the next Forensic Scientist if we have other choices
+          finalSelectionPool = availableInCycle.filter(p => p.userId !== nextForensicPlayer.userId);
+          // If filtering everyone out (e.g. only 1 person left in cycle and they are next FS), 
+          // then just use the original pool.
+          if (finalSelectionPool.length === 0) finalSelectionPool = availableInCycle;
         }
+
+        // Pick a random player from the filtered pool
+        const witnessPlayer = finalSelectionPool[Math.floor(Math.random() * finalSelectionPool.length)];
+        
+        witnessPlayer.role = "Witness";
+        room.witnessCycleUserIds.push(witnessPlayer.userId);
       }
     }
 
@@ -322,11 +334,11 @@ export class DeceptionEngine {
         },
       );
 
-      socket.on("joinRoom", ({ roomId, playerName, userId }) => {
+      socket.on("joinRoom", ({ roomId, playerName, userId, avatarUrl }) => {
         if (!userId) return;
         this.joinRoom(
           roomId,
-          { id: socket.id, userId, name: playerName },
+          { id: socket.id, userId, name: playerName, avatarUrl },
           socket,
         );
         socket.data.roomId = roomId;
@@ -441,6 +453,12 @@ export class DeceptionEngine {
         }
       });
 
+      socket.on("updateAvatar", (avatarUrl: string | null) => {
+        if (socket.data.roomId && socket.data.userId) {
+          this.updateAvatar(socket.data.roomId, socket.data.userId, avatarUrl);
+        }
+      });
+
       socket.on("transferHost", (targetUserId: string) => {
         if (socket.data.roomId && socket.data.userId) {
           this.transferHost(socket.data.roomId, socket.data.userId, targetUserId);
@@ -500,7 +518,7 @@ export class DeceptionEngine {
       activeSolvingAttempt: null,
       solvingResolutionNotice: null,
       lastForensicScientistUserId: null,
-      lastWitnessUserId: null,
+      witnessCycleUserIds: [],
     });
 
 
@@ -508,7 +526,7 @@ export class DeceptionEngine {
 
   public joinRoom(
     roomId: string,
-    pData: { id: string; userId: string; name: string },
+    pData: { id: string; userId: string; name: string; avatarUrl?: string },
     socket: Socket,
   ) {
     if (!this.rooms.has(roomId)) {
@@ -523,6 +541,7 @@ export class DeceptionEngine {
     if (existing) {
       existing.id = pData.id;
       existing.name = pData.name;
+      if (pData.avatarUrl !== undefined) existing.avatarUrl = pData.avatarUrl;
       existing.status = "connected";
 
       if (room.state === "LOBBY" && !existing.isHost) {
@@ -539,6 +558,7 @@ export class DeceptionEngine {
         id: pData.id,
         userId: pData.userId,
         name: pData.name,
+        avatarUrl: pData.avatarUrl,
         isHost: isHost && !isMidGame,
         status: "connected",
         meansCards: [],
@@ -1117,6 +1137,17 @@ export class DeceptionEngine {
     const player = this.findPlayer(room, userId);
     if (player) {
       player.name = newName;
+      this.broadcastState(roomId);
+    }
+  }
+
+  public updateAvatar(roomId: string, userId: string, avatarUrl: string | null) {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    const player = this.findPlayer(room, userId);
+    if (player) {
+      player.avatarUrl = avatarUrl ?? undefined;
       this.broadcastState(roomId);
     }
   }

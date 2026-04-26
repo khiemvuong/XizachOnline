@@ -8,6 +8,7 @@ import {
   getResolvedMeansImageUrl,
 } from "@/utils/deceptionAssets";
 import EvidenceImageCard from "./EvidenceImageCard";
+import AvatarDisplay from "@/components/shared/AvatarDisplay";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -196,7 +197,6 @@ export default function SolvingWizard({
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 {candidates.map((player) => {
                   const selected = accusedUserId === player.userId;
-                  const initial = (player.name?.trim().charAt(0) || "?").toUpperCase();
                   return (
                     <button
                       key={player.userId}
@@ -217,9 +217,11 @@ export default function SolvingWizard({
                           <Skull className="h-5 w-5 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" fill="currentColor" />
                         </div>
                       )}
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-lg font-black text-white">
-                        {initial}
-                      </div>
+                      <AvatarDisplay
+                        avatarUrl={player.avatarUrl}
+                        name={player.name}
+                        className="h-12 w-12 border border-white/20 bg-white/10 text-lg text-white"
+                      />
                       <p className="mt-3 text-sm font-black uppercase tracking-[0.08em] text-(--on-surface)">
                         {player.name}
                       </p>

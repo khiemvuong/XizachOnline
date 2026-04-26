@@ -21,8 +21,8 @@ import {
   ScrollText,
   Star,
   UserPlus,
-  UserRound,
 } from "lucide-react";
+import AvatarDisplay from "@/components/shared/AvatarDisplay";
 
 function formatTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -39,6 +39,7 @@ export default function DeceptionLobby({
   setPlayerPings,
   onBackHome,
   voiceChatNode,
+  onOpenProfile,
 }: {
   gameState: DeceptionRoom;
   me?: DeceptionPlayer;
@@ -48,8 +49,8 @@ export default function DeceptionLobby({
   setPlayerPings: Dispatch<SetStateAction<Record<string, number>>>;
   onBackHome: () => void;
   voiceChatNode?: React.ReactNode;
+  onOpenProfile?: () => void;
 }) {
-  const [nameInput, setNameInput] = useState(me?.name || "");
   const [chatText, setChatText] = useState("");
   const [showRules, setShowRules] = useState(false);
 
@@ -77,13 +78,6 @@ export default function DeceptionLobby({
     navigator.clipboard.writeText(roomId).catch(() => {
       // Clipboard can be blocked by browser policy; keep this action non-blocking.
     });
-  };
-
-  const saveNickname = () => {
-    const normalized = nameInput.trim().slice(0, 14) || me?.name || "AGENT";
-    setNameInput(normalized);
-    localStorage.setItem("deception_playerName", normalized);
-    socket?.emit("changeName", normalized);
   };
 
   return (
@@ -140,17 +134,16 @@ export default function DeceptionLobby({
               </div>
 
               <div className="flex items-center gap-2">
-                <input
-                  value={nameInput}
-                  onChange={(event) => setNameInput(event.target.value.slice(0, 14))}
-                  className="deception-input w-44"
-                  placeholder="Mật danh"
-                />
                 <button
-                  onClick={saveNickname}
-                  className="deception-btn-outline px-3 py-2 text-[11px] uppercase tracking-[0.16em]"
+                  onClick={onOpenProfile}
+                  className="deception-btn-outline inline-flex items-center gap-2 px-3 py-2 text-[11px] uppercase tracking-[0.16em]"
                 >
-                  Lưu tên
+                  <AvatarDisplay
+                    avatarUrl={me?.avatarUrl}
+                    name={me?.name || ""}
+                    size={20}
+                  />
+                  <span>Hồ Sơ Của {me?.name || "Bạn"}</span>
                 </button>
               </div>
             </div>
@@ -170,7 +163,17 @@ export default function DeceptionLobby({
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <div className="deception-avatar h-9 w-9 shrink-0">
-                        {player.isSpectator ? <Camera className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
+                        {player.isSpectator ? (
+                          <div className="flex h-full w-full items-center justify-center rounded-full bg-black/40 text-[rgba(255,255,255,0.4)] border border-[rgba(255,255,255,0.1)]">
+                            <Camera className="h-4 w-4" />
+                          </div>
+                        ) : (
+                          <AvatarDisplay
+                            avatarUrl={player.avatarUrl}
+                            name={player.name}
+                            size={36}
+                          />
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-xs font-bold uppercase tracking-[0.08em] text-(--on-surface) sm:text-sm">

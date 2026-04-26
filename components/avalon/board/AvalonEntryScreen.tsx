@@ -1,15 +1,17 @@
-import { Edit2, ChevronsRight } from "lucide-react";
+import { ChevronsRight, Settings } from "lucide-react";
+import AvatarDisplay from "@/components/shared/AvatarDisplay";
+import { type PlayerProfile } from "@/hooks/usePlayerProfile";
 
 export default function AvalonEntryScreen({
-  playerName,
-  setPlayerName,
   onJoin,
   onRulesClick,
+  onOpenProfile,
+  profile,
 }: {
-  playerName: string;
-  setPlayerName: (name: string) => void;
   onJoin: () => void;
   onRulesClick: () => void;
+  onOpenProfile: () => void;
+  profile: PlayerProfile;
 }) {
   return (
     <div className="avalon-entry-screen font-body text-primary-avalon h-dvh overflow-hidden flex items-center justify-center relative z-0 p-4">
@@ -63,36 +65,42 @@ export default function AvalonEntryScreen({
           </div>
 
           <div className="avalon-entry-form rounded-2xl border border-(--outline-variant)/25 bg-[#0f172a]/45 p-4 sm:p-5 flex flex-col justify-center space-y-4">
-            <label className="block text-(--secondary) text-xs sm:text-sm uppercase tracking-tighter text-center">
-              Tên của bạn
-            </label>
-            <div className="relative group">
-              <input
-                className="w-full bg-[#0f172a]/80 border border-(--outline-variant) focus:ring-1 focus:ring-(--primary) rounded-xl py-3 sm:py-4 px-5 text-white placeholder:text-slate-500 font-sans text-center font-bold tracking-widest text-base sm:text-lg outline-none transition-colors"
-                placeholder="Nhập tên..."
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                maxLength={12}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && playerName.trim()) {
-                    onJoin();
-                  }
-                }}
-              />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-(--primary)/50" />
-              </div>
+            <div className="flex flex-col items-center gap-3">
+              <button
+                onClick={onOpenProfile}
+                className="group relative flex flex-col items-center gap-2 p-4 rounded-2xl border border-(--outline-variant)/30 bg-black/40 hover:bg-black/60 transition-all hover:border-(--primary)/50 cursor-pointer shadow-lg w-full"
+              >
+                <div className="absolute inset-0 bg-linear-to-br from-(--primary)/0 to-(--primary)/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                
+                <div className="relative">
+                  <AvatarDisplay 
+                    avatarUrl={profile.avatarUrl} 
+                    name={profile.name || "?"} 
+                    size={64} 
+                    className="border-2 border-(--primary)/40 group-hover:border-(--primary) transition-colors shadow-xl"
+                  />
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-(--primary) text-[#0f172a] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                    <Settings className="w-4 h-4" />
+                  </div>
+                </div>
+                
+                <div className="text-center mt-2 w-full">
+                  <div className="text-[10px] text-(--on-surface-variant)/70 uppercase tracking-widest mb-1">Danh xưng hiện tại</div>
+                  <div className="text-(--primary) font-headline font-bold text-lg tracking-wider truncate w-full px-2">
+                    {profile.name || "Chưa thiết lập"}
+                  </div>
+                </div>
+              </button>
             </div>
 
             <button
               onClick={() => {
-                if (playerName.trim()) onJoin();
+                if (profile.name.trim()) onJoin();
               }}
-              disabled={!playerName.trim()}
+              disabled={!profile.name.trim()}
               className={`px-12 py-3.5 rounded-xl font-headline font-extrabold text-sm transform transition-all tracking-widest uppercase flex items-center justify-center gap-3 w-full
                   ${
-                    playerName.trim()
+                    profile.name.trim()
                       ? "bg-primary-avalon hover:bg-white text-surface-dim-avalon shadow-[0_10px_30px_rgba(186,200,220,0.2)] active:scale-95 cursor-pointer"
                       : "bg-[#1e2b3b] text-[#768497] cursor-not-allowed border border-[#44474c]/50"
                   }`}
