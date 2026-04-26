@@ -7,7 +7,7 @@ const imagekit = new ImageKit({
   urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || "",
 });
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (Vercel limit is ~4.5MB)
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 // Simple in-memory rate limit (per deploy instance)
