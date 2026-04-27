@@ -78,6 +78,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const [showReturnConfirm, setShowReturnConfirm] = useState(false);
   const [returnIntent, setReturnIntent] = useState<ReturnIntent>("home");
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [slackerNames, setSlackerNames] = useState<string[] | null>(null);
 
   const initialized = useRef(false);
   const { profile, updateProfile } = usePlayerProfile();
@@ -140,6 +141,10 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
 
     socketio.on("deceptionError", (msg: string) => {
       setErrorMsg(msg || "Không thể vào phòng.");
+    });
+
+    socketio.on("slackerAlert", (names: string[]) => {
+      setSlackerNames(names);
     });
 
     socketio.on("connect_error", () => {
@@ -396,6 +401,9 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       <RoleReveal
         gameState={gameState}
         me={me}
+        socket={socket}
+        slackerNames={slackerNames}
+        onSlackerDismiss={() => setSlackerNames(null)}
         onReady={() => socket?.emit("playerReady")}
         onExit={() => requestReturn()}
       />
