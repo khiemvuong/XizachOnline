@@ -141,24 +141,66 @@ export class DeceptionEngine {
     room.lastForensicScientistUserId = forensicPlayer.userId;
     forensicPlayer.role = "ForensicScientist";
 
-    // 2. Determine Murderer (Random with name restriction)
-    const murdererCandidates = activePlayers.filter(p => p.role !== "ForensicScientist");
-    const restrictedNames = ["khim", "minhtu"];
-    
-    let allowedCandidates = murdererCandidates.filter(p => {
-      const normalized = p.name
-        .normalize("NFD")
+    // 2. Determine Murderer
+    //
+    // Rule A – permanent blacklist: "khim" and "minhtu" can NEVER be Murderer / Accomplice.
+    // Rule B – quota rule: anyone whose normalised name contains "thao" OR equals "chu"
+    //          must be Murderer on average at least once every 3 games.
+    //          The quota is tracked per-userId in room.murdererQuotaMap.
+    //          A player is "due" when their murdererCount < ceil(gamesPlayed / 3).
+
+    /** Strip Vietnamese diacritics, spaces, and lowercase */
+    const normalize = (s: string) =>
+      s.normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g, "")
         .toLowerCase();
-      return !restrictedNames.includes(normalized);
+
+    const BLACKLISTED = ["khim", "minhtu"];
+    const isBlacklisted = (p: DeceptionPlayer) => BLACKLISTED.includes(normalize(p.name));
+    const isThaoGroup   = (p: DeceptionPlayer) => {
+      const n = normalize(p.name);
+      return n.includes("thao") || n === "chu";
+    };
+
+    if (!room.murdererQuotaMap) room.murdererQuotaMap = {};
+
+    // Candidates = everyone except FS
+    const murdererCandidates = activePlayers.filter(p => p.role !== "ForensicScientist");
+
+    // Update gamesPlayed for all thao-group candidates
+    for (const p of murdererCandidates.filter(isThaoGroup)) {
+      if (!room.murdererQuotaMap[p.userId]) {
+        room.murdererQuotaMap[p.userId] = { gamesPlayed: 0, murdererCount: 0 };
+      }
+      room.murdererQuotaMap[p.userId].gamesPlayed++;
+    }
+
+    // Among thao-group: find those who are "due" (murdererCount < ceil(gamesPlayed/3))
+    const thaoCandidates = murdererCandidates.filter(isThaoGroup);
+    const dueThaoPlayers = thaoCandidates.filter(p => {
+      const q = room.murdererQuotaMap![p.userId];
+      return q && q.murdererCount < Math.ceil(q.gamesPlayed / 3);
     });
 
-    // If everyone is restricted, fallback to all candidates
-    if (allowedCandidates.length === 0) allowedCandidates = murdererCandidates;
+    let murdererPlayer: DeceptionPlayer;
 
-    const murdererPlayer = allowedCandidates[Math.floor(Math.random() * allowedCandidates.length)];
+    if (dueThaoPlayers.length > 0) {
+      // Force-pick one of the due thao players at random
+      murdererPlayer = dueThaoPlayers[Math.floor(Math.random() * dueThaoPlayers.length)];
+    } else {
+      // Normal random selection — excluding blacklisted players
+      let allowedCandidates = murdererCandidates.filter(p => !isBlacklisted(p));
+      if (allowedCandidates.length === 0) allowedCandidates = murdererCandidates;
+      murdererPlayer = allowedCandidates[Math.floor(Math.random() * allowedCandidates.length)];
+    }
+
     murdererPlayer.role = "Murderer";
+
+    // Record quota if this player is in the thao-group
+    if (isThaoGroup(murdererPlayer) && room.murdererQuotaMap[murdererPlayer.userId]) {
+      room.murdererQuotaMap[murdererPlayer.userId].murdererCount++;
+    }
 
     // 3. Determine Witness (Randomized Turn-based)
     if (enableWitness) {
@@ -204,16 +246,23 @@ export class DeceptionEngine {
     }
 
     // 4. Assign remaining roles (Accomplice and Investigators)
+    // Blacklisted players (khim/minhtu) must not receive Accomplice if avoidable.
+    const unassigned = activePlayers.filter(p => p.role === undefined);
+    const allowedUnassigned   = unassigned.filter(p => !isBlacklisted(p));
+    const blacklistedUnassigned = unassigned.filter(p => isBlacklisted(p));
+
     const remainingRoles: DeceptionRole[] = [];
     if (enableAccomplice) remainingRoles.push("Accomplice");
     for (let i = 0; i < investigators; i++) remainingRoles.push("Investigator");
     shuffle(remainingRoles);
 
+    // Assign allowed players first so Accomplice (if present) lands on non-blacklisted
+    [...allowedUnassigned, ...blacklistedUnassigned].forEach((p) => {
+      p.role = remainingRoles.pop()!;
+    });
+
     activePlayers.forEach((p) => {
-      if (p.role === undefined) {
-        p.role = remainingRoles.pop()!;
-      }
-      p.team = roleToTeam(p.role);
+      p.team = roleToTeam(p.role!);
       p.isReady = false;
       p.hasBadge = p.role !== "ForensicScientist";
     });
@@ -440,6 +489,20 @@ export class DeceptionEngine {
         }
       });
 
+      // Broadcast "shame" popup to all players during ROLE_REVEAL
+      socket.on("slackerAlert", () => {
+        const roomId = socket.data.roomId;
+        if (!roomId) return;
+        const room = this.rooms.get(roomId);
+        if (!room || room.state !== "ROLE_REVEAL") return;
+
+        const notReadyNames = room.players
+          .filter(p => !p.isSpectator && p.status === "connected" && !p.isReady)
+          .map(p => p.name);
+
+        this.io.to(roomId).emit("slackerAlert", notReadyNames);
+      });
+
       // Return to lobby / restart
       socket.on("returnToLobby", () => {
         if (socket.data.roomId && socket.data.userId) {
@@ -519,6 +582,7 @@ export class DeceptionEngine {
       solvingResolutionNotice: null,
       lastForensicScientistUserId: null,
       witnessCycleUserIds: [],
+      murdererQuotaMap: {},
     });
 
 

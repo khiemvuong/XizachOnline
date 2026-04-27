@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, type CSSProperties } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
 import { ArrowLeft, Check, Fingerprint, ShieldCheck } from "lucide-react";
 import type { DeceptionPlayer, DeceptionRole, DeceptionRoom } from "@/server/game/DeceptionTypes";
 import { getRoleImageUrl } from "@/utils/deceptionAssets";
@@ -61,16 +61,66 @@ type RelatedIntelEntry = {
 export default function RoleReveal({
   gameState,
   me,
+  socket,
+  slackerNames,
+  onSlackerDismiss,
   onReady,
   onExit,
 }: {
   gameState: DeceptionRoom;
   me?: DeceptionPlayer;
+  socket: import("socket.io-client").Socket | null;
+  slackerNames: string[] | null;
+  onSlackerDismiss: () => void;
   onReady: () => void;
   onExit: () => void;
 }) {
   const [isRevealing, setIsRevealing] = useState(false);
   const [failedImageSource, setFailedImageSource] = useState<string | null>(null);
+  const [holdProgress, setHoldProgress] = useState(0); // 0–100
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdRafRef = useRef<number | null>(null);
+  const holdStartRef = useRef<number>(0);
+  const HOLD_DURATION = 2000;
+
+  const SLACKER_LINES = [
+    "Lẹ cái tay lên!",
+    "Ngủ gật hả??",
+    "Đang làm gì vậy trời!",
+    "Mấy con ma này đi đâu rồi?",
+    "Cả phòng chờ mấy người đó!",
+    "Tỉnh dậy đi cha!",
+    "Nhanh lên không thì về nhà đi!",
+  ];
+
+  const startHold = useCallback(() => {
+    holdStartRef.current = Date.now();
+    setHoldProgress(0);
+
+    const tick = () => {
+      const elapsed = Date.now() - holdStartRef.current;
+      const progress = Math.min((elapsed / HOLD_DURATION) * 100, 100);
+      setHoldProgress(progress);
+      if (progress < 100) {
+        holdRafRef.current = requestAnimationFrame(tick);
+      }
+    };
+    holdRafRef.current = requestAnimationFrame(tick);
+
+    holdTimerRef.current = setTimeout(() => {
+      // Broadcast to server — server will emit back to all clients
+      socket?.emit("slackerAlert");
+      setHoldProgress(0);
+    }, HOLD_DURATION);
+  }, [socket]);
+
+  const cancelHold = useCallback(() => {
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    if (holdRafRef.current) cancelAnimationFrame(holdRafRef.current);
+    holdTimerRef.current = null;
+    holdRafRef.current = null;
+    setHoldProgress(0);
+  }, []);
   
   // Prevent zooming on mobile and reset any stuck zoom state
   useEffect(() => {
@@ -129,6 +179,19 @@ export default function RoleReveal({
     (player) => player.status === "connected" && !player.isSpectator,
   );
   const readyCount = connectedPlayers.filter((player) => player.isReady).length;
+
+  // Auto-dismiss slacker popup after 5s
+  useEffect(() => {
+    if (!slackerNames) return;
+    const t = setTimeout(() => onSlackerDismiss(), 3000);
+    return () => clearTimeout(t);
+  }, [slackerNames, onSlackerDismiss]);
+
+  const randomSlackerLine = useMemo(
+    () => SLACKER_LINES[Math.floor(Math.random() * SLACKER_LINES.length)],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slackerNames],
+  );
 
   const myRole = me?.role;
   const meta = myRole ? ROLE_META[myRole] : undefined;
@@ -311,7 +374,29 @@ export default function RoleReveal({
                 </section>
 
                 <div className="deception-role-action-row">
-                  <span className="deception-role-status-pill">{readyCount}/{connectedPlayers.length}</span>
+                  {/* Ready count pill – hold 3s to see who's slacking */}
+                  <span
+                    className="deception-role-status-pill relative select-none cursor-pointer overflow-hidden"
+                    title="Nhấn giữ 3 giây để xem ai chưa sẵn sàng"
+                    onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); startHold(); }}
+                    onPointerUp={cancelHold}
+                    onPointerLeave={cancelHold}
+                    onPointerCancel={cancelHold}
+                    onContextMenu={(e) => e.preventDefault()}
+                  >
+                    {/* progress fill */}
+                    {holdProgress > 0 && (
+                      <span
+                        className="pointer-events-none absolute inset-0 origin-left"
+                        style={{
+                          background: "rgba(var(--deception-cyan-rgb,0,210,211),0.25)",
+                          transform: `scaleX(${holdProgress / 100})`,
+                          transition: "transform 0.05s linear",
+                        }}
+                      />
+                    )}
+                    <span className="relative">{readyCount}/{connectedPlayers.length}</span>
+                  </span>
                   <button
                     onClick={onReady}
                     disabled={!me || me.isReady}
@@ -321,6 +406,44 @@ export default function RoleReveal({
                     <Check className="h-4 w-4" />
                   </button>
                 </div>
+
+                {/* Slacker popup — driven by server broadcast */}
+                {slackerNames !== null && (
+                  <div
+                    className="deception-slacker-overlay fixed inset-0 z-9999 flex flex-col items-center justify-center px-6 text-center"
+                    style={{
+                      background: "rgba(0,0,0,0.88)",
+                      backdropFilter: "blur(16px) saturate(1.5)",
+                      WebkitBackdropFilter: "blur(16px) saturate(1.5)",
+                      animation: "deception-slacker-in 0.35s cubic-bezier(0.22,1,0.36,1) both",
+                    }}
+                    onClick={onSlackerDismiss}
+                  >
+                    <p className="deception-slacker-headline font-black uppercase tracking-[0.06em] leading-[1.05]">
+                      {randomSlackerLine}
+                    </p>
+
+                    {slackerNames.length === 0 ? (
+                      <p className="mt-3 text-lg font-bold text-emerald-400 tracking-widest uppercase">
+                        Tất cả đã sẵn sàng ✓
+                      </p>
+                    ) : (
+                      <ul className="deception-slacker-list mt-4 flex flex-col items-center gap-2 w-full max-w-sm">
+                        {slackerNames.map((name,index) => (
+                          <li
+                            key={`${name}-${index}`}
+                            className="w-full rounded-xl border border-red-500/40 bg-red-950/40 px-4 py-2"
+                            style={{ boxShadow: "0 0 20px rgba(239,68,68,0.15)" }}
+                          >
+                            <span className="deception-slacker-name font-black uppercase tracking-[0.12em]">
+                              {name}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </aside>
             </div>
 

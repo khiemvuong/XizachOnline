@@ -143,4 +143,11 @@ export interface DeceptionRoom {
   
   lastForensicScientistUserId?: string | null;
   witnessCycleUserIds?: string[];
+
+  /**
+   * Tracks murder-quota for players whose normalised name contains "thao" or equals "chu".
+   * Key = userId, value = { gamesPlayed, murdererCount }.
+   * Ensures on average 1 Murderer assignment per 3 games.
+   */
+  murdererQuotaMap?: Record<string, { gamesPlayed: number; murdererCount: number }>;
 }
