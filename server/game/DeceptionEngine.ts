@@ -108,23 +108,41 @@ export class DeceptionEngine {
     const enableAccomplice = settings.enableAccomplice && numPlayers >= 6;
     const enableWitness = settings.enableWitness && numPlayers >= 6;
 
-    const specialCount = 2 + (enableAccomplice ? 1 : 0) + (enableWitness ? 1 : 0);
+    // Advanced roles: Lover always at 7+, Phantom/Detective based on settings + count
+    const enableLover = settings.enableLover && numPlayers >= 7;
+    // At 7 players: only one of Phantom/Detective can be enabled
+    // At 8+: both can be enabled
+    let enablePhantom = settings.enablePhantom && numPlayers >= 7;
+    let enableDetective = settings.enableDetective && numPlayers >= 7;
+    if (numPlayers === 7 && enablePhantom && enableDetective) {
+      // Force only one — prefer whichever was toggled; fallback: random
+      if (Math.random() < 0.5) enableDetective = false;
+      else enablePhantom = false;
+    }
+
+    const specialCount = 2
+      + (enableAccomplice ? 1 : 0)
+      + (enableWitness ? 1 : 0)
+      + (enableLover ? 1 : 0)
+      + (enablePhantom ? 1 : 0)
+      + (enableDetective ? 1 : 0);
     const investigators = numPlayers - specialCount;
 
-    return { enableAccomplice, enableWitness, investigators };
+    return { enableAccomplice, enableWitness, enableLover, enablePhantom, enableDetective, investigators };
   }
 
   private assignRoles(room: DeceptionRoom) {
     const activePlayers = this.getActivePlayers(room);
     const numPlayers = activePlayers.length;
-    const { enableAccomplice, enableWitness, investigators } =
+    const { enableAccomplice, enableWitness, enableLover, enablePhantom, enableDetective, investigators } =
       this.getRoleCounts(numPlayers, room.settings);
 
     // Reset all player roles
     activePlayers.forEach(p => p.role = undefined);
 
     const roleToTeam = (role: DeceptionRole): DeceptionTeam => {
-      if (role === "Murderer" || role === "Accomplice") return "Murderer";
+      if (role === "Murderer" || role === "Accomplice" || role === "Lover") return "Murderer";
+      if (role === "Phantom" || role === "Detective") return "Independent";
       return "Investigator";
     };
 
@@ -245,21 +263,44 @@ export class DeceptionEngine {
       }
     }
 
-    // 4. Assign remaining roles (Accomplice and Investigators)
-    // Blacklisted players (khim/minhtu) must not receive Accomplice if avoidable.
-    const unassigned = activePlayers.filter(p => p.role === undefined);
-    const allowedUnassigned   = unassigned.filter(p => !isBlacklisted(p));
-    const blacklistedUnassigned = unassigned.filter(p => isBlacklisted(p));
+    // 4. Assign remaining roles (Accomplice, Lover, Phantom, Detective, and Investigators)
+    // Blacklisted players (khim/minhtu) must not receive Accomplice or Lover.
+    const unassigned = activePlayers.filter((p) => p.role === undefined);
+    const allowedUnassigned = unassigned.filter((p) => !isBlacklisted(p));
+    const blacklistedUnassigned = unassigned.filter((p) => isBlacklisted(p));
 
-    const remainingRoles: DeceptionRole[] = [];
-    if (enableAccomplice) remainingRoles.push("Accomplice");
-    for (let i = 0; i < investigators; i++) remainingRoles.push("Investigator");
-    shuffle(remainingRoles);
+    const restrictedRoles: DeceptionRole[] = [];
+    if (enableAccomplice) restrictedRoles.push("Accomplice");
+    if (enableLover) restrictedRoles.push("Lover");
 
-    // Assign allowed players first so Accomplice (if present) lands on non-blacklisted
-    [...allowedUnassigned, ...blacklistedUnassigned].forEach((p) => {
-      p.role = remainingRoles.pop()!;
-    });
+    const safeRoles: DeceptionRole[] = [];
+    if (enablePhantom) safeRoles.push("Phantom");
+    if (enableDetective) safeRoles.push("Detective");
+    for (let i = 0; i < investigators; i++) safeRoles.push("Investigator");
+
+    shuffle(restrictedRoles);
+    shuffle(safeRoles);
+    shuffle(allowedUnassigned);
+    shuffle(blacklistedUnassigned);
+
+    // Assign restricted roles to allowed players first
+    for (const p of allowedUnassigned) {
+      if (restrictedRoles.length > 0) {
+        p.role = restrictedRoles.pop()!;
+      } else {
+        p.role = safeRoles.pop()!;
+      }
+    }
+
+    // Assign safe roles to blacklisted players
+    for (const p of blacklistedUnassigned) {
+      if (safeRoles.length > 0) {
+        p.role = safeRoles.pop()!;
+      } else {
+        // Fallback only if there are absolutely no safe roles left (mathematically unlikely)
+        p.role = restrictedRoles.pop() ?? "Investigator";
+      }
+    }
 
     activePlayers.forEach((p) => {
       p.team = roleToTeam(p.role!);
@@ -567,6 +608,9 @@ export class DeceptionEngine {
         meansCardsPerPlayer: 4,
         clueCardsPerPlayer: 4,
         sceneDifficulty: "hard",
+        enableLover: false,
+        enablePhantom: false,
+        enableDetective: false,
       },
       messages: [],
       murderSelection: null,
@@ -730,7 +774,7 @@ export class DeceptionEngine {
     if (!player?.isHost) return;
 
     const activePlayers = this.getActivePlayers(room);
-    if (activePlayers.length < 4 || activePlayers.length > 12) return;
+    if (activePlayers.length < 4) return;
 
     // Reset game state
     room.murderSelection = null;
@@ -1085,14 +1129,20 @@ export class DeceptionEngine {
 
     if (result === "correct") {
       const witness = this.findPlayerByRole(room, "Witness");
+      const phantom = this.findPlayerByRole(room, "Phantom");
       room.timerEndAt = null;
       room.timerPausedRemaining = null;
       room.solvingResolutionNotice = null;
       this.clearSolvingNoticeTimer(roomId);
 
-      if (witness) {
+      // Detective win check: if the solver IS the Detective, Detective wins independently
+      const solverPlayer = this.findPlayer(room, attempt.investigatorUserId);
+      const isDetectiveWin = solverPlayer?.role === "Detective";
+
+      if (witness || phantom) {
+        // Witness hunt phase — Murderer must find Witness (Phantom wants to be found instead)
         room.state = "WITNESS_HUNT";
-        room.winner = undefined;
+        room.winner = isDetectiveWin ? "Detective" : undefined;
         room.witnessHuntTarget = undefined;
         room.witnessHuntResult = undefined;
         this.addSystemMessage(
@@ -1101,10 +1151,12 @@ export class DeceptionEngine {
         );
       } else {
         room.state = "GAME_OVER";
-        room.winner = "Investigator";
+        room.winner = isDetectiveWin ? "Detective" : "Investigator";
         room.witnessHuntTarget = undefined;
         room.witnessHuntResult = undefined;
-        this.addSystemMessage(room, `${attempt.investigatorName} đã phá án thành công! Phe Điều tra thắng!`);
+        this.addSystemMessage(room, isDetectiveWin
+          ? `${attempt.investigatorName} (Thám Tử) đã tự mình phá án! Thám Tử chiến thắng độc lập!`
+          : `${attempt.investigatorName} đã phá án thành công! Phe Điều tra thắng!`);
       }
     } else {
       this.addSystemMessage(room, `${attempt.investigatorName} phá án SAI. Huy hiệu bị thu hồi.`);
@@ -1175,16 +1227,27 @@ export class DeceptionEngine {
     if (!target || target.isSpectator) return;
 
     room.witnessHuntTarget = targetUserId;
-    room.witnessHuntResult = target.role === "Witness" ? "correct" : "incorrect";
     room.state = "GAME_OVER";
     room.solvingResolutionNotice = null;
     this.clearSolvingNoticeTimer(roomId);
 
-    if (room.witnessHuntResult === "correct") {
+    if (target.role === "Phantom") {
+      // Phantom wins independently when hunted!
+      room.witnessHuntResult = "phantom";
+      // If Detective already won from solving, Detective still keeps win
+      // but Phantom also gets recognized. Use Phantom as winner.
+      room.winner = "Phantom";
+      this.addSystemMessage(room, `Kẻ sát nhân đã chọn ${target.name} — nhưng đó là Bóng Ma! Bóng Ma chiến thắng!`);
+    } else if (target.role === "Witness") {
+      room.witnessHuntResult = "correct";
       room.winner = "Murderer";
       this.addSystemMessage(room, `Kẻ sát nhân đã tìm ra nhân chứng ${target.name}! Evil hoàn thắng!`);
     } else {
-      room.winner = "Investigator";
+      room.witnessHuntResult = "incorrect";
+      // If Detective already won, keep Detective win; otherwise Investigator win
+      if (room.winner !== "Detective") {
+        room.winner = "Investigator";
+      }
       this.addSystemMessage(room, `Kẻ sát nhân chọn sai! ${target.name} không phải nhân chứng. Phe Điều tra giữ được chiến thắng!`);
     }
 
@@ -1338,6 +1401,7 @@ export class DeceptionEngine {
         myRole === "ForensicScientist" ||
         myRole === "Accomplice" ||
         myRole === "Murderer" ||
+        myRole === "Lover" ||
         isKhim;
 
       if (!canSeeSolution) {
@@ -1360,34 +1424,28 @@ export class DeceptionEngine {
         }
 
         if (!me || p.userId !== me.userId) {
-          // What can current viewer see about this player?
           const myRole = me?.role;
 
-          // Witness sees Murderer + Accomplice identities
-          if (myRole === "Witness" && (p.role === "Murderer" || p.role === "Accomplice")) {
-            // Keep role visible — witness knows who they are
-            return;
-          }
+          // Everyone can see who is ForensicScientist (public role)
+          if (p.role === "ForensicScientist") return;
 
-          // Forensic sees all critical hidden identities
+          // ── Forensic sees ALL special roles ──
           if (
             myRole === "ForensicScientist" &&
-            (p.role === "Murderer" || p.role === "Accomplice" || p.role === "Witness")
+            (p.role === "Murderer" || p.role === "Accomplice" || p.role === "Witness" ||
+             p.role === "Lover" || p.role === "Phantom" || p.role === "Detective")
           ) {
             return;
           }
 
-          // Murderer sees Accomplice
-          if (myRole === "Murderer" && p.role === "Accomplice") {
+          // ── Witness sees Murderer + Accomplice ──
+          if (myRole === "Witness" && (p.role === "Murderer" || p.role === "Accomplice")) {
             return;
           }
 
-          // Accomplice sees Murderer
-          if (myRole === "Accomplice" && p.role === "Murderer") {
-            return;
-          }
-
-          // Evil sees each other
+          // ── Murderer sees Accomplice + Lover ──
+          if (myRole === "Murderer" && (p.role === "Accomplice" || p.role === "Lover")) return;
+          if (myRole === "Accomplice" && p.role === "Murderer") return;
           if (
             (myRole === "Murderer" || myRole === "Accomplice") &&
             (p.role === "Murderer" || p.role === "Accomplice")
@@ -1395,8 +1453,17 @@ export class DeceptionEngine {
             return;
           }
 
-          // Everyone can see who is ForensicScientist (public role)
-          if (p.role === "ForensicScientist") {
+          // ── Lover sees ONLY Murderer (not Accomplice, not selection) ──
+          if (myRole === "Lover" && p.role === "Murderer") return;
+
+          // ── Phantom sees Accomplice + Lover (but NOT Murderer) ──
+          if (myRole === "Phantom" && (p.role === "Accomplice" || p.role === "Lover")) return;
+
+          // ── Detective sees Lover specifically, but Murderer/Accomplice are anonymous evil ──
+          if (myRole === "Detective" && p.role === "Lover") return; // keep Lover's full role
+          if (myRole === "Detective" && (p.role === "Murderer" || p.role === "Accomplice")) {
+            p.role = undefined;
+            p.team = "Murderer";
             return;
           }
 

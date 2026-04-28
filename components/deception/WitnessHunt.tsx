@@ -6,7 +6,7 @@ import { ArrowLeft, Crosshair, EyeOff, Target } from "lucide-react";
 import type { DeceptionPlayer, DeceptionRoom } from "@/server/game/DeceptionTypes";
 
 function isEvil(player: DeceptionPlayer) {
-  return player.role === "Murderer" || player.role === "Accomplice";
+  return player.role === "Murderer" || player.role === "Accomplice" || player.role === "Lover";
 }
 
 export default function WitnessHunt({

@@ -237,24 +237,102 @@ export default function DeceptionLobby({
           </section>
 
           <aside className="deception-lobby-side grid min-h-0 grid-rows-[auto_1fr] gap-3">
+            {/* Advanced Roles Config — replaces Host Control badge */}
             <section className="deception-card rounded-xl p-3 sm:p-4">
-              <div className="flex items-center gap-3">
-                <div className="deception-lobby-badge-icon flex h-10 w-10 items-center justify-center border border-(--deception-red) bg-[rgba(255,45,85,0.1)]">
-                  <Shield className="h-5 w-5 text-(--deception-red-soft)" />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-bold uppercase tracking-[0.12em] text-(--on-surface)">
-                    {me?.name || "Inspector"}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-(--on-surface-variant)">
-                    {isHost ? "Host Control Online" : "Case Badge"}
-                  </p>
-                </div>
-                <span className="ml-auto inline-flex items-center gap-1 rounded-md border border-(--deception-cyan) bg-[rgba(0,212,255,0.1)] px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-(--deception-cyan)">
-                  <Check className="h-3.5 w-3.5" />
-                  Online
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-(--deception-amber)">
+                <Shield className="h-4 w-4" />
+                Advanced Roles
+                <span className="ml-auto text-[10px] font-normal tracking-[0.12em] text-(--on-surface-variant)">
+                  {connectedCount >= 7 ? `${connectedCount}P — khả dụng` : "cần 7+ người"}
                 </span>
               </div>
+
+              {connectedCount < 7 ? (
+                <p className="text-[11px] text-(--on-surface-variant) leading-relaxed">
+                  Cần tối thiểu <strong className="text-(--deception-amber)">7 người chơi</strong> để mở khóa các vai trò nâng cao.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {/* Lover — always available at 7+ */}
+                  <label
+                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] uppercase tracking-[0.12em] transition ${
+                      isHost ? "cursor-pointer border-(--deception-border) hover:border-(--deception-red)" : "cursor-not-allowed border-(--deception-border) opacity-70"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={gameState.settings.enableLover}
+                      disabled={!isHost}
+                      onChange={() =>
+                        socket?.emit("updateSettings", {
+                          enableLover: !gameState.settings.enableLover,
+                        })
+                      }
+                      className="h-4 w-4 accent-(--deception-red)"
+                    />
+                    <span>Tình Nhân</span>
+                    <span className="ml-auto text-[9px] font-normal normal-case tracking-normal text-(--on-surface-variant)">Phe Ác</span>
+                  </label>
+
+                  {/* Phantom */}
+                  <label
+                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] uppercase tracking-[0.12em] transition ${
+                      isHost ? "cursor-pointer border-(--deception-border) hover:border-(--deception-cyan)" : "cursor-not-allowed border-(--deception-border) opacity-70"
+                    } ${connectedCount === 7 && gameState.settings.enableDetective && !gameState.settings.enablePhantom ? "opacity-50" : ""}`}
+                    title={connectedCount === 7 && gameState.settings.enableDetective ? "7 người: chỉ chọn được 1 trong Bóng Ma / Thám Tử" : ""}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={gameState.settings.enablePhantom}
+                      disabled={!isHost || (connectedCount === 7 && gameState.settings.enableDetective && !gameState.settings.enablePhantom)}
+                      onChange={() => {
+                        const next = !gameState.settings.enablePhantom;
+                        const patch: Record<string, boolean> = { enablePhantom: next };
+                        // At 7 players, enabling Phantom must disable Detective
+                        if (next && connectedCount === 7 && gameState.settings.enableDetective) {
+                          patch.enableDetective = false;
+                        }
+                        socket?.emit("updateSettings", patch);
+                      }}
+                      className="h-4 w-4 accent-(--deception-cyan)"
+                    />
+                    <span>Bóng Ma</span>
+                    <span className="ml-auto text-[9px] font-normal normal-case tracking-normal text-(--on-surface-variant)">Phe Độc Lập</span>
+                  </label>
+
+                  {/* Detective */}
+                  <label
+                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] uppercase tracking-[0.12em] transition ${
+                      isHost ? "cursor-pointer border-(--deception-border) hover:border-emerald-500" : "cursor-not-allowed border-(--deception-border) opacity-70"
+                    } ${connectedCount === 7 && gameState.settings.enablePhantom && !gameState.settings.enableDetective ? "opacity-50" : ""}`}
+                    title={connectedCount === 7 && gameState.settings.enablePhantom ? "7 người: chỉ chọn được 1 trong Bóng Ma / Thám Tử" : ""}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={gameState.settings.enableDetective}
+                      disabled={!isHost || (connectedCount === 7 && gameState.settings.enablePhantom && !gameState.settings.enableDetective)}
+                      onChange={() => {
+                        const next = !gameState.settings.enableDetective;
+                        const patch: Record<string, boolean> = { enableDetective: next };
+                        // At 7 players, enabling Detective must disable Phantom
+                        if (next && connectedCount === 7 && gameState.settings.enablePhantom) {
+                          patch.enablePhantom = false;
+                        }
+                        socket?.emit("updateSettings", patch);
+                      }}
+                      className="h-4 w-4 accent-emerald-500"
+                    />
+                    <span>Thám Tử</span>
+                    <span className="ml-auto text-[9px] font-normal normal-case tracking-normal text-(--on-surface-variant)">Phe Độc Lập</span>
+                  </label>
+
+                  {connectedCount === 7 && (
+                    <p className="text-[10px] italic text-(--on-surface-variant)">
+                      7 người chơi: chỉ chọn được 1 trong Bóng Ma / Thám Tử
+                    </p>
+                  )}
+                </div>
+              )}
             </section>
 
             <section className="deception-card flex min-h-0 flex-col rounded-xl p-3 sm:p-4">

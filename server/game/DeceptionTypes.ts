@@ -3,9 +3,12 @@ export type DeceptionRole =
   | "Murderer"
   | "Accomplice"
   | "Witness"
-  | "Investigator";
+  | "Investigator"
+  | "Lover"
+  | "Phantom"
+  | "Detective";
 
-export type DeceptionTeam = "Investigator" | "Murderer";
+export type DeceptionTeam = "Investigator" | "Murderer" | "Independent";
 
 export type DeceptionGameState =
   | "LOBBY"
@@ -94,6 +97,10 @@ export interface DeceptionSettings {
   clueCardsPerPlayer: number;
   /** "easy" = bộ thẻ cụ thể dễ suy luận; "hard" = bộ gốc bản board game */
   sceneDifficulty: "easy" | "hard";
+  /** Advanced roles for 7+ players */
+  enableLover: boolean;
+  enablePhantom: boolean;
+  enableDetective: boolean;
 }
 
 export interface DeceptionChatMessage {
@@ -137,9 +144,9 @@ export interface DeceptionRoom {
   solvingResolutionNotice: SolvingResolutionNotice | null;
 
   // Results
-  winner?: "Investigator" | "Murderer" | "Abandoned";
+  winner?: "Investigator" | "Murderer" | "Phantom" | "Detective" | "Abandoned";
   witnessHuntTarget?: string;
-  witnessHuntResult?: "correct" | "incorrect";
+  witnessHuntResult?: "correct" | "incorrect" | "phantom";
   
   lastForensicScientistUserId?: string | null;
   witnessCycleUserIds?: string[];

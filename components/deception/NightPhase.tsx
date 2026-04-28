@@ -12,6 +12,7 @@ import NightPhaseForensic    from "@/components/deception/NightPhaseForensic";
 import NightPhaseInvestigator from "@/components/deception/NightPhaseInvestigator";
 import NightPhaseAccomplice  from "@/components/deception/NightPhaseAccomplice";
 import NightPhaseWitness     from "@/components/deception/NightPhaseWitness";
+import NightPhasePhantom     from "@/components/deception/NightPhasePhantom";
 
 type SelectableCard = MeansCard | ClueCard;
 
@@ -129,6 +130,9 @@ export default function NightPhase({
   const isAccomplice = me?.role === "Accomplice";
   const isInvestigator = me?.role === "Investigator";
   const isForensic   = me?.role === "ForensicScientist";
+  const isLover      = me?.role === "Lover";
+  const isPhantom    = me?.role === "Phantom";
+  const isDetective  = me?.role === "Detective";
 
   // Preload own cards immediately when murderer enters night phase
   usePreloadCardImages(me ? [me] : []);
@@ -137,10 +141,13 @@ export default function NightPhase({
   if (isForensic) {
     return <NightPhaseForensic gameState={gameState} me={me} onExit={onExit} />;
   }
-  if (isInvestigator) {
+  if (isInvestigator || isDetective) {
     return <NightPhaseInvestigator gameState={gameState} me={me} onExit={onExit} />;
   }
-  if (isAccomplice) {
+  if (isPhantom) {
+    return <NightPhasePhantom gameState={gameState} me={me} onExit={onExit} />;
+  }
+  if (isAccomplice || isLover) {
     return <NightPhaseAccomplice gameState={gameState} me={me} onExit={onExit} />;
   }
   if (isWitness) {
