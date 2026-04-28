@@ -50,6 +50,27 @@ const ROLE_META: Record<
     quote: '"Khi ta loại trừ những điều không thể, phần còn lại, dù khó tin đến đâu, cũng là sự thật."',
     image: getRoleImageUrl("investigator"),
   },
+  Lover: {
+    color: "#f43f5e",
+    team: "PHE SÁT NHÂN",
+    title: "TÌNH NHÂN",
+    quote: '"Tình yêu mù quáng — tôi biết anh ấy là kẻ giết người, nhưng trái tim tôi vẫn không thể phản bội."',
+    image: getRoleImageUrl("lover"),
+  },
+  Phantom: {
+    color: "#8b5cf6",
+    team: "PHE ĐỘC LẬP",
+    title: "BÓNG MA",
+    quote: '"Tôi là bóng tối mà kẻ sát nhân muốn tìm kiếm. Hãy chọn tôi, nếu ngươi đủ can đảm."',
+    image: getRoleImageUrl("phantom"),
+  },
+  Detective: {
+    color: "#f59e0b",
+    team: "PHE ĐỘC LẬP",
+    title: "THÁM TỬ",
+    quote: '"Tôi thấy tất cả bóng tối, nhưng chiến thắng chỉ thuộc về kẻ tự mình giải mã sự thật."',
+    image: getRoleImageUrl("detective"),
+  },
 };
 
 type RelatedIntelEntry = {
@@ -199,19 +220,71 @@ export default function RoleReveal({
   const imageFailed = Boolean(roleImageSource && failedImageSource === roleImageSource);
 
   const relatedIntel = useMemo(() => {
-    if (!me) return [] as RelatedIntelEntry[];
+    if (!me || !me.role) return [] as RelatedIntelEntry[];
+
+    const myRole = me.role;
+
+    // Determine which roles this player can see
+    const canSee = (p: DeceptionPlayer): boolean => {
+      if (!p.role || p.userId === me.userId) return false;
+
+      // ForensicScientist sees all special roles
+      if (myRole === "ForensicScientist") {
+        return p.role !== "Investigator";
+      }
+      // Witness sees Murderer + Accomplice
+      if (myRole === "Witness") {
+        return p.role === "Murderer" || p.role === "Accomplice";
+      }
+      // Murderer sees Accomplice
+      if (myRole === "Murderer") {
+        return p.role === "Accomplice" || p.role === "Lover";
+      }
+      // Accomplice sees Murderer
+      if (myRole === "Accomplice") {
+        return p.role === "Murderer";
+      }
+      // Lover sees only Murderer
+      if (myRole === "Lover") {
+        return p.role === "Murderer";
+      }
+      // Phantom sees Accomplice + Lover
+      if (myRole === "Phantom") {
+        return p.role === "Accomplice" || p.role === "Lover";
+      }
+      // Detective sees Lover specifically, but Murderer/Accomplice as anonymous evil
+      if (myRole === "Detective") {
+        return p.role === "Murderer" || p.role === "Accomplice" || p.role === "Lover";
+      }
+      return false;
+    };
 
     return gameState.players
-      .filter((player): player is DeceptionPlayer & { role: DeceptionRole } => (
-        player.userId !== me.userId && Boolean(player.role)
-      ))
-      .map((player) => ({
-        userId: player.userId,
-        name: player.name,
-        roleTitle: ROLE_META[player.role].title,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name, "vi"))
-      .slice(0, 3);
+      .filter((player) => {
+        // Detective can see players whose team is Murderer even if role is stripped
+        if (myRole === "Detective" && !player.role && player.team === "Murderer") return true;
+        return Boolean(player.role) && canSee(player as DeceptionPlayer & { role: DeceptionRole });
+      })
+      .map((player) => {
+        // Safe role extraction for title mapping
+        const r = player.role;
+        let roleTitle = "PHE ÁC";
+        if (r && ROLE_META[r]) {
+          roleTitle = ROLE_META[r].title;
+        }
+        
+        // Detective sees Lover specifically, but Murderer/Accomplice as anonymous evil
+        if (myRole === "Detective" && r !== "Lover") {
+          roleTitle = "PHE ÁC";
+        }
+
+        return {
+          userId: player.userId,
+          name: player.name,
+          roleTitle,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "vi"));
   }, [gameState.players, me]);
 
   const roleStyle = {
@@ -236,9 +309,6 @@ export default function RoleReveal({
         <section
           className="deception-role-centered-wrap deception-role-fit-wrap relative w-full select-none touch-none"
           style={roleStyle}
-          onPointerUp={() => setIsRevealing(false)}
-          onPointerLeave={() => setIsRevealing(false)}
-          onPointerCancel={() => setIsRevealing(false)}
           onContextMenu={(event) => event.preventDefault()}
         >
           <div className="deception-role-centered-glow" aria-hidden />
@@ -250,17 +320,14 @@ export default function RoleReveal({
             </div>
 
             <p className="deception-role-security-note mt-2 font-bold tracking-widest uppercase">
-              Nhấn Giữ Để Giải Mật
+              {isRevealing ? "Nhấn Để Niêm Phong" : "Nhấn Để Giải Mật"}
             </p>
 
             <div className="deception-role-main mt-2 min-h-0">
               <div className="deception-role-visual-pane">
                 <div
-                  className="deception-role-reveal-image-wrap relative overflow-hidden rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)]"
-                  onPointerDown={() => setIsRevealing(true)}
-                  onPointerUp={() => setIsRevealing(false)}
-                  onPointerLeave={() => setIsRevealing(false)}
-                  onPointerCancel={() => setIsRevealing(false)}
+                  className="deception-role-reveal-image-wrap relative overflow-hidden rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] cursor-pointer"
+                  onClick={() => setIsRevealing(prev => !prev)}
                 >
                   {!imageFailed && meta && roleImageSource ? (
                     <div className="deception-role-reveal-image relative mx-auto overflow-hidden">
@@ -301,11 +368,8 @@ export default function RoleReveal({
 
               <aside className="deception-role-side-pane min-h-0">
                 <section
-                  className="deception-role-name-card relative overflow-hidden rounded-lg border border-(--deception-border) bg-[rgba(0,0,0,0.22)] p-3 sm:p-4"
-                  onPointerDown={() => setIsRevealing(true)}
-                  onPointerUp={() => setIsRevealing(false)}
-                  onPointerLeave={() => setIsRevealing(false)}
-                  onPointerCancel={() => setIsRevealing(false)}
+                  className="deception-role-name-card relative overflow-hidden rounded-lg border border-(--deception-border) bg-[rgba(0,0,0,0.22)] p-3 sm:p-4 cursor-pointer"
+                  onClick={() => setIsRevealing(prev => !prev)}
                 >
                   <div
                     className={`deception-role-name-content transition-all duration-200 ${
@@ -333,11 +397,8 @@ export default function RoleReveal({
                 </section>
 
                 <section
-                  className="deception-role-related-card relative overflow-hidden flex flex-col flex-1 rounded-lg border border-(--deception-border) bg-[rgba(0,0,0,0.22)] p-3"
-                  onPointerDown={() => setIsRevealing(true)}
-                  onPointerUp={() => setIsRevealing(false)}
-                  onPointerLeave={() => setIsRevealing(false)}
-                  onPointerCancel={() => setIsRevealing(false)}
+                  className="deception-role-related-card relative overflow-hidden flex flex-col flex-1 rounded-lg border border-(--deception-border) bg-[rgba(0,0,0,0.22)] p-3 cursor-pointer"
+                  onClick={() => setIsRevealing(prev => !prev)}
                 >
                   <div
                     className={`deception-role-related-content flex flex-col flex-1 min-h-0 transition-all duration-200 ${

@@ -16,6 +16,12 @@ function roleLabel(role?: DeceptionPlayer["role"]) {
       return "Nhân Chứng";
     case "Investigator":
       return "Điều Tra Viên";
+    case "Lover":
+      return "Tình Nhân";
+    case "Phantom":
+      return "Bóng Ma";
+    case "Detective":
+      return "Thám Tử";
     default:
       return "Ẩn danh";
   }
@@ -24,6 +30,8 @@ function roleLabel(role?: DeceptionPlayer["role"]) {
 function winnerLabel(room: DeceptionRoom) {
   if (room.winner === "Investigator") return "PHE ĐIỀU TRA THẮNG";
   if (room.winner === "Murderer") return "PHE SÁT NHÂN THẮNG";
+  if (room.winner === "Phantom") return "BÓNG MA CHIẾN THẮNG";
+  if (room.winner === "Detective") return "THÁM TỬ CHIẾN THẮNG";
   return "VÁN CHƠI KẾT THÚC";
 }
 
@@ -73,10 +81,14 @@ export default function GameOverScene({
   const primaryReturnAction = canReturnToLobby && onReturnToLobby ? onReturnToLobby : onExit;
   const sortedByTeam = [...gameState.players].sort((a, b) => {
     const score = (player: DeceptionPlayer) => {
-      if (player.role === "Murderer" || player.role === "Accomplice") return 0;
-      if (player.role === "Witness") return 1;
-      if (player.role === "ForensicScientist") return 2;
-      return 3;
+      if (player.role === "Murderer") return 0;
+      if (player.role === "Accomplice") return 1;
+      if (player.role === "Lover") return 2;
+      if (player.role === "Phantom") return 3;
+      if (player.role === "Detective") return 4;
+      if (player.role === "Witness") return 5;
+      if (player.role === "ForensicScientist") return 6;
+      return 7;
     };
     return score(a) - score(b);
   });
@@ -111,13 +123,19 @@ export default function GameOverScene({
         <section className="deception-card mx-auto w-full max-w-7xl rounded-2xl p-3 sm:p-6 landscape:p-2 sm:landscape:p-5 flex flex-col min-h-0 landscape:scale-[0.99] landscape:max-w-full origin-top">
           <div className="flex flex-col items-center">
             <div className={`text-[9px] sm:text-xs font-black uppercase tracking-[0.4em] mb-0.5 sm:mb-2 ${
-              gameState.winner === "Investigator" ? "text-(--deception-cyan)" : "text-(--deception-red)"
+              gameState.winner === "Investigator" || gameState.winner === "Detective" ? "text-(--deception-cyan)" 
+              : gameState.winner === "Phantom" ? "text-purple-400" 
+              : "text-(--deception-red)"
             }`}>
-              {gameState.winner === "Investigator" ? "Mission Accomplished" : "Case Closed: Failed"}
+              {gameState.winner === "Investigator" || gameState.winner === "Detective"
+                ? "Mission Accomplished" 
+                : gameState.winner === "Phantom" ? "Phantom Prevails" 
+                : "Case Closed: Failed"}
             </div>
             <h1 className={`text-xl sm:text-5xl font-black uppercase tracking-tighter sm:tracking-widest text-center drop-shadow-2xl bg-linear-to-b bg-clip-text text-transparent py-1 sm:py-2 leading-relaxed ${
-              gameState.winner === "Investigator" 
+              gameState.winner === "Investigator" || gameState.winner === "Detective"
                 ? "from-(--deception-cyan) to-blue-500" 
+                : gameState.winner === "Phantom" ? "from-purple-400 to-violet-600"
                 : "from-(--deception-red) to-orange-600"
             } landscape:text-lg sm:landscape:text-4xl`}>
               {winnerLabel(gameState)}
@@ -156,10 +174,14 @@ export default function GameOverScene({
                   </p>
                   <div className="mt-3 pt-2 border-t border-white/5">
                     <p className={`text-[10px] font-black uppercase tracking-widest ${
-                      gameState.witnessHuntResult === "correct" ? "text-(--deception-red-soft)" : "text-(--deception-cyan)"
+                      gameState.witnessHuntResult === "correct" ? "text-(--deception-red-soft)" 
+                      : gameState.witnessHuntResult === "phantom" ? "text-violet-400"
+                      : "text-(--deception-cyan)"
                     }`}>
                       {gameState.witnessHuntResult === "correct"
                         ? "Sát nhân đã thắng nhờ săn được witness"
+                        : gameState.witnessHuntResult === "phantom"
+                        ? "Sát nhân đã chọn nhầm Bóng Ma! Bóng Ma chiến thắng!"
                         : "Sát nhân thất bại trong việc săn witness"}
                     </p>
                   </div>
@@ -182,13 +204,19 @@ export default function GameOverScene({
                 const isAccomplice = player.role === "Accomplice";
                 const isWitness = player.role === "Witness";
                 const isForensic = player.role === "ForensicScientist";
+                const isLover = player.role === "Lover";
+                const isPhantom = player.role === "Phantom";
+                const isDetective = player.role === "Detective";
                 const isHuntedTarget = player.userId === gameState.witnessHuntTarget;
                 
                 let roleColorClass = "border-(--deception-border) bg-white/5";
                 if (isMurderer) roleColorClass = "border-(--deception-red) bg-red-950/30 shadow-[inset_0_0_15px_rgba(255,45,85,0.1)]";
                 if (isAccomplice) roleColorClass = "border-(--deception-red)/50 bg-red-950/10";
+                if (isLover) roleColorClass = "border-rose-400/50 bg-rose-950/15";
                 if (isWitness) roleColorClass = "border-(--deception-cyan)/60 bg-cyan-950/10";
                 if (isForensic) roleColorClass = "border-purple-500/50 bg-purple-950/10";
+                if (isPhantom) roleColorClass = "border-violet-500/50 bg-violet-950/15";
+                if (isDetective) roleColorClass = "border-amber-500/50 bg-amber-950/15";
 
                 return (
                 <div
@@ -206,7 +234,9 @@ export default function GameOverScene({
                     {isForensic && <span className="text-[10px]">🔬</span>}
                   </div>
                   <p className={`mt-0.5 sm:mt-1 text-[9px] sm:text-[10px] uppercase tracking-widest font-black ${
-                    (isMurderer || isAccomplice) ? "text-(--deception-red-soft)" : 
+                    (isMurderer || isAccomplice || isLover) ? "text-(--deception-red-soft)" : 
+                    isPhantom ? "text-violet-400" :
+                    isDetective ? "text-amber-400" :
                     isForensic ? "text-purple-400" : "text-(--deception-cyan)"
                   }`}>
                     {roleLabel(player.role)}

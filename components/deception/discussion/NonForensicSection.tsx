@@ -21,7 +21,7 @@ interface NonForensicSectionProps {
   clampPlayerName: (name: string, maxLen: number) => string;
   isCompactViewport: boolean;
   effectivePendingSolveSelection: PendingSolveSelection | null;
-  roleToneByRole: (role: DeceptionPlayer["role"] | undefined) => RoleTone;
+  roleToneByRole: (role: DeceptionPlayer["role"] | undefined, team?: DeceptionPlayer["team"]) => RoleTone;
   playerPings: Record<string, number>;
   roleLabel: (player: DeceptionPlayer | undefined) => string;
   setFocusedPlayerUserId: React.Dispatch<React.SetStateAction<string>>;
@@ -138,7 +138,7 @@ export default function NonForensicSection({
                 );
                 const roleTone = hideRolesUi
                   ? roleToneByRole(undefined)
-                  : roleToneByRole(player.role);
+                  : roleToneByRole(player.role, player.team);
 
                 const isMurderer = player.role === "Murderer" || player.isMurdererHint;
 

@@ -116,7 +116,7 @@ export default function ForensicClueBoard({
                 <span className="font-black">Item #{String(index + 1).padStart(3, "0")}: </span>
                 <span className={`font-black ${tone.metaStrong}`}>{tile.name}</span>
               </p>
-              <h3 className={`mt-1 line-clamp-2 text-base font-black uppercase leading-tight sm:text-lg ${tone.title}`}>
+              <h3 className={`pt-1 line-clamp-2 text-base font-black uppercase leading-tight sm:text-lg ${tone.title}`}>
                 {chosen.vi}
               </h3>
 

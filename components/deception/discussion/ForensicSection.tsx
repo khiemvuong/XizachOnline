@@ -11,6 +11,59 @@ import Image from "next/image";
 import AvatarDisplay from "@/components/shared/AvatarDisplay";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 
+// ── Forensic-specific: role label + color group ──
+function forensicRoleLabel(role: string | undefined): string {
+  switch (role) {
+    case "Murderer": return "Sát Nhân";
+    case "Accomplice": return "Đồng Phạm";
+    case "Lover": return "Tình Nhân";
+    case "Witness": return "Nhân Chứng";
+    case "Investigator": return "Điều Tra";
+    case "Phantom": return "Bóng Ma";
+    case "Detective": return "Thám Tử";
+    case "ForensicScientist": return "Pháp Y";
+    default: return "Ẩn Danh";
+  }
+}
+
+type ForensicChipTone = { chipClass: string; dotClass: string };
+function forensicRoleTone(role: string | undefined): ForensicChipTone {
+  switch (role) {
+    // Evil team → red
+    case "Murderer":
+    case "Accomplice":
+    case "Lover":
+      return {
+        chipClass: "border-red-400/70 bg-red-500/20 text-red-200",
+        dotClass: "bg-red-400",
+      };
+    // Detective → purple
+    case "Detective":
+      return {
+        chipClass: "border-violet-400/70 bg-violet-500/20 text-violet-200",
+        dotClass: "bg-violet-400",
+      };
+    // Phantom → green
+    case "Phantom":
+      return {
+        chipClass: "border-emerald-400/70 bg-emerald-500/20 text-emerald-200",
+        dotClass: "bg-emerald-400",
+      };
+    // Witness & Investigator → cyan
+    case "Witness":
+    case "Investigator":
+      return {
+        chipClass: "border-cyan-400/70 bg-cyan-500/20 text-cyan-200",
+        dotClass: "bg-cyan-400",
+      };
+    default:
+      return {
+        chipClass: "border-slate-500/50 bg-slate-500/15 text-slate-300",
+        dotClass: "bg-slate-400",
+      };
+  }
+}
+
 const FullCardDetail = ({ card, tone }: { card: MeansCard | ClueCard, tone: "means"|"clue" }) => {
   const isMeans = tone === "means";
   const imageUrl = isMeans ? getResolvedMeansImageUrl(card.id) : getResolvedClueImageUrl(card.id);
@@ -62,7 +115,7 @@ interface ForensicSectionProps {
   } | null) => void;
   clampPlayerName: (name: string, maxLen: number) => string;
   playerPings: Record<string, number>;
-  roleToneByRole: (role: DeceptionPlayer["role"] | undefined) => RoleTone;
+  roleToneByRole: (role: DeceptionPlayer["role"] | undefined, team?: DeceptionPlayer["team"]) => RoleTone;
   me: DeceptionPlayer | undefined;
   playerEvidenceViews: Map<string, PlayerEvidenceView>;
 
@@ -317,7 +370,7 @@ export default function ForensicSection({
               const active = player.userId === resolvedFocusedPlayerUserId;
               const isSelf = player.userId === me?.userId;
               const displayName = clampPlayerName(player.name, isCompactViewport ? 11 : 14);
-              const roleTone = hideRolesUi ? roleToneByRole(undefined) : roleToneByRole(player.role);
+              const roleTone = hideRolesUi ? roleToneByRole(undefined) : roleToneByRole(player.role, player.team);
               return (
                 <button
                   key={player.userId}
@@ -326,7 +379,7 @@ export default function ForensicSection({
                     setFocusedPlayerUserId(player.userId);
                   }}
                   title="Xem bộ thẻ người chơi"
-                  className={`relative shrink-0 w-[180px] sm:w-[220px] overflow-hidden rounded-lg border p-1.5 md:p-2 text-left transition ${active ? roleTone.activeCardClass : roleTone.idleCardClass}`}
+                  className={`relative shrink-0 w-[180px] sm:w-[235px] overflow-hidden rounded-lg border p-1.5 md:p-2 text-left transition ${active ? roleTone.activeCardClass : roleTone.idleCardClass}`}
                 >
                   <div className="flex items-center gap-1.5 md:gap-2">
                     <AvatarDisplay
@@ -342,10 +395,15 @@ export default function ForensicSection({
                         )}
                       </p>
                       <div className="mt-0.5 md:mt-1 flex flex-wrap items-center gap-1">
-                        <span className={`inline-flex max-w-full items-center gap-1 rounded border px-1 py-0 md:px-1.5 md:py-0.5 text-[7px] md:text-[9px] font-black uppercase tracking-widest ${roleTone.chipClass}`}>
-                          <span className={`h-1 w-1 md:h-1.5 md:w-1.5 rounded-full ${roleTone.dotClass}`} />
-                          <span className="truncate">{hideRolesUi ? "Người chơi" : player.role}</span>
-                        </span>
+                        {(() => {
+                          const fTone = hideRolesUi ? forensicRoleTone(undefined) : forensicRoleTone(player.role);
+                          return (
+                            <span className={`inline-flex max-w-full items-center gap-1 rounded border px-1 py-0 md:px-1.5 md:py-0.5 text-[7px] md:text-[9px] font-black uppercase tracking-widest ${fTone.chipClass}`}>
+                              <span className={`h-1 w-1 md:h-1.5 md:w-1.5 rounded-full ${fTone.dotClass}`} />
+                              <span className="truncate">{hideRolesUi ? "Người chơi" : forensicRoleLabel(player.role)}</span>
+                            </span>
+                          );
+                        })()}
                         {showForensicBadge && (
                           <span className="inline-flex items-center gap-1 rounded border border-cyan-300/75 bg-[radial-gradient(circle_at_30%_30%,rgba(70,220,255,0.35),rgba(12,68,102,0.58))] px-1 py-0 md:px-1.5 md:py-0.5 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-cyan-50 shadow-[0_0_10px_rgba(0,212,255,0.28)]">
                             <span className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-cyan-200 shadow-[0_0_8px_rgba(120,240,255,0.8)]" />
@@ -403,7 +461,7 @@ export default function ForensicSection({
                             activePlayer.role === "Murderer" && card.id === selectedMeansForensic?.id;
 
                           return (
-                            <div className="relative h-44 md:h-48 xl:h-56 [@media(max-height:500px)]:h-[110px]" key={`forensic-players-means-${activePlayer.userId}-${card.id}`}>
+                            <div className="relative h-44 md:h-48 xl:h-56 [@media(max-height:500px)]:h-[160px]" key={`forensic-players-means-${activePlayer.userId}-${card.id}`}>
                               <EvidencePreviewCard
                                 card={card}
                                 tone="means"
@@ -424,7 +482,7 @@ export default function ForensicSection({
                             activePlayer.role === "Murderer" && card.id === selectedClueForensic?.id;
 
                           return (
-                            <div className="relative h-44 md:h-48 xl:h-56 [@media(max-height:500px)]:h-[110px]" key={`forensic-players-clue-${activePlayer.userId}-${card.id}`}>
+                            <div className="relative h-44 md:h-48 xl:h-56 [@media(max-height:500px)]:h-[160px]" key={`forensic-players-clue-${activePlayer.userId}-${card.id}`}>
                               <EvidencePreviewCard
                                 card={card}
                                 tone="clue"

@@ -59,7 +59,10 @@ function clampPlayerName(name: string, maxLength: number) {
 }
 
 function roleLabel(player: DeceptionPlayer | undefined) {
-  if (!player?.role) return "Ẩn danh";
+  if (!player?.role) {
+    if (player?.team === "Murderer") return "Phe Ác";
+    return "Ẩn danh";
+  }
   switch (player.role) {
     case "ForensicScientist":
       return "Pháp Y";
@@ -71,6 +74,12 @@ function roleLabel(player: DeceptionPlayer | undefined) {
       return "Nhân Chứng";
     case "Investigator":
       return "Điều Tra Viên";
+    case "Lover":
+      return "Tình Nhân";
+    case "Phantom":
+      return "Bóng Ma";
+    case "Detective":
+      return "Thám Tử";
     default:
       return player.role;
   }
@@ -84,7 +93,20 @@ export type RoleTone = {
   dotClass: string;
 };
 
-function roleToneByRole(role: DeceptionPlayer["role"] | undefined): RoleTone {
+function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: DeceptionPlayer["team"]): RoleTone {
+  // Detective sees evil players: role=undefined, team="Murderer"
+  if (!role && team === "Murderer") {
+    return {
+      idleCardClass:
+        "border-[#a5354d]/55 bg-[linear-gradient(135deg,rgba(100,23,39,0.34),rgba(34,10,17,0.24))] hover:border-[#ff5a78]",
+      activeCardClass:
+        "border-[#ff5f80] bg-[linear-gradient(135deg,rgba(130,27,49,0.44),rgba(50,10,21,0.32))] shadow-[0_0_0_1px_rgba(255,95,128,0.36)]",
+      avatarClass:
+        "border-[#ff6f8d] text-[#ffd0db] bg-[radial-gradient(circle_at_30%_30%,rgba(255,99,129,0.34),rgba(58,13,25,0.56))]",
+      chipClass: "border-[#ff6788] bg-[rgba(133,34,57,0.28)] text-[#ffd1db]",
+      dotClass: "bg-[#ff6f90]",
+    };
+  }
   switch (role) {
     case "ForensicScientist":
       return {
@@ -140,6 +162,39 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined): RoleTone {
           "border-[#76b8ff] text-[#d2ebff] bg-[radial-gradient(circle_at_30%_30%,rgba(95,169,255,0.34),rgba(14,33,66,0.56))]",
         chipClass: "border-[#74b5ff] bg-[rgba(34,79,149,0.3)] text-[#d6ecff]",
         dotClass: "bg-[#82c0ff]",
+      };
+    case "Lover":
+      return {
+        idleCardClass:
+          "border-[#a83550]/55 bg-[linear-gradient(135deg,rgba(100,23,45,0.34),rgba(34,10,20,0.24))] hover:border-[#f4607a]",
+        activeCardClass:
+          "border-[#f4607a] bg-[linear-gradient(135deg,rgba(120,30,55,0.44),rgba(48,12,24,0.32))] shadow-[0_0_0_1px_rgba(244,96,122,0.35)]",
+        avatarClass:
+          "border-[#f4607a] text-[#ffd0db] bg-[radial-gradient(circle_at_30%_30%,rgba(244,96,122,0.34),rgba(58,13,25,0.56))]",
+        chipClass: "border-[#f4607a] bg-[rgba(133,34,57,0.28)] text-[#ffd1db]",
+        dotClass: "bg-[#f4607a]",
+      };
+    case "Phantom":
+      return {
+        idleCardClass:
+          "border-[#7c3aed]/55 bg-[linear-gradient(135deg,rgba(62,33,120,0.36),rgba(24,12,52,0.24))] hover:border-[#a78bfa]",
+        activeCardClass:
+          "border-[#a78bfa] bg-[linear-gradient(135deg,rgba(80,44,150,0.44),rgba(31,15,65,0.32))] shadow-[0_0_0_1px_rgba(167,139,250,0.35)]",
+        avatarClass:
+          "border-[#a78bfa] text-[#ead9ff] bg-[radial-gradient(circle_at_30%_30%,rgba(167,139,250,0.34),rgba(33,18,70,0.56))]",
+        chipClass: "border-[#a78bfa] bg-[rgba(77,47,140,0.3)] text-[#ebddff]",
+        dotClass: "bg-[#a78bfa]",
+      };
+    case "Detective":
+      return {
+        idleCardClass:
+          "border-[#b08825]/55 bg-[linear-gradient(135deg,rgba(100,76,18,0.36),rgba(40,30,8,0.24))] hover:border-[#f59e0b]",
+        activeCardClass:
+          "border-[#f59e0b] bg-[linear-gradient(135deg,rgba(120,88,20,0.46),rgba(50,38,10,0.32))] shadow-[0_0_0_1px_rgba(245,158,11,0.35)]",
+        avatarClass:
+          "border-[#f59e0b] text-[#fde68a] bg-[radial-gradient(circle_at_30%_30%,rgba(245,158,11,0.34),rgba(60,45,10,0.56))]",
+        chipClass: "border-[#f59e0b] bg-[rgba(126,90,20,0.3)] text-[#fde68a]",
+        dotClass: "bg-[#f59e0b]",
       };
     default:
       return {
