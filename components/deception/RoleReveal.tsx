@@ -228,6 +228,9 @@ export default function RoleReveal({
     const canSee = (p: DeceptionPlayer): boolean => {
       if (!p.role || p.userId === me.userId) return false;
 
+      // Everyone can see the ForensicScientist
+      if (p.role === "ForensicScientist") return true;
+
       // ForensicScientist sees all special roles
       if (myRole === "ForensicScientist") {
         return p.role !== "Investigator";
@@ -271,11 +274,6 @@ export default function RoleReveal({
         let roleTitle = "PHE ÁC";
         if (r && ROLE_META[r]) {
           roleTitle = ROLE_META[r].title;
-        }
-        
-        // Detective sees Lover specifically, but Murderer/Accomplice as anonymous evil
-        if (myRole === "Detective" && r !== "Lover") {
-          roleTitle = "PHE ÁC";
         }
 
         return {

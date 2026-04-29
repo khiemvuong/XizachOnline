@@ -101,6 +101,7 @@ export interface DeceptionSettings {
   enableLover: boolean;
   enablePhantom: boolean;
   enableDetective: boolean;
+  enableDepersonalization: boolean;
 }
 
 export interface DeceptionChatMessage {

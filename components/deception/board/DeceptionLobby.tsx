@@ -8,7 +8,6 @@ import PingIndicator from "./PingIndicator";
 import {
   ArrowLeft,
   Camera,
-  Check,
   Clock3,
   Copy,
   Fingerprint,
@@ -126,10 +125,10 @@ export default function DeceptionLobby({
               <div>
                 <p className="text-[10px] uppercase tracking-[0.22em] text-(--deception-cyan)">Case #{roomId}</p>
                 <h2 className="mt-1 text-lg font-black uppercase tracking-widest text-(--on-surface) sm:text-2xl">
-                  Waiting For Investigators
+                  Đang đợi anh em zô
                 </h2>
                 <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-(--deception-red-soft)">
-                  {connectedCount} / 12 players ready
+                  {connectedCount} người chơi
                 </p>
               </div>
 
@@ -441,7 +440,7 @@ export default function DeceptionLobby({
                   }
                   className="h-4 w-4 accent-(--deception-red)"
                 />
-                Accomplice
+                Đồng phạm
               </label>
 
               <label
@@ -460,14 +459,31 @@ export default function DeceptionLobby({
                   }
                   className="h-4 w-4 accent-(--deception-red)"
                 />
-                Witness
+                Nhân chứng
+              </label>
+
+              <label
+                className={`inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] ${
+                  isHost ? "cursor-pointer" : "cursor-not-allowed opacity-70"
+                }`}
+                title="Sát nhân không biết mình là Sát nhân"
+              >
+                <input
+                  type="checkbox"
+                  checked={gameState.settings.enableDepersonalization}
+                  disabled={!isHost}
+                  onChange={() =>
+                    socket?.emit("updateSettings", {
+                      enableDepersonalization: !gameState.settings.enableDepersonalization,
+                    })
+                  }
+                  className="h-4 w-4 accent-(--deception-red)"
+                />
+                Thái nhân cách
               </label>
 
               {/* Compact difficulty toggle — visible on all screens < lg */}
               <div className="flex items-center gap-1.5 lg:hidden">
-                <span className="text-[10px] uppercase tracking-[0.12em] text-(--on-surface-variant)">
-                  Difficulty
-                </span>
                 <div className="flex items-center gap-0.5 rounded-md border border-(--deception-border) bg-[rgba(255,255,255,0.02)] p-0.5">
                   <button
                     disabled={!isHost}
@@ -542,7 +558,7 @@ export default function DeceptionLobby({
               onClick={() => socket?.emit("startGame")}
               className="deception-btn-red deception-lobby-start-btn inline-flex items-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span>Start Investigation</span>
+              <span>Go go</span>
               <Play className="h-4 w-4" fill="currentColor" />
             </button>
           </div>
