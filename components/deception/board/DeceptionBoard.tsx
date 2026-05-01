@@ -272,19 +272,9 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
     setNameDraft(newName);
   };
 
-  const withReturnConfirm = (content: ReactNode, voicePosition: 'bottom-left' | 'bottom-right' | 'none' = 'bottom-left') => (
+  const withReturnConfirm = (content: ReactNode) => (
     <>
       {content}
-      {me && voicePosition !== 'none' && (
-        <VoiceChatPanel
-          roomId={gameState?.id ?? roomId}
-          userId={me.userId}
-          playerName={me.name}
-          players={connectedVoicePlayers}
-          position={voicePosition as 'bottom-left' | 'bottom-right'}
-          themeClass="[--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
-        />
-      )}
       <ReturnConfirmModal
         open={showReturnConfirm}
         title={returnConfirmTitle}
@@ -304,6 +294,8 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       />
     </>
   );
+
+
 
   if (!hydrated) {
     return (
@@ -368,120 +360,141 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
     );
   }
 
-  if (gameState.state === "LOBBY") {
-    const voiceChatNode = me ? (
-      <VoiceChatPanel
-        roomId={gameState?.id ?? roomId}
-        userId={me.userId}
-        playerName={me.name}
-        players={connectedVoicePlayers}
-        position="header-dropdown"
-        themeClass="deception-theme [--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
-      />
-    ) : null;
+  // ─── Persistent VoiceChatPanel (Fixed Bottom Right) ───
+  // Rendered once statically to prevent LiveKit disconnects across phase changes.
+  const voicePanel = me ? (
+    <VoiceChatPanel
+      roomId={gameState?.id ?? roomId}
+      userId={me.userId}
+      playerName={me.name}
+      players={connectedVoicePlayers}
+      position="bottom-left"
+      themeClass="deception-theme [--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
+    />
+  ) : null;
 
-    return withReturnConfirm(
-      <DeceptionLobby
-        gameState={gameState}
-        me={me}
-        socket={socket}
-        roomId={roomId}
-        playerPings={playerPings}
-        setPlayerPings={setPlayerPings}
-        onBackHome={() => router.push("/deception")}
-        voiceChatNode={voiceChatNode}
-        onOpenProfile={() => setShowProfileModal(true)}
-      />,
-      "none"
+  if (gameState.state === "LOBBY") {
+    return (
+      <>
+        {withReturnConfirm(
+          <DeceptionLobby
+            gameState={gameState}
+            me={me}
+            socket={socket}
+            roomId={roomId}
+            playerPings={playerPings}
+            setPlayerPings={setPlayerPings}
+            onBackHome={() => router.push("/deception")}
+            onOpenProfile={() => setShowProfileModal(true)}
+          />
+        )}
+        {voicePanel}
+      </>
     );
   }
 
   if (gameState.state === "ROLE_REVEAL") {
-    return withReturnConfirm(
-      <RoleReveal
-        gameState={gameState}
-        me={me}
-        socket={socket}
-        slackerNames={slackerNames}
-        onSlackerDismiss={() => setSlackerNames(null)}
-        onReady={() => socket?.emit("playerReady")}
-        onExit={() => requestReturn()}
-      />
+    return (
+      <>
+        {withReturnConfirm(
+          <RoleReveal
+            gameState={gameState}
+            me={me}
+            socket={socket}
+            slackerNames={slackerNames}
+            onSlackerDismiss={() => setSlackerNames(null)}
+            onReady={() => socket?.emit("playerReady")}
+            onExit={() => requestReturn()}
+          />
+        )}
+        {voicePanel}
+      </>
     );
   }
 
   if (gameState.state === "NIGHT_PHASE") {
-    return withReturnConfirm(
-      <NightPhase
-        gameState={gameState}
-        me={me}
-        socket={socket}
-        onExit={() => requestReturn()}
-      />
+    return (
+      <>
+        {withReturnConfirm(
+          <NightPhase
+            gameState={gameState}
+            me={me}
+            socket={socket}
+            onExit={() => requestReturn()}
+          />
+        )}
+        {voicePanel}
+      </>
     );
   }
 
   if (gameState.state === "SCENE_SETUP") {
-    return withReturnConfirm(
-      <ForensicPanel
-        gameState={gameState}
-        me={me}
-        socket={socket}
-        onExit={() => requestReturn()}
-      />,
-      "bottom-right",
+    return (
+      <>
+        {withReturnConfirm(
+          <ForensicPanel
+            gameState={gameState}
+            me={me}
+            socket={socket}
+            onExit={() => requestReturn()}
+          />
+        )}
+        {voicePanel}
+      </>
     );
   }
 
   if (gameState.state === "DISCUSSION" || gameState.state === "SOLVING_ATTEMPT") {
-    const voiceChatNode = me ? (
-      <VoiceChatPanel
-        roomId={gameState?.id ?? roomId}
-        userId={me.userId}
-        playerName={me.name}
-        players={connectedVoicePlayers}
-        position="header-dropdown"
-        themeClass="deception-theme [--primary:var(--deception-cyan)] [--outline-variant:var(--on-surface)] [--on-surface-variant:rgba(255,255,255,0.7)]"
-      />
-    ) : null;
-
-    return withReturnConfirm(
-      <DiscussionBoard
-        gameState={gameState}
-        me={me}
-        socket={socket}
-        playerPings={playerPings}
-        roleMaskEnabled={roleMaskEnabled}
-        bgmMuted={isDiscussionBgmMuted}
-        onToggleRoleMask={() => setRoleMaskEnabled((prev) => !prev)}
-        onToggleBgm={() => setIsDiscussionBgmMuted((prev) => !prev)}
-        onExit={() => requestReturn()}
-        voiceChatNode={voiceChatNode}
-      />,
-      'none'
+    return (
+      <>
+        {withReturnConfirm(
+          <DiscussionBoard
+            gameState={gameState}
+            me={me}
+            socket={socket}
+            playerPings={playerPings}
+            roleMaskEnabled={roleMaskEnabled}
+            bgmMuted={isDiscussionBgmMuted}
+            onToggleRoleMask={() => setRoleMaskEnabled((prev) => !prev)}
+            onToggleBgm={() => setIsDiscussionBgmMuted((prev) => !prev)}
+            onExit={() => requestReturn()}
+          />
+        )}
+        {voicePanel}
+      </>
     );
   }
 
   if (gameState.state === "WITNESS_HUNT") {
-    return withReturnConfirm(
-      <WitnessHunt
-        gameState={gameState}
-        me={me}
-        socket={socket}
-        onExit={() => requestReturn()}
-      />
+    return (
+      <>
+        {withReturnConfirm(
+          <WitnessHunt
+            gameState={gameState}
+            me={me}
+            socket={socket}
+            onExit={() => requestReturn()}
+          />
+        )}
+        {voicePanel}
+      </>
     );
   }
 
   if (gameState.state === "GAME_OVER") {
-    return withReturnConfirm(
-      <GameOverScene
-        gameState={gameState}
-        me={me}
-        onExit={() => requestReturn()}
-        canReturnToLobby={hostCanReturnLobby}
-        onReturnToLobby={() => requestReturn("lobby")}
-      />
+    return (
+      <>
+        {withReturnConfirm(
+          <GameOverScene
+            gameState={gameState}
+            me={me}
+            onExit={() => requestReturn()}
+            canReturnToLobby={hostCanReturnLobby}
+            onReturnToLobby={() => requestReturn("lobby")}
+          />
+        )}
+        {voicePanel}
+      </>
     );
   }
 

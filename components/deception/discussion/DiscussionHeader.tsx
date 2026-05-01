@@ -28,7 +28,7 @@ interface DiscussionHeaderProps {
   clearPendingSolveSelection: () => void;
   selectedMeansTitle: string;
   selectedClueTitle: string;
-  voiceChatNode?: React.ReactNode;
+
 }
 
 export default function DiscussionHeader({
@@ -54,7 +54,7 @@ export default function DiscussionHeader({
   clearPendingSolveSelection,
   selectedMeansTitle,
   selectedClueTitle,
-  voiceChatNode,
+
 }: DiscussionHeaderProps) {
   return (
     <section
@@ -142,11 +142,7 @@ export default function DiscussionHeader({
           >
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
-          {voiceChatNode && (
-            <div className="ml-1 shrink-0">
-              {voiceChatNode}
-            </div>
-          )}
+          <div id="deception-voice-slot" className="ml-1 shrink-0" />
         </div>
       </div>
 

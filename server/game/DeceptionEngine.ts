@@ -628,6 +628,7 @@ export class DeceptionEngine {
       lastForensicScientistUserId: null,
       witnessCycleUserIds: [],
       murdererQuotaMap: {},
+      isDepersonalizationActive: false,
     });
 
 
@@ -793,6 +794,7 @@ export class DeceptionEngine {
     room.witnessHuntTarget = undefined;
     room.witnessHuntResult = undefined;
     room.messages = [];
+    room.isDepersonalizationActive = room.settings.enableDepersonalization && Math.random() < 0.5;
 
     this.assignRoles(room);
     this.dealCards(room);
@@ -816,7 +818,7 @@ export class DeceptionEngine {
       .every((p) => p.isReady);
 
     if (allReady) {
-      if (room.settings.enableDepersonalization) {
+      if (room.isDepersonalizationActive) {
         const murderer = room.players.find(p => p.role === "Murderer" && !p.isSpectator);
         if (murderer && murderer.meansCards.length > 0 && murderer.clueCards.length > 0) {
           const randomMeans = murderer.meansCards[Math.floor(Math.random() * murderer.meansCards.length)];
@@ -828,7 +830,7 @@ export class DeceptionEngine {
         }
 
         room.state = "NIGHT_PHASE";
-        this.addSystemMessage(room, "Đêm xuống... Sát nhân bị thái hóa nhân cách. Ký ức vụ án đang bị xóa nhòa...");
+        this.addSystemMessage(room, "Đêm xuống... Kẻ sát nhân hãy chọn hung khí và manh mối.");
 
         // Random wait between 2s and 10s
         const waitTime = Math.floor(Math.random() * 8000) + 2000;
@@ -866,7 +868,7 @@ export class DeceptionEngine {
 
     const player = this.findPlayer(room, userId);
     if (!player || player.role !== "Murderer") return;
-    if (room.settings.enableDepersonalization) return;
+    if (room.isDepersonalizationActive) return;
 
     // Validate that means & clue belong to the murderer's cards
     const hasMeans = player.meansCards.some((c) => c.id === selection.meansId);
@@ -1364,6 +1366,7 @@ export class DeceptionEngine {
     room.winner = undefined;
     room.witnessHuntTarget = undefined;
     room.witnessHuntResult = undefined;
+    room.isDepersonalizationActive = false;
 
     // Remove disconnected, clear roles
     room.players = room.players.filter((p) => p.status === "connected");
@@ -1410,6 +1413,7 @@ export class DeceptionEngine {
     me: DeceptionPlayer | undefined,
   ): Partial<DeceptionRoom> {
     const clone: DeceptionRoom = JSON.parse(JSON.stringify(room));
+    delete clone.isDepersonalizationActive;
 
     const isGameActive =
       room.state !== "LOBBY" &&
@@ -1430,7 +1434,7 @@ export class DeceptionEngine {
     // ─── Hide murder selection from most players ───
     if (clone.murderSelection) {
       let myRole = me?.role;
-      if (room.settings.enableDepersonalization && myRole === "Murderer" && room.state !== "WITNESS_HUNT") {
+      if (room.isDepersonalizationActive && myRole === "Murderer" && room.state !== "WITNESS_HUNT") {
         myRole = "Investigator";
       }
       
@@ -1462,7 +1466,7 @@ export class DeceptionEngine {
 
         // Self-obfuscation: If I am the Murderer and Depersonalization is ON, I see myself as Investigator
         if (me && p.userId === me.userId) {
-          if (room.settings.enableDepersonalization && p.role === "Murderer" && room.state !== "WITNESS_HUNT") {
+          if (room.isDepersonalizationActive && p.role === "Murderer" && room.state !== "WITNESS_HUNT") {
             p.role = "Investigator";
             p.team = "Investigator";
           }
@@ -1471,7 +1475,7 @@ export class DeceptionEngine {
 
         if (!me || p.userId !== me.userId) {
           let myRole = me?.role;
-          if (room.settings.enableDepersonalization && myRole === "Murderer" && room.state !== "WITNESS_HUNT") {
+          if (room.isDepersonalizationActive && myRole === "Murderer" && room.state !== "WITNESS_HUNT") {
             myRole = "Investigator";
           }
 
@@ -1489,7 +1493,7 @@ export class DeceptionEngine {
 
           // ── Witness sees Murderer + Accomplice ──
           if (myRole === "Witness" && (p.role === "Murderer" || p.role === "Accomplice")) {
-            if (room.settings.enableDepersonalization && p.role === "Murderer") {
+            if (room.isDepersonalizationActive && p.role === "Murderer") {
               // Hide Murderer from Witness
             } else {
               return;

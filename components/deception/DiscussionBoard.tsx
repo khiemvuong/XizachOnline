@@ -289,7 +289,7 @@ export default function DiscussionBoard({
   onToggleRoleMask,
   onToggleBgm,
   onExit,
-  voiceChatNode,
+
 }: {
   gameState: DeceptionRoom;
   me?: DeceptionPlayer;
@@ -300,7 +300,7 @@ export default function DiscussionBoard({
   onToggleRoleMask: () => void;
   onToggleBgm: () => void;
   onExit: () => void;
-  voiceChatNode?: React.ReactNode;
+
 }) {
   const [showChat, setShowChat] = useState(false);
   const [chatText, setChatText] = useState("");
@@ -783,7 +783,7 @@ export default function DiscussionBoard({
           clearPendingSolveSelection={clearPendingSolveSelection}
           selectedMeansTitle={selectedMeansTitle}
           selectedClueTitle={selectedClueTitle}
-          voiceChatNode={voiceChatNode}
+
         />
       )}
 
@@ -817,7 +817,7 @@ export default function DiscussionBoard({
             playerReadyMap={playerReadyMap}
             warmProgressLabel={warmProgressLabel}
             setZoomedCard={setZoomedCard}
-            voiceChatNode={voiceChatNode}
+
           />
         ) : (
           <NonForensicSection

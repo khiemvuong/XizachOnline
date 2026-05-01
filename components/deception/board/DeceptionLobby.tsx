@@ -37,7 +37,7 @@ export default function DeceptionLobby({
   playerPings,
   setPlayerPings,
   onBackHome,
-  voiceChatNode,
+
   onOpenProfile,
 }: {
   gameState: DeceptionRoom;
@@ -47,7 +47,7 @@ export default function DeceptionLobby({
   playerPings: Record<string, number>;
   setPlayerPings: Dispatch<SetStateAction<Record<string, number>>>;
   onBackHome: () => void;
-  voiceChatNode?: React.ReactNode;
+
   onOpenProfile?: () => void;
 }) {
   const [chatText, setChatText] = useState("");
@@ -110,11 +110,7 @@ export default function DeceptionLobby({
           <button onClick={() => setShowRules(true)} className="deception-icon-btn" title="Luật chơi">
             <ScrollText className="h-4 w-4" />
           </button>
-          {voiceChatNode && (
-            <div className="ml-1 shrink-0">
-              {voiceChatNode}
-            </div>
-          )}
+          <div id="deception-voice-slot" className="ml-1 shrink-0" />
         </div>
       </header>
 
