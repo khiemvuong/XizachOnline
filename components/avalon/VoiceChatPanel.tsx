@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import {
     Room as LiveKitRoom,
     RoomEvent,
@@ -24,7 +25,7 @@ interface VoiceChatPanelProps {
     userId: string;
     playerName: string;
     players: VoicePlayer[];
-    position?: 'bottom-left' | 'bottom-right' | 'header-dropdown';
+    position?: 'bottom-left' | 'bottom-right' | 'header-dropdown' | 'bottom-center';
     themeClass?: string;
 }
 
@@ -643,18 +644,37 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players, po
         );
     }
 
+    // Default to a freely draggable bubble overlay
     return (
-        <div className={themeClass}>
-            {/* Collapsed pill - fixed bottom position */}
-            <div className={`fixed bottom-3 z-50 pointer-events-auto ${position === 'bottom-right' ? 'right-3' : 'left-3'}`}>
+        <motion.div 
+            className={`${themeClass} fixed z-50 pointer-events-auto touch-none`}
+            drag
+            dragMomentum={false}
+            dragConstraints={
+                typeof window !== 'undefined' 
+                    ? { top: -window.innerHeight + 100, left: -window.innerWidth + 100, right: window.innerWidth - 100, bottom: window.innerHeight - 100 }
+                    : { top: -1000, left: -1000, right: 1000, bottom: 1000 }
+            }
+            initial={
+                position === 'bottom-center' ? { x: "-50%" } : {}
+            }
+            style={
+                position === 'bottom-center'
+                    ? { bottom: 12, left: '50%' }
+                    : position === 'bottom-left'
+                    ? { bottom: 12, left: 12 }
+                    : { bottom: 12, right: 12 } // default bottom-right
+            }
+        >
+            <div className="relative">
                 {triggerBtn}
+                {isOpen && (
+                    <div className="absolute bottom-full mb-3 right-0 origin-bottom-right">
+                        {panelCard}
+                    </div>
+                )}
             </div>
-            {isOpen && (
-                <div className={`fixed inset-0 z-60 flex flex-col justify-end pointer-events-none pb-14 pt-4 ${position === 'bottom-right' ? 'items-end pr-3' : 'items-start pl-3'}`}>
-                    {panelCard}
-                </div>
-            )}
-        </div>
+        </motion.div>
     );
 }
 

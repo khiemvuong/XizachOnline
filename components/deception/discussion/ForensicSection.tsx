@@ -123,7 +123,7 @@ interface ForensicSectionProps {
   warmProgressLabel: string;
   forensicHintTiles: SceneTile[];
   socket: Socket | null;
-  voiceChatNode?: React.ReactNode;
+
 }
 
 export default function ForensicSection({
@@ -152,7 +152,7 @@ export default function ForensicSection({
   playerEvidenceViews,
   forensicHintTiles,
   socket,
-  voiceChatNode,
+
 }: ForensicSectionProps) {
   const [showPauseModal, setShowPauseModal] = useState(false);
   const knownMurderer = gameState.players.find((p) => p.role === "Murderer");
@@ -255,11 +255,7 @@ export default function ForensicSection({
               >
                 <ArrowLeft className="h-4 w-4" />
               </button>
-              {voiceChatNode && (
-                <div className="ml-1 shrink-0">
-                  {voiceChatNode}
-                </div>
-              )}
+              <div id="deception-voice-slot" className="ml-1 shrink-0" />
             </div>
           </div>
 

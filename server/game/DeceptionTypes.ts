@@ -158,4 +158,7 @@ export interface DeceptionRoom {
    * Ensures on average 1 Murderer assignment per 3 games.
    */
   murdererQuotaMap?: Record<string, { gamesPlayed: number; murdererCount: number }>;
+
+  /** Runtime flag — coin-flipped per game when settings.enableDepersonalization is ON */
+  isDepersonalizationActive?: boolean;
 }
