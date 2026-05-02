@@ -174,7 +174,7 @@ export class DeceptionEngine {
         .replace(/\s+/g, "")
         .toLowerCase();
 
-    const BLACKLISTED = ["khim", "minhtu"];
+    const BLACKLISTED = ["minhtu"];
     const isBlacklisted = (p: DeceptionPlayer) => BLACKLISTED.includes(normalize(p.name));
     const isThaoGroup   = (p: DeceptionPlayer) => {
       const n = normalize(p.name);
