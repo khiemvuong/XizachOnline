@@ -166,7 +166,7 @@ export default function DeceptionLobby({
                   }`}
                 >
                   <div className="flex min-w-0 flex-1 flex-col items-center gap-2 overflow-hidden sm:flex-row sm:gap-3 lg:gap-4">
-                    <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-white/10 bg-black/25 p-0.5 shadow-[0_10px_26px_rgba(0,0,0,0.28)] sm:h-14 sm:w-14">
+                    <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-white/10 bg-black/25 p-0.5 shadow-[0_10px_26px_rgba(0,0,0,0.28)] sm:h-16 sm:w-16">
                       {player.isSpectator ? (
                         <div className="flex h-full w-full items-center justify-center rounded-full bg-black/40 text-[rgba(255,255,255,0.45)]">
                           <Camera className="h-6 w-6 sm:h-5 sm:w-5" />

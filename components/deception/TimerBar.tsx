@@ -48,10 +48,10 @@ export default function TimerBar({
     : "--:--";
 
   const statusText = timerEndAt
-    ? "RUNNING"
+    ? "Đang chạy"
     : timerPausedRemaining
-      ? "PAUSED"
-      : "READY";
+      ? "Tạm dừng"
+      : "Sẵn sàng";
 
   const statusClass = timerEndAt
     ? "text-(--deception-cyan)"
@@ -64,7 +64,7 @@ export default function TimerBar({
   return (
     <div className="deception-chip deception-timer-chip inline-flex items-center gap-2 rounded-md px-3 py-1.5">
       <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-(--deception-red-soft)">
-        Round {currentRound}
+        R{currentRound}
       </span>
       <span
         className={`text-[11px] font-black uppercase tracking-[0.16em] ${

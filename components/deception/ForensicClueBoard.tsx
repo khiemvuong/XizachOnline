@@ -104,7 +104,7 @@ export default function ForensicClueBoard({
           return (
             <article
               key={tile.id}
-              className={`relative border border-l-[3px] p-2 text-[#141a24] shadow-[0_8px_18px_rgba(0,0,0,0.38)] transition-transform duration-200 hover:scale-[1.015] sm:border-l-4 sm:p-3 sm:shadow-[0_14px_28px_rgba(0,0,0,0.45)] ${tone.paper} ${PAPER_ROTATIONS[index % PAPER_ROTATIONS.length]}`}
+              className={`relative flex flex-col justify-start border border-l-[3px] p-2.5 pb-8 text-[#141a24] shadow-[0_8px_18px_rgba(0,0,0,0.38)] transition-transform duration-200 hover:scale-[1.015] sm:border-l-4 sm:p-4 sm:pb-12 sm:shadow-[0_14px_28px_rgba(0,0,0,0.45)] ${tone.paper} ${PAPER_ROTATIONS[index % PAPER_ROTATIONS.length]}`}
               style={{
                 clipPath:
                   "polygon(0% 0%,100% 0%,100% 95%,98% 97%,95% 94%,92% 98%,88% 94%,84% 97%,80% 95%,75% 98%,70% 94%,64% 97%,58% 95%,52% 98%,46% 94%,40% 97%,34% 95%,28% 98%,22% 94%,16% 97%,10% 95%,5% 98%,0% 95%)",
@@ -112,34 +112,39 @@ export default function ForensicClueBoard({
             >
               <span className={`absolute right-2.5 top-2.5 h-2 w-2 rounded-full sm:right-3 sm:top-3 sm:h-2.5 sm:w-2.5 ${tone.pin}`} />
 
-              <p className={`text-[8px] font-extrabold uppercase tracking-wide sm:text-[10px] ${tone.meta}`}>
-                <span className="font-black">Item #{String(index + 1).padStart(3, "0")}: </span>
-                <span className={`font-black ${tone.metaStrong}`}>{tile.name}</span>
-              </p>
-              <h3 className={`pt-1 line-clamp-2 text-base font-black uppercase leading-tight sm:text-lg ${tone.title}`}>
-                {chosen.vi}
-              </h3>
+              <div className="flex-1 pr-3 sm:pr-4">
+                <p className={`text-[8px] font-extrabold uppercase tracking-wide sm:text-[9px] ${tone.meta}`}>
+                  <span className="font-black">Item #{String(index + 1).padStart(3, "0")}: </span>
+                  <span className={`font-black ${tone.metaStrong}`}>{tile.name}</span>
+                </p>
+                <h3 className={`pt-0.5 line-clamp-2 text-base font-black uppercase leading-tight sm:text-lg ${tone.title} ${!chosen.selected ? "opacity-40" : ""}`}>
+                  {chosen.selected ? chosen.vi : "–– ĐANG PHÂN TÍCH ––"}
+                </h3>
 
-              <p className={`mt-1.5 line-clamp-1 border-t pt-1.5 text-[10px] italic sm:mt-2 sm:line-clamp-2 sm:pt-2 sm:text-[11px] ${tone.divider} ${tone.sub}`}>
-                {tile.nameVi}
-              </p>
+                <p className={`mt-1 line-clamp-1 border-t pt-1 text-[10px] italic sm:mt-1.5 sm:line-clamp-2 sm:pt-1.5 sm:text-[11px] ${tone.divider} ${tone.sub}`}>
+                  {tile.nameVi}
+                </p>
 
-              <div className="mt-2 flex items-center justify-end sm:mt-3">
-                <span
-                  className={`rounded-md border px-2 py-0.5 text-[8px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(15,23,42,0.14)] sm:px-2.5 sm:text-[9px] ${
-                    chosen.selected
-                      ? "border-[#4d79bd] bg-[#1b3761] text-[#dbeafe]"
-                      : "border-[#8f7146] bg-[#4c3b25] text-[#fbe4af]"
-                  }`}
-                >
-                  {chosen.selected ? "Marked" : "Pending"}
-                </span>
+                {chosen.selected && (
+                  <p className="mt-1 hidden line-clamp-1 text-[10px] text-[#3e4a5f] sm:mt-1 sm:block sm:line-clamp-2 sm:text-[11px]">
+                    {chosen.en}
+                  </p>
+                )}
               </div>
 
-              {chosen.selected && (
-                <p className="mt-1 hidden line-clamp-1 text-[10px] text-[#3e4a5f] sm:mt-2 sm:block sm:line-clamp-2 sm:text-[11px]">
-                  {chosen.en}
-                </p>
+              {chosen.selected ? (
+                <div className="pointer-events-none absolute bottom-4 right-2 origin-center -rotate-12 sm:bottom-6 sm:right-4 lg:bottom-8 lg:right-6">
+                  <div className="rounded border-[3px] lg:border-4 border-red-700/85 px-2 py-0.5 sm:px-3 sm:py-1 lg:px-5 lg:py-1.5 opacity-90 mix-blend-multiply shadow-[0_0_12px_rgba(185,28,28,0.2)]">
+                    <span className="text-[11px] font-black uppercase tracking-[0.25em] text-red-700 sm:text-[16px] lg:text-[22px]">
+                      MARKED
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="absolute bottom-4 right-3 sm:bottom-6 sm:right-4 lg:bottom-8 lg:right-6 rotate-170">
+                   <div className={`flex h-8 w-20 items-center justify-center rounded-sm border-2 lg:border-[3px] border-dashed sm:h-12 sm:w-28 lg:h-16 lg:w-36 ${tone.divider} bg-transparent opacity-50`}>
+                   </div>
+                </div>
               )}
             </article>
           );
