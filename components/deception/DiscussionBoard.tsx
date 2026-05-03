@@ -384,13 +384,8 @@ export default function DiscussionBoard({
   );
 
   const solveTargetPlayers = useMemo(
-    () =>
-      isForensic
-        ? selectableEvidencePlayers
-        : selectableEvidencePlayers.filter(
-            (player) => player.userId !== me?.userId,
-          ),
-    [isForensic, me?.userId, selectableEvidencePlayers],
+    () => selectableEvidencePlayers,
+    [selectableEvidencePlayers],
   );
 
   const visibleChatMessages = useMemo(
@@ -844,7 +839,6 @@ export default function DiscussionBoard({
             playerReadyMap={playerReadyMap}
             playerCardsReady={playerCardsReady}
             warmProgressLabel={warmProgressLabel}
-            isForensic={isForensic}
             knownMurderer={knownMurderer}
             revealedMurderSelection={revealedMurderSelection}
             handleSelectMeansForSolve={handleSelectMeansForSolve}

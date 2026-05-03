@@ -128,7 +128,17 @@ export default function DeceptionLobby({
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {me && !me.isHost && (
+                  <button
+                    onClick={() => socket?.emit("toggleSpectatorLobby")}
+                    className="deception-btn-outline inline-flex items-center gap-2 px-3 py-2 text-[11px] uppercase tracking-[0.16em] hover:border-(--deception-cyan) hover:text-(--deception-cyan)"
+                  >
+                    <Camera className="h-4 w-4" />
+                    <span>{me.isSpectator ? "Rời spectator" : "Vào spectator"}</span>
+                  </button>
+                )}
+
                 <button
                   onClick={onOpenProfile}
                   className="deception-btn-outline inline-flex items-center gap-2 px-3 py-2 text-[11px] uppercase tracking-[0.16em]"
@@ -143,11 +153,11 @@ export default function DeceptionLobby({
               </div>
             </div>
 
-            <div className="deception-lobby-player-grid mt-3 grid min-h-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+            <div className="deception-lobby-player-grid mt-3 grid min-h-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {sortedPlayers.map((player) => (
                 <article
                   key={player.userId}
-                  className={`deception-lobby-player-card flex min-h-28 flex-col rounded-xl border p-2.5 transition ${
+                  className={`deception-lobby-player-card flex min-h-32 items-center rounded-xl border p-3 transition sm:min-h-28 lg:p-3.5 ${
                     player.isHost
                       ? "border-(--deception-red) bg-[rgba(255,45,85,0.11)]"
                       : player.isSpectator
@@ -155,72 +165,65 @@ export default function DeceptionLobby({
                         : "border-(--deception-border) bg-[rgba(255,255,255,0.03)]"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <div className="deception-avatar h-9 w-9 shrink-0">
-                        {player.isSpectator ? (
-                          <div className="flex h-full w-full items-center justify-center rounded-full bg-black/40 text-[rgba(255,255,255,0.4)] border border-[rgba(255,255,255,0.1)]">
-                            <Camera className="h-4 w-4" />
-                          </div>
-                        ) : (
-                          <AvatarDisplay
-                            avatarUrl={player.avatarUrl}
-                            name={player.name}
-                            size={36}
-                          />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold uppercase tracking-[0.08em] text-(--on-surface) sm:text-sm">
-                          {player.name}
-                          {player.userId === me?.userId ? " (Bạn)" : ""}
-                          {playerPings[player.userId] !== undefined && (
-                            <span className={`ml-1 text-[10px] font-black font-mono tracking-tighter ${
-                              playerPings[player.userId] < 150
-                                ? "text-emerald-400"
-                                : playerPings[player.userId] < 350
-                                  ? "text-amber-400"
-                                  : "text-red-500"
-                            }`}>
-                              {Math.min(999, playerPings[player.userId])}ms
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-[10px] uppercase tracking-[0.15em] text-(--on-surface-variant)">
-                          {player.status === "connected" ? "Connected" : "Disconnected"}
-                        </p>
-                      </div>
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-2 overflow-hidden sm:flex-row sm:gap-3 lg:gap-4">
+                    <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-white/10 bg-black/25 p-0.5 shadow-[0_10px_26px_rgba(0,0,0,0.28)] sm:h-14 sm:w-14">
+                      {player.isSpectator ? (
+                        <div className="flex h-full w-full items-center justify-center rounded-full bg-black/40 text-[rgba(255,255,255,0.45)]">
+                          <Camera className="h-6 w-6 sm:h-5 sm:w-5" />
+                        </div>
+                      ) : (
+                        <AvatarDisplay
+                          avatarUrl={player.avatarUrl}
+                          name={player.name}
+                          size={60}
+                          className="border border-white/10 sm:h-[52px] sm:w-[52px]"
+                        />
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1">
-                      {player.isHost && <Star className="h-4 w-4 text-(--deception-amber)" fill="currentColor" />}
-                      {!player.isHost && isHost && player.status === "connected" && !player.isSpectator && (
-                        <button
-                          onClick={() => socket?.emit("transferHost", player.userId)}
-                          className="deception-icon-btn h-8 w-8"
-                          title="Chuyển host"
-                        >
-                          <Shield className="h-4 w-4" />
-                        </button>
-                      )}
+                    <div className="min-w-0 flex-1 overflow-hidden text-center sm:text-left">
+                      <div className="flex min-w-0 items-center justify-center gap-1.5 sm:justify-start">
+                        <p className="min-w-0 truncate text-xs font-black uppercase tracking-[0.08em] text-(--on-surface) sm:text-sm">
+                          {player.name}
+                          {player.userId === me?.userId ? " (Bạn)" : ""}
+                        </p>
+                        {playerPings[player.userId] !== undefined && (
+                          <span className={`shrink-0 text-[10px] font-black font-mono tracking-tighter ${
+                            playerPings[player.userId] < 150
+                              ? "text-emerald-400"
+                              : playerPings[player.userId] < 350
+                                ? "text-amber-400"
+                                : "text-red-500"
+                          }`}>
+                            {Math.min(999, playerPings[player.userId])}ms
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 truncate text-[10px] uppercase tracking-[0.15em] text-(--on-surface-variant)">
+                        {player.status === "connected" ? "Connected" : "Disconnected"}
+                      </p>
                     </div>
                   </div>
 
-                  {player.userId === me?.userId && !player.isHost && (
-                    <button
-                      onClick={() => socket?.emit("toggleSpectatorLobby")}
-                      className="mt-2 w-full rounded-lg border border-(--deception-border) px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-(--on-surface-variant) transition hover:border-(--deception-cyan)"
-                    >
-                      {player.isSpectator ? "Rời spectator" : "Vào spectator"}
-                    </button>
-                  )}
+                  <div className="flex shrink-0 items-center gap-1 pl-1 sm:pl-2">
+                    {player.isHost && <Star className="h-4 w-4 text-(--deception-amber)" fill="currentColor" />}
+                    {!player.isHost && isHost && player.status === "connected" && !player.isSpectator && (
+                      <button
+                        onClick={() => socket?.emit("transferHost", player.userId)}
+                        className="deception-icon-btn h-8 w-8"
+                        title="Chuyển host"
+                      >
+                        <Shield className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </article>
               ))}
 
               {Array.from({ length: openSlots }).map((_, index) => (
                 <article
                   key={`open-slot-${index}`}
-                  className="deception-lobby-empty-slot flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-(--deception-border) p-2.5 opacity-60"
+                  className="deception-lobby-empty-slot flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border border-(--deception-border) p-2.5 opacity-60 sm:min-h-28"
                 >
                   <div className="flex h-10 w-10 items-center justify-center bg-[rgba(255,255,255,0.03)]">
                     <UserPlus className="h-5 w-5 text-(--on-surface-variant)" />

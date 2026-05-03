@@ -131,6 +131,7 @@ export interface DeceptionRoom {
   scenePool: SceneTile[];
   replacedTileIndex: number | null;
   awaitingReplacementChoice: boolean;
+  forensicMarkerAdjustmentUsedThisRound: boolean;
 
   // Rounds
   currentRound: number;

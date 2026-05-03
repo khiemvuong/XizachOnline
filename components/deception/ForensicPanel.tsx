@@ -78,6 +78,8 @@ export default function ForensicPanel({
   );
 
   const [pendingReplacementTileId, setPendingReplacementTileId] = useState<string | null>(null);
+  const [markerNotice, setMarkerNotice] = useState<string | null>(null);
+  const [pendingMarker, setPendingMarker] = useState<{ tileId: string; optionIndex: number; tileName: string; optionText: string } | null>(null);
 
   const pendingReplacementTile = useMemo(
     () => replaceableEvidenceTiles.find((tile) => tile.id === pendingReplacementTileId) || null,
@@ -114,6 +116,20 @@ export default function ForensicPanel({
     if (!pendingReplacementTileId) return;
     socket?.emit("chooseReplacementTile", pendingReplacementTileId);
     setPendingReplacementTileId(null);
+  };
+
+  const closeMarkerModal = () => {
+    setPendingMarker(null);
+    setMarkerNotice(null);
+  };
+
+  const confirmMarkerPlacement = () => {
+    if (!pendingMarker) return;
+    socket?.emit("placeMarker", {
+      tileId: pendingMarker.tileId,
+      optionIndex: pendingMarker.optionIndex,
+    });
+    closeMarkerModal();
   };
 
   return (
@@ -225,13 +241,40 @@ export default function ForensicPanel({
                 <SceneBoard
                   variant="forensicNotes"
                   tiles={gameState.activeSceneTiles}
-                  readOnly={!isForensic || awaitingReplacementChoice}
+                  readOnly={!isForensic}
                   replacedTileIndex={gameState.replacedTileIndex}
+                  releaseSealsForAdjustment={Boolean(
+                    gameState.currentRound > 1 &&
+                    gameState.replacedTileIndex !== null &&
+                    !gameState.forensicMarkerAdjustmentUsedThisRound
+                  )}
                   onSelectOption={(tileId, optionIndex) => {
                     if (!isForensic) return;
-                    socket?.emit("placeMarker", {
+                    if (gameState.state === "DISCUSSION") {
+                      setMarkerNotice("Chỉ được đổi lựa chọn ở phase thay card nâu sau khi hết round.");
+                      return;
+                    }
+                    if (awaitingReplacementChoice) {
+                      setMarkerNotice("Hãy chọn card nâu cần thay trước khi đổi lựa chọn trên board.");
+                      return;
+                    }
+                    const selectedTile = gameState.activeSceneTiles.find((tile) => tile.id === tileId);
+                    if (!selectedTile) return;
+                    const isChangingExistingMarker = selectedTile.markerIndex !== null;
+                    const canAdjustMarker =
+                      gameState.currentRound === 1 ||
+                      selectedTile.markerIndex === null ||
+                      (gameState.replacedTileIndex !== null && !gameState.forensicMarkerAdjustmentUsedThisRound);
+                    if (!canAdjustMarker) {
+                      setMarkerNotice("Round này Pháp y đã chốt 1 thay đổi. Hãy đợi round sau.");
+                      return;
+                    }
+                    if (gameState.currentRound === 1 && isChangingExistingMarker) return;
+                    setPendingMarker({
                       tileId,
                       optionIndex,
+                      tileName: selectedTile?.nameVi || selectedTile?.name || "Báo cáo hiện trường",
+                      optionText: selectedTile?.options[optionIndex]?.textVi || selectedTile?.options[optionIndex]?.text || "Lựa chọn đã chọn",
                     });
                   }}
                 />
@@ -351,6 +394,44 @@ export default function ForensicPanel({
                 className="deception-btn-cyan px-4 py-3 text-xs font-black uppercase tracking-[0.16em]"
               >
                 Xác nhận
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {(markerNotice || pendingMarker) && (
+        <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <section className="deception-card w-full max-w-md overflow-hidden rounded-2xl border border-(--deception-border) bg-[rgba(10,13,20,0.97)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:p-6">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-(--deception-cyan)/45 bg-(--deception-cyan)/12 text-(--deception-cyan)">
+              <Microscope className="h-6 w-6" />
+            </div>
+            <h2 className="text-center text-xl font-black uppercase tracking-[0.14em] text-(--on-surface)">
+              {pendingMarker ? "Xác nhận dấu vết" : "Chưa thể đổi dấu vết"}
+            </h2>
+            <p className="mt-3 text-center text-sm leading-relaxed text-(--on-surface-variant)">
+              {pendingMarker ? (
+                <>
+                  Chốt <span className="font-bold text-(--deception-cyan)">{pendingMarker.optionText}</span> cho báo cáo <span className="font-bold text-(--deception-amber)">{pendingMarker.tileName}</span>? Bạn chỉ được đổi lựa chọn 1 lần trong round này, có chắc muốn đổi không?
+                </>
+              ) : (
+                markerNotice
+              )}
+            </p>
+            <div className={`mt-6 grid gap-3 ${pendingMarker ? "grid-cols-2" : "grid-cols-1"}`}>
+              {pendingMarker && (
+                <button
+                  onClick={closeMarkerModal}
+                  className="deception-btn-outline px-4 py-3 text-xs font-black uppercase tracking-[0.16em]"
+                >
+                  Hủy
+                </button>
+              )}
+              <button
+                onClick={pendingMarker ? confirmMarkerPlacement : closeMarkerModal}
+                className="deception-btn-cyan px-4 py-3 text-xs font-black uppercase tracking-[0.16em]"
+              >
+                {pendingMarker ? "Chốt lựa chọn" : "Đã hiểu"}
               </button>
             </div>
           </section>

@@ -30,7 +30,6 @@ interface NonForensicSectionProps {
   playerReadyMap: Record<string, boolean>;
   playerCardsReady: boolean;
   warmProgressLabel: string;
-  isForensic: boolean;
   knownMurderer: DeceptionPlayer | undefined | null;
   revealedMurderSelection: { meansId: number; clueId: number } | undefined | null;
   handleSelectMeansForSolve: (player: DeceptionPlayer, card: MeansCard, img: string) => void;
@@ -60,7 +59,6 @@ export default function NonForensicSection({
   setFocusedPlayerUserId,
   selectableEvidencePlayers,
   playerEvidenceViews,
-  isForensic,
   knownMurderer,
   revealedMurderSelection,
   handleSelectMeansForSolve,
@@ -247,7 +245,7 @@ export default function NonForensicSection({
                   if (!view) return null;
 
                   const playerHasNoCards = hideRolesUi && view.cardCount === 0;
-                  const canSelectPlayerForSolve = isForensic || activePlayer.userId !== me?.userId;
+                  const canSelectPlayerForSolve = true;
                   const playerIsKnownMurderer = Boolean(knownMurderer && activePlayer.userId === knownMurderer.userId);
 
                   return (
