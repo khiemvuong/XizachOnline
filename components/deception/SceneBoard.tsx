@@ -8,6 +8,7 @@ type SceneBoardProps = {
   tiles: SceneTile[];
   readOnly: boolean;
   replacedTileIndex?: number | null;
+  releaseSealsForAdjustment?: boolean;
   onSelectOption?: (tileId: string, optionIndex: number) => void;
   variant?: SceneBoardVariant;
 };
@@ -65,6 +66,7 @@ export default function SceneBoard({
   tiles,
   readOnly,
   replacedTileIndex,
+  releaseSealsForAdjustment = false,
   onSelectOption,
   variant = "default",
 }: SceneBoardProps) {
@@ -83,18 +85,21 @@ export default function SceneBoard({
           const theme = tileTheme(tile);
           const rotation = NOTE_ROTATIONS[tileIndex % NOTE_ROTATIONS.length];
           const pinPos = NOTE_PIN_POSITIONS[tileIndex % NOTE_PIN_POSITIONS.length];
+          const sealVisible = tile.markerIndex !== null && !releaseSealsForAdjustment;
 
           return (
             <article
               key={tile.id}
-              className={`deception-paper-texture deception-scene-forensic-note-tile relative min-h-0 border-t-4 p-2.5 shadow-2xl sm:p-3 lg:p-4 ${rotation}`}
+              className={`deception-paper-texture deception-scene-forensic-note-tile relative min-h-0 overflow-hidden border-t-4 p-2.5 shadow-2xl sm:p-3 lg:p-4 ${rotation} ${
+                sealVisible ? "deception-scene-tile-sealed" : ""
+              }`}
               style={{
                 backgroundColor: theme.paperBg,
                 borderTopColor: theme.paperBorder,
               }}
             >
               {pinPos && (
-                <div className={`absolute ${pinPos} flex h-6 w-6 items-center justify-center rounded-full bg-slate-300 shadow-inner`}>
+                <div className={`absolute z-20 ${pinPos} flex h-6 w-6 items-center justify-center rounded-full bg-slate-300 shadow-inner`}>
                   <div className="h-2 w-2 rounded-full bg-slate-500" />
                 </div>
               )}
@@ -145,6 +150,12 @@ export default function SceneBoard({
                   );
                 })}
               </ul>
+
+              {sealVisible && (
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[linear-gradient(135deg,rgba(8,12,18,0.16),rgba(8,12,18,0.48))]">
+                  <div className="absolute inset-x-[-18%] top-1/2 h-10 -translate-y-1/2 rotate-[-10deg] border-y border-red-200/35 bg-[repeating-linear-gradient(90deg,rgba(255,81,103,0.72)_0_14px,rgba(255,236,210,0.72)_14px_28px)] shadow-[0_8px_28px_rgba(0,0,0,0.35)]" />
+                </div>
+              )}
             </article>
           );
         })}
@@ -156,10 +167,13 @@ export default function SceneBoard({
     <div className="deception-scene-grid grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {tiles.map((tile, tileIndex) => {
         const theme = tileTheme(tile);
+        const sealVisible = tile.markerIndex !== null && !releaseSealsForAdjustment;
         return (
           <article
             key={tile.id}
-            className="deception-scene-tile flex min-h-0 flex-col rounded-xl border p-2.5 sm:p-3"
+            className={`deception-scene-tile relative flex min-h-0 flex-col overflow-hidden rounded-xl border p-2.5 sm:p-3 ${
+              sealVisible ? "deception-scene-tile-sealed" : ""
+            }`}
             style={{
               borderColor: "var(--deception-border)",
               background: theme.bg,
@@ -203,6 +217,12 @@ export default function SceneBoard({
                 );
               })}
             </ul>
+
+            {sealVisible && (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[linear-gradient(135deg,rgba(8,12,18,0.18),rgba(8,12,18,0.5))] backdrop-blur-[1px]">
+                <div className="absolute inset-x-[-18%] top-1/2 h-11 -translate-y-1/2 rotate-[-8deg] border-y border-red-200/35 bg-[repeating-linear-gradient(90deg,rgba(255,81,103,0.72)_0_14px,rgba(255,236,210,0.72)_14px_28px)] shadow-[0_8px_28px_rgba(0,0,0,0.35)]" />
+              </div>
+            )}
           </article>
         );
       })}

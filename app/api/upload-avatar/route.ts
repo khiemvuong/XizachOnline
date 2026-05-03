@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       url: result.url,
       thumbnailUrl: result.thumbnailUrl,
+      fileId: result.fileId,
     });
   } catch (error) {
     console.error("Avatar upload error:", error);

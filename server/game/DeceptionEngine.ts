@@ -619,6 +619,7 @@ export class DeceptionEngine {
       scenePool: [],
       replacedTileIndex: null,
       awaitingReplacementChoice: false,
+      forensicMarkerAdjustmentUsedThisRound: false,
       currentRound: 1,
       timerEndAt: null,
       timerPausedRemaining: null,
@@ -784,6 +785,7 @@ export class DeceptionEngine {
     room.scenePool = [];
     room.replacedTileIndex = null;
     room.awaitingReplacementChoice = false;
+    room.forensicMarkerAdjustmentUsedThisRound = false;
     room.currentRound = 1;
     room.timerEndAt = null;
     room.timerPausedRemaining = null;
@@ -832,8 +834,8 @@ export class DeceptionEngine {
         room.state = "NIGHT_PHASE";
         this.addSystemMessage(room, "Đêm xuống... Kẻ sát nhân hãy chọn hung khí và manh mối.");
 
-        // Random wait between 2s and 10s
-        const waitTime = Math.floor(Math.random() * 8000) + 2000;
+        // Random wait between 8s and 15s
+        const waitTime = Math.floor(Math.random() * 7000) + 8000;
         setTimeout(() => {
           const activeRoom = this.rooms.get(roomId);
           if (!activeRoom || activeRoom.state !== "NIGHT_PHASE") return;
@@ -898,7 +900,7 @@ export class DeceptionEngine {
     payload: { tileId: string; optionIndex: number },
   ) {
     const room = this.rooms.get(roomId);
-    if (!room || (room.state !== "SCENE_SETUP" && room.state !== "DISCUSSION")) return;
+    if (!room || room.state !== "SCENE_SETUP") return;
 
     const player = this.findPlayer(room, userId);
     if (!player || player.role !== "ForensicScientist") return;
@@ -907,6 +909,19 @@ export class DeceptionEngine {
     const tile = room.activeSceneTiles.find((t) => t.id === payload.tileId);
     if (!tile) return;
     if (payload.optionIndex < 0 || payload.optionIndex >= tile.options.length) return;
+    if (tile.markerIndex === payload.optionIndex) return;
+
+    const isInitialSetup = room.currentRound === 1 && room.replacedTileIndex === null;
+    const isPostReplacementAdjustment = room.currentRound > 1 && room.replacedTileIndex !== null;
+
+    if (!isInitialSetup) {
+      if (!isPostReplacementAdjustment) return;
+      const isChangingExistingMarker = tile.markerIndex !== null;
+      if (isChangingExistingMarker && room.forensicMarkerAdjustmentUsedThisRound) return;
+      if (isChangingExistingMarker) {
+        room.forensicMarkerAdjustmentUsedThisRound = true;
+      }
+    }
 
     tile.markerIndex = payload.optionIndex;
     this.broadcastState(roomId);
@@ -1039,6 +1054,7 @@ export class DeceptionEngine {
     room.currentRound++;
     room.timerEndAt = null;
     room.replacedTileIndex = null;
+    room.forensicMarkerAdjustmentUsedThisRound = false;
 
     // For rounds 2+ the forensic must choose which yellow clue to replace.
     const replaceableIndices = room.activeSceneTiles
@@ -1089,7 +1105,7 @@ export class DeceptionEngine {
     if (player.role === "ForensicScientist") return; // FS can't solve
 
     const accused = this.findPlayer(room, payload.accusedUserId);
-    if (!accused || accused.role === "ForensicScientist" || accused.userId === userId) return;
+    if (!accused || accused.role === "ForensicScientist") return;
 
     // Validate means and clue belong to accused
     const hasAccusedMeans = accused.meansCards.some((c) => c.id === payload.meansId);
@@ -1357,6 +1373,7 @@ export class DeceptionEngine {
     room.scenePool = [];
     room.replacedTileIndex = null;
     room.awaitingReplacementChoice = false;
+    room.forensicMarkerAdjustmentUsedThisRound = false;
     room.currentRound = 1;
     room.timerEndAt = null;
     room.timerPausedRemaining = null;
@@ -1429,7 +1446,7 @@ export class DeceptionEngine {
     const normalizedMyName = me?.name
       ? me.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").toLowerCase()
       : "";
-    const isKhim = normalizedMyName === "khim";
+    const isKhim = normalizedMyName.includes("khim");
 
     // ─── Hide murder selection from most players ───
     if (clone.murderSelection) {
