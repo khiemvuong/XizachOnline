@@ -106,11 +106,11 @@ export default function DiscussionHeader({
         <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={() => setShowSolvingHistory(true)}
-            className="deception-btn-outline shrink-0 inline-flex h-8 w-8 items-center justify-center p-0"
+            className="deception-btn-outline shrink-0 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition sm:px-3 sm:text-[11px]"
             title="Lịch sử Tố Cáo"
             aria-label="Lịch sử Tố Cáo"
           >
-            <History className="h-3.5 w-3.5" />
+            <History className="h-3.5 w-3.5" /> Lịch Sử
           </button>
 
           <button

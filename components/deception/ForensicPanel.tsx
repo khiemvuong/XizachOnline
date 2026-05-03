@@ -306,7 +306,9 @@ export default function ForensicPanel({
               <section className="deception-card deception-forensic-summary rounded-xl border border-(--deception-border) bg-[rgba(14,16,23,0.84)]">
                 <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-(--on-surface-variant) sm:gap-2 sm:text-[11px]">
                   <EyeOff className="h-3.5 w-3.5 text-(--deception-cyan) sm:h-4 sm:w-4" />
-                  PHÁP Y ĐANG DỰNG LẠI HIỆN TRƯỜNG VÀ KIỂM ĐỊNH CHỨNG CỨ...
+                  {gameState.players.find(p => p.role === "ForensicScientist")?.name 
+                    ? `${gameState.players.find(p => p.role === "ForensicScientist")?.name} ĐANG DỰNG LẠI HIỆN TRƯỜNG VÀ KIỂM ĐỊNH CHỨNG CỨ...`
+                    : "PHÁP Y ĐANG DỰNG LẠI HIỆN TRƯỜNG VÀ KIỂM ĐỊNH CHỨNG CỨ..."}
                 </div>
               </section>
 

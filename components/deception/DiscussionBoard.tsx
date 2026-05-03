@@ -61,19 +61,19 @@ function clampPlayerName(name: string, maxLength: number) {
 function roleLabel(player: DeceptionPlayer | undefined) {
   if (!player?.role) {
     if (player?.team === "Murderer") return "Phe Ác";
-    return "Ẩn danh";
+    return "Ẩn Danh";
   }
   switch (player.role) {
     case "ForensicScientist":
       return "Pháp Y";
     case "Murderer":
-      return "Kẻ Giết Người";
+      return "Sát Nhân";
     case "Accomplice":
       return "Đồng Phạm";
     case "Witness":
       return "Nhân Chứng";
     case "Investigator":
-      return "Điều Tra Viên";
+      return "Điều Tra";
     case "Lover":
       return "Tình Nhân";
     case "Phantom":
@@ -91,6 +91,7 @@ export type RoleTone = {
   avatarClass: string;
   chipClass: string;
   dotClass: string;
+  tagClass: string;
 };
 
 function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: DeceptionPlayer["team"]): RoleTone {
@@ -104,7 +105,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
       avatarClass:
         "border-[#ff6f8d] text-[#ffd0db] bg-[radial-gradient(circle_at_30%_30%,rgba(255,99,129,0.34),rgba(58,13,25,0.56))]",
       chipClass: "border-[#ff6788] bg-[rgba(133,34,57,0.28)] text-[#ffd1db]",
-      dotClass: "bg-[#ff6f90]",
+      dotClass: "bg-[#ff6f90] shadow-[0_0_6px_rgba(255,111,144,0.8)]",
+      tagClass: "border-l-[#ff6788] bg-gradient-to-r from-[#ff6788]/20 to-transparent text-[#ffd1db]",
     };
   }
   switch (role) {
@@ -117,7 +119,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
         avatarClass:
           "border-[#65dfee] text-[#adf5ff] bg-[radial-gradient(circle_at_30%_30%,rgba(75,216,240,0.34),rgba(8,34,49,0.5))]",
         chipClass: "border-[#4bd0e6] bg-[rgba(17,110,129,0.26)] text-[#a7f3ff]",
-        dotClass: "bg-[#4eddf7]",
+        dotClass: "bg-[#4eddf7] shadow-[0_0_6px_rgba(78,221,247,0.8)]",
+        tagClass: "border-l-[#4bd0e6] bg-gradient-to-r from-[#4bd0e6]/20 to-transparent text-[#a7f3ff]",
       };
     case "Murderer":
       return {
@@ -128,7 +131,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
         avatarClass:
           "border-[#ff6f8d] text-[#ffd0db] bg-[radial-gradient(circle_at_30%_30%,rgba(255,99,129,0.34),rgba(58,13,25,0.56))]",
         chipClass: "border-[#ff6788] bg-[rgba(133,34,57,0.28)] text-[#ffd1db]",
-        dotClass: "bg-[#ff6f90]",
+        dotClass: "bg-[#ff6f90] shadow-[0_0_6px_rgba(255,111,144,0.8)]",
+        tagClass: "border-l-[#ff6788] bg-gradient-to-r from-[#ff6788]/20 to-transparent text-[#ffd1db]",
       };
     case "Accomplice":
       return {
@@ -139,7 +143,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
         avatarClass:
           "border-[#ffc266] text-[#ffe3ba] bg-[radial-gradient(circle_at_30%_30%,rgba(255,190,94,0.34),rgba(60,35,10,0.56))]",
         chipClass: "border-[#ffbc5e] bg-[rgba(126,81,23,0.3)] text-[#ffe5be]",
-        dotClass: "bg-[#ffc367]",
+        dotClass: "bg-[#ffc367] shadow-[0_0_6px_rgba(255,195,103,0.8)]",
+        tagClass: "border-l-[#ffbc5e] bg-gradient-to-r from-[#ffbc5e]/20 to-transparent text-[#ffe5be]",
       };
     case "Witness":
       return {
@@ -150,7 +155,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
         avatarClass:
           "border-[#be97ff] text-[#ead9ff] bg-[radial-gradient(circle_at_30%_30%,rgba(180,138,255,0.34),rgba(33,18,64,0.56))]",
         chipClass: "border-[#be94ff] bg-[rgba(77,47,131,0.3)] text-[#ebddff]",
-        dotClass: "bg-[#c3a0ff]",
+        dotClass: "bg-[#c3a0ff] shadow-[0_0_6px_rgba(195,160,255,0.8)]",
+        tagClass: "border-l-[#be94ff] bg-gradient-to-r from-[#be94ff]/20 to-transparent text-[#ebddff]",
       };
     case "Investigator":
       return {
@@ -161,7 +167,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
         avatarClass:
           "border-[#76b8ff] text-[#d2ebff] bg-[radial-gradient(circle_at_30%_30%,rgba(95,169,255,0.34),rgba(14,33,66,0.56))]",
         chipClass: "border-[#74b5ff] bg-[rgba(34,79,149,0.3)] text-[#d6ecff]",
-        dotClass: "bg-[#82c0ff]",
+        dotClass: "bg-[#82c0ff] shadow-[0_0_6px_rgba(130,192,255,0.8)]",
+        tagClass: "border-l-[#74b5ff] bg-gradient-to-r from-[#74b5ff]/20 to-transparent text-[#d6ecff]",
       };
     case "Lover":
       return {
@@ -172,7 +179,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
         avatarClass:
           "border-[#f4607a] text-[#ffd0db] bg-[radial-gradient(circle_at_30%_30%,rgba(244,96,122,0.34),rgba(58,13,25,0.56))]",
         chipClass: "border-[#f4607a] bg-[rgba(133,34,57,0.28)] text-[#ffd1db]",
-        dotClass: "bg-[#f4607a]",
+        dotClass: "bg-[#f4607a] shadow-[0_0_6px_rgba(244,96,122,0.8)]",
+        tagClass: "border-l-[#f4607a] bg-gradient-to-r from-[#f4607a]/20 to-transparent text-[#ffd1db]",
       };
     case "Phantom":
       return {
@@ -183,7 +191,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
         avatarClass:
           "border-[#a78bfa] text-[#ead9ff] bg-[radial-gradient(circle_at_30%_30%,rgba(167,139,250,0.34),rgba(33,18,70,0.56))]",
         chipClass: "border-[#a78bfa] bg-[rgba(77,47,140,0.3)] text-[#ebddff]",
-        dotClass: "bg-[#a78bfa]",
+        dotClass: "bg-[#a78bfa] shadow-[0_0_6px_rgba(167,139,250,0.8)]",
+        tagClass: "border-l-[#a78bfa] bg-gradient-to-r from-[#a78bfa]/20 to-transparent text-[#ebddff]",
       };
     case "Detective":
       return {
@@ -194,7 +203,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
         avatarClass:
           "border-[#f59e0b] text-[#fde68a] bg-[radial-gradient(circle_at_30%_30%,rgba(245,158,11,0.34),rgba(60,45,10,0.56))]",
         chipClass: "border-[#f59e0b] bg-[rgba(126,90,20,0.3)] text-[#fde68a]",
-        dotClass: "bg-[#f59e0b]",
+        dotClass: "bg-[#f59e0b] shadow-[0_0_6px_rgba(245,158,11,0.8)]",
+        tagClass: "border-l-[#f59e0b] bg-gradient-to-r from-[#f59e0b]/20 to-transparent text-[#fde68a]",
       };
     default:
       return {
@@ -206,7 +216,8 @@ function roleToneByRole(role: DeceptionPlayer["role"] | undefined, team?: Decept
           "border-(--deception-border) text-(--deception-cyan) bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.2),rgba(255,255,255,0.03))]",
         chipClass:
           "border-(--deception-border) bg-[rgba(255,255,255,0.05)] text-(--on-surface-variant)",
-        dotClass: "bg-(--on-surface-variant)",
+        dotClass: "bg-slate-400",
+        tagClass: "border-l-slate-400 bg-gradient-to-r from-slate-500/20 to-transparent text-slate-300",
       };
   }
 }

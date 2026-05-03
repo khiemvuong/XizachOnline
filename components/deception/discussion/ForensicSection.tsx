@@ -26,43 +26,6 @@ function forensicRoleLabel(role: string | undefined): string {
   }
 }
 
-type ForensicChipTone = { chipClass: string; dotClass: string };
-function forensicRoleTone(role: string | undefined): ForensicChipTone {
-  switch (role) {
-    // Evil team → red
-    case "Murderer":
-    case "Accomplice":
-    case "Lover":
-      return {
-        chipClass: "border-red-400/70 bg-red-500/20 text-red-200",
-        dotClass: "bg-red-400",
-      };
-    // Detective → purple
-    case "Detective":
-      return {
-        chipClass: "border-violet-400/70 bg-violet-500/20 text-violet-200",
-        dotClass: "bg-violet-400",
-      };
-    // Phantom → green
-    case "Phantom":
-      return {
-        chipClass: "border-emerald-400/70 bg-emerald-500/20 text-emerald-200",
-        dotClass: "bg-emerald-400",
-      };
-    // Witness & Investigator → cyan
-    case "Witness":
-    case "Investigator":
-      return {
-        chipClass: "border-cyan-400/70 bg-cyan-500/20 text-cyan-200",
-        dotClass: "bg-cyan-400",
-      };
-    default:
-      return {
-        chipClass: "border-slate-500/50 bg-slate-500/15 text-slate-300",
-        dotClass: "bg-slate-400",
-      };
-  }
-}
 
 const FullCardDetail = ({ card, tone }: { card: MeansCard | ClueCard, tone: "means"|"clue" }) => {
   const isMeans = tone === "means";
@@ -410,6 +373,16 @@ export default function ForensicSection({
               const isSelf = player.userId === me?.userId;
               const displayName = clampPlayerName(player.name, isCompactViewport ? 11 : 14);
               const roleTone = hideRolesUi ? roleToneByRole(undefined) : roleToneByRole(player.role, player.team);
+              const isMurderer = !hideRolesUi && player.team === "Murderer";
+              
+              // Theme variables for the decor
+              const decorColor = hideRolesUi 
+                ? "text-slate-500" 
+                : isMurderer 
+                  ? "text-rose-500" 
+                  : "text-cyan-500";
+              const watermarkText = hideRolesUi ? "CLASSIFIED" : isMurderer ? "SUSPECT" : "CLEARED";
+
               return (
                 <button
                   key={player.userId}
@@ -420,45 +393,99 @@ export default function ForensicSection({
                   title="Xem bộ thẻ người chơi"
                   className={`relative shrink-0 w-[180px] sm:w-[235px] overflow-hidden rounded-lg border p-1.5 md:p-2 text-left transition ${active ? roleTone.activeCardClass : roleTone.idleCardClass}`}
                 >
-                  <div className="flex items-center gap-1.5 md:gap-2">
-                    <AvatarDisplay
-                      avatarUrl={player.avatarUrl}
-                      name={player.name}
-                      className={`h-7 w-7 md:h-10 md:w-10 border text-[10px] md:text-sm tracking-[0.08em] ${roleTone.avatarClass}`}
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate text-[10px] md:text-xs font-bold uppercase tracking-[0.08em] text-(--on-surface)">
-                        {displayName}
-                        {playerPings[player.userId] !== undefined && (
-                          <span className={`ml-1 text-[8px] md:text-[10px] font-black font-mono tracking-tighter ${playerPings[player.userId] < 150 ? "text-emerald-400" : playerPings[player.userId] < 350 ? "text-amber-400" : "text-red-500"}`}>{Math.min(999, playerPings[player.userId])}ms</span>
+                  {/* Investigation Background Decor - Harmornized */}
+                  <div className={`absolute inset-0 overflow-hidden pointer-events-none rounded-[inherit] transition-colors duration-500 ${decorColor}`}>
+                     {/* Blueprint/Graph Grid */}
+                     <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                     
+                     {/* Corner Caution Stripes - top left */}
+                     <div className="absolute -left-6 -top-6 h-16 w-16 -rotate-45 opacity-[0.12]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, currentColor, currentColor 2px, transparent 2px, transparent 6px)' }} />
+                     
+                     {/* Side Barcode - right edge */}
+                     <div className="absolute -right-2 top-0 h-full w-6 opacity-[0.1]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, currentColor 0, currentColor 1.5px, transparent 1.5px, transparent 3px, currentColor 3px, currentColor 5px, transparent 5px, transparent 7px)' }} />
+
+                     {/* Creative SVG Icon based on Role */}
+                     <div className="absolute right-4 top-1/2 -translate-y-1/2 w-20 h-20 opacity-[0.06] -rotate-12">
+                        {hideRolesUi ? (
+                           // Folder / Classified icon
+                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+                        ) : isMurderer ? (
+                           // Target / Crosshair icon
+                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+                        ) : (
+                           // Shield / Check icon
+                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
                         )}
-                      </p>
-                      <div className="mt-0.5 md:mt-1 flex flex-wrap items-center gap-1">
+                     </div>
+
+                     {/* Elegant Typography Watermark */}
+                     <span className="absolute -bottom-1 right-12 select-none text-2xl font-black uppercase tracking-widest opacity-[0.06]">
+                        {watermarkText}
+                     </span>
+                  </div>
+
+                  {/* Glassmorphism & layout upgrade */}
+                  <div className="relative z-10 flex items-center gap-2 md:gap-3">
+                    <div className="relative shrink-0">
+                      <div className={`absolute inset-0 rounded-full blur-[6px] opacity-70 ${active ? 'bg-current' : 'hidden'}`} />
+                      <AvatarDisplay
+                        avatarUrl={player.avatarUrl}
+                        name={player.name}
+                        className={`relative border-2 tracking-[0.08em] shadow-[0_4px_10px_rgba(0,0,0,0.5)] ${roleTone.avatarClass} h-8 w-8 md:h-12 md:w-12 text-[10px] md:text-sm`}
+                      />
+                    </div>
+
+                    <div className="min-w-0 flex-1 py-0.5">
+                      <div className="flex items-center justify-between gap-1 md:gap-2">
+                        <p className="truncate font-black uppercase tracking-widest text-(--on-surface) drop-shadow-md text-[10px] md:text-xs">
+                          {displayName}
+                        </p>
+                        {playerPings[player.userId] !== undefined && (
+                          <span className={`shrink-0 text-[8px] md:text-[9px] font-black font-mono tracking-tighter ${playerPings[player.userId] < 150 ? "text-emerald-400" : playerPings[player.userId] < 350 ? "text-amber-400" : "text-red-500"}`}>
+                            {Math.min(999, playerPings[player.userId])}ms
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-0.5 md:mt-1 flex flex-wrap items-center gap-1 md:gap-1.5">
+                        {/* ROLE TAG - Folder Tab Style */}
                         {(() => {
-                          const fTone = hideRolesUi ? forensicRoleTone(undefined) : forensicRoleTone(player.role);
+                          const tagColor = hideRolesUi ? "border-l-slate-400 bg-gradient-to-r from-slate-500/20 to-transparent text-slate-300" : roleTone.tagClass;
+                          const dotColor = hideRolesUi ? "bg-slate-400" : roleTone.dotClass;
+
                           return (
-                            <span className={`inline-flex max-w-full items-center gap-1 rounded border px-1 py-0 md:px-1.5 md:py-0.5 text-[7px] md:text-[9px] font-black uppercase tracking-widest ${fTone.chipClass}`}>
-                              <span className={`h-1 w-1 md:h-1.5 md:w-1.5 rounded-full ${fTone.dotClass}`} />
+                            <span className={`inline-flex max-w-full items-center gap-1.5 border-l-[3px] px-1 md:px-2 py-0 md:py-0.5 text-[7px] md:text-[9px] font-black uppercase tracking-widest shadow-sm ${tagColor}`}>
+                              <span className={`h-1 md:h-1.5 w-1 md:w-1.5 rounded-sm ${dotColor}`} />
                               <span className="truncate">{hideRolesUi ? "Người chơi" : forensicRoleLabel(player.role)}</span>
                             </span>
                           );
                         })()}
+
+                        {/* FORENSIC BADGE (If applicable) */}
                         {showForensicBadge && (
-                          <span className="inline-flex items-center gap-1 rounded border border-cyan-300/75 bg-[radial-gradient(circle_at_30%_30%,rgba(70,220,255,0.35),rgba(12,68,102,0.58))] px-1 py-0 md:px-1.5 md:py-0.5 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-cyan-50 shadow-[0_0_10px_rgba(0,212,255,0.28)]">
-                            <span className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-cyan-200 shadow-[0_0_8px_rgba(120,240,255,0.8)]" />
+                          <span className="inline-flex items-center gap-1.5 border-l-[3px] border-l-teal-400 bg-linear-to-r from-teal-500/20 to-transparent px-1 md:px-2 py-0 md:py-0.5 text-[7px] md:text-[9px] font-black uppercase tracking-widest text-teal-200 shadow-sm">
+                            <span className="h-1 md:h-1.5 w-1 md:w-1.5 rounded-sm bg-teal-400 shadow-[0_0_6px_rgba(45,212,191,0.8)]" />
                             Pháp y
                           </span>
                         )}
-                        <span title={accusationTone.title} className={`inline-flex items-center gap-1 rounded border px-1 py-0 md:px-1.5 md:py-0.5 text-[7px] md:text-[8px] font-black uppercase tracking-widest ${accusationTone.chipClass}`}>
-                          <BadgeCheck className={`h-2 w-2 md:h-2.5 md:w-2.5 ${accusationTone.iconClass}`} />
+
+                        {/* ACCUSATION BADGE - Ticket/Token Style */}
+                        <span title={accusationTone.title} className={`relative inline-flex items-center gap-1.5 rounded-sm outline outline-offset-[1.5px] px-1 md:px-2 py-0 md:py-0.5 text-[7px] md:text-[9px] font-black uppercase tracking-widest mx-0.5 md:mx-1 ${player.hasBadge ? 'outline-amber-400/80 bg-amber-500/20 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.3)]' : 'outline-slate-700/80 bg-slate-800/40 text-slate-500'}`}>
+                          <BadgeCheck className={`h-2 md:h-3 w-2 md:w-3 ${player.hasBadge ? 'text-amber-400 drop-shadow-[0_0_3px_currentColor]' : 'text-slate-500'}`} />
                           <span>{accusationTone.label}</span>
                         </span>
+
+                        {/* YOU TAG - Solid High Contrast Style */}
                         {isSelf && (
-                          <span className="rounded border border-cyan-300/70 bg-cyan-400/18 px-1 py-0 md:px-1.5 md:py-0.5 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-cyan-100">Bạn</span>
+                          <span className="flex items-center gap-1 rounded-sm bg-cyan-400 text-cyan-950 px-1 md:px-2 py-0 md:py-[3px] text-[7px] md:text-[10px] font-black uppercase tracking-widest shadow-[0_0_12px_rgba(34,211,238,0.6)] ring-1 ring-cyan-200">
+                            BẠN
+                          </span>
                         )}
                       </div>
                     </div>
                   </div>
+                  {/* Background Texture */}
+                  <div className="absolute inset-0 opacity-[0.04] pointer-events-none mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }}></div>
                 </button>
               );
             })}

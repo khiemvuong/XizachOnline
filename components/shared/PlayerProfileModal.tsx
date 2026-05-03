@@ -455,21 +455,21 @@ export default function PlayerProfileModal({
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-0.5 sm:gap-3 sm:pt-1 max-[900px]:landscape:grid-cols-1 max-[900px]:landscape:gap-1.5 max-[900px]:landscape:pt-0">
+              <div className="grid grid-cols-2 gap-3 pt-2 sm:gap-3 sm:pt-1">
                 <button
                   onClick={closeCropper}
                   disabled={uploading}
-                  className="rounded-xl border border-white/12 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/65 transition hover:bg-white/8 disabled:opacity-50 sm:px-4 sm:py-3 sm:text-xs max-[900px]:landscape:py-1.5 max-[900px]:landscape:text-[9px]"
+                  className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-rose-400 transition hover:bg-rose-500/20 disabled:opacity-50 sm:px-4 sm:py-3 sm:text-xs"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={confirmCrop}
                   disabled={uploading}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#051018] transition hover:bg-cyan-200 disabled:opacity-50 sm:px-4 sm:py-3 sm:text-xs max-[900px]:landscape:py-1.5 max-[900px]:landscape:text-[9px]"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-[#051018] transition hover:bg-cyan-200 disabled:opacity-50 sm:px-4 sm:py-3 sm:text-xs"
                 >
                   {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Dùng ảnh này
+                  Xác nhận
                 </button>
               </div>
             </div>

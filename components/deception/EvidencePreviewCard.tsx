@@ -186,7 +186,7 @@ export default function EvidencePreviewCard({
           <div
             className={`pointer-events-none absolute left-0.5 top-0.5 md:left-1 md:top-1 z-20 rounded px-1 py-0 md:px-1.5 md:py-0.5 text-[5px] md:text-[7px] font-black uppercase tracking-widest ${toneBadgeClass}`}
           >
-            {isMeans ? "Means" : "Clue"}
+            {isMeans ? "Hung khí" : "Manh mối"}
           </div>
 
           {imageUrl ? (
@@ -229,7 +229,7 @@ export default function EvidencePreviewCard({
       <div
         className={`pointer-events-none absolute -bottom-1.5 -right-1 md:-bottom-2 md:-right-2 px-1 py-0 md:px-2 md:py-0.5 text-[6px] md:text-[8px] font-black uppercase tracking-widest shadow-sm ${toneTagClass}`}
       >
-        {isMeans ? "Means" : "Clue"} #{evidenceNum}
+        {isMeans ? "Hung khí" : "Manh mối"} #{evidenceNum}
       </div>
 
       {selected && (
