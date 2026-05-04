@@ -13,7 +13,7 @@ import {
     createLocalAudioTrack,
     AudioPresets,
 } from 'livekit-client';
-import { Mic, MicOff, Volume2, X, ChevronDown, RotateCcw } from 'lucide-react';
+import { Mic, MicOff, Volume2, X, RotateCcw } from 'lucide-react';
 
 interface VoicePlayer {
     userId: string;
@@ -425,36 +425,30 @@ export default function VoiceChatPanel({ roomId, userId, playerName, players, po
                 }
                 setIsOpen(p => !p);
             }}
-            className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 transition-all cursor-pointer text-xs font-bold tracking-wide shrink-0 ${
-                isConnected
-                    ? 'bg-black/40 border-(--primary)/35-[var(--primary)] hover:bg-(--primary)/10'
-                    : 'bg-black/30 border-(--outline-variant)/30 text-(--on-surface-variant) hover:bg-white/5'
-            } ${position !== 'header-dropdown' ? 'shadow-lg backdrop-blur-md rounded-full px-3' : 'h-8 w-8 justify-center p-0'}`}
+            className={`relative flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-lg backdrop-blur-md rounded-full border ${
+                !isConnected
+                    ? 'bg-red-500/80 border-red-400/50 text-white hover:bg-red-500/90 hover:shadow-red-500/30'
+                    : 'bg-black/60 border-(--primary)/40 text-(--primary) hover:bg-black/80 hover:shadow-(--primary)/20'
+            } w-10 h-10 sm:w-11 sm:h-11`}
             title="Voice Chat"
             aria-label="Mở bảng điều khiển giọng nói"
         >
             {isMicOn
-                ? <Mic className={`w-3.5 h-3.5 ${iAmSpeaking ? 'animate-pulse text-green-400' : ''}`} />
-                : <MicOff className="w-3.5 h-3.5 opacity-50" />
+                ? <Mic className={`w-4 h-4 sm:w-5 sm:h-5 ${iAmSpeaking ? 'animate-pulse text-green-400' : ''}`} />
+                : <MicOff className={`w-4 h-4 sm:w-5 sm:h-5 ${!isConnected ? 'opacity-90' : 'opacity-60'}`} />
             }
-            {position !== 'header-dropdown' && (
-                <>
-                    <span>Voice</span>
-                    {!hasJoinedVoice ? (
-                        <span className="text-[9px] font-bold uppercase text-amber-400/90 ml-1">(Chưa vào)</span>
-                    ) : !isConnected ? (
-                        <span className="text-[9px] opacity-50 ml-1">...</span>
-                    ) : null}
-                    {isConnected && speakingOthers.length > 0 && (
-                        <span className="text-[9px] text-green-400 max-w-24 truncate">
-                            {speakingOthers.map(p => p.name).join(', ')}
-                        </span>
-                    )}
-                    <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
-                </>
+            
+            {!hasJoinedVoice && (
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-400 border-2 border-black" title="Chưa vào" />
             )}
-            {position === 'header-dropdown' && !hasJoinedVoice && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 border border-black" />
+            {hasJoinedVoice && !isConnected && (
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500 border-2 border-black animate-pulse" title="Đang kết nối..." />
+            )}
+            
+            {isConnected && speakingOthers.length > 0 && !isOpen && (
+                <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-green-500 border-2 border-black text-[9px] font-bold text-white">
+                    {speakingOthers.length}
+                </span>
             )}
         </button>
     );
