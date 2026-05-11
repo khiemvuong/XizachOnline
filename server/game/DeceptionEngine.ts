@@ -161,11 +161,12 @@ export class DeceptionEngine {
 
     // 2. Determine Murderer
     //
-    // Rule A – permanent blacklist: "khim" and "minhtu" can NEVER be Murderer / Accomplice.
+    // Rule A – permanent blacklist: "minhtu" can NEVER be Murderer / Accomplice.
     // Rule B – quota rule: anyone whose normalised name contains "thao" OR equals "chu"
-    //          must be Murderer on average at least once every 3 games.
+    //          must be Murderer exactly once every 3 games (at least 1 and at most 1).
     //          The quota is tracked per-userId in room.murdererQuotaMap.
     //          A player is "due" when their murdererCount < ceil(gamesPlayed / 3).
+    //          A player is "capped" when their murdererCount >= ceil(gamesPlayed / 3).
 
     /** Strip Vietnamese diacritics, spaces, and lowercase */
     const normalize = (s: string) =>
@@ -207,8 +208,17 @@ export class DeceptionEngine {
       // Force-pick one of the due thao players at random
       murdererPlayer = dueThaoPlayers[Math.floor(Math.random() * dueThaoPlayers.length)];
     } else {
-      // Normal random selection — excluding blacklisted players
-      let allowedCandidates = murdererCandidates.filter(p => !isBlacklisted(p));
+      // Normal random selection — excluding blacklisted players and capped quota players
+      let allowedCandidates = murdererCandidates.filter(p => {
+        if (isBlacklisted(p)) return false;
+        if (isThaoGroup(p)) {
+          const q = room.murdererQuotaMap![p.userId];
+          // If they reached the quota (1 per 3 games), block them from being murderer by chance
+          if (q && q.murdererCount >= Math.ceil(q.gamesPlayed / 3)) return false;
+        }
+        return true;
+      });
+
       if (allowedCandidates.length === 0) allowedCandidates = murdererCandidates;
       murdererPlayer = allowedCandidates[Math.floor(Math.random() * allowedCandidates.length)];
     }
