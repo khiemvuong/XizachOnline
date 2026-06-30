@@ -1,5 +1,5 @@
 /* --- Weredog Game: Gothic Fairytale Theme --- */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=Cormorant+SC:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Lora:ital,wght@0,400..700;1,400..700&family=Cormorant+SC:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
 
 .weredog-theme {
   --weredog-bg: #0b0d11;
@@ -19,20 +19,20 @@
     #171e23 0%,
     #0b0d11 100%
   );
-  font-family: 'EB Garamond', serif;
+  font-family: var(--font-lora), 'Lora', serif;
 }
 
 /* Fonts styling */
 .font-gothic-heading {
-  font-family: 'Cinzel Decorative', Georgia, serif;
+  font-family: var(--font-cinzel-decorative), 'Cinzel Decorative', Georgia, serif;
 }
 
 .font-gothic-body {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-lora), 'Lora', Georgia, serif;
 }
 
 .font-gothic-label {
-  font-family: 'Cormorant SC', Georgia, serif;
+  font-family: var(--font-cormorant), 'Cormorant SC', Georgia, serif;
   letter-spacing: 0.08em;
 }
 
@@ -144,4 +144,36 @@
   text-align: center;
 }
 
+/* Mobile Landscape Aspect Ratio Protection */
+@media screen and (orientation: landscape) {
+  .weredog-game-container {
+    min-height: 493px !important;
+    width: 100%;
+  }
+  
+  /* Disable min-height for active gameplay states to fit exactly in 100vh landscape */
+  .weredog-orientation-lock .weredog-game-container {
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+}
 
+/* Night Phase animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out both;
+}
+
+/* Night player selected pulse */
+@keyframes nightPulse {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+.night-selected-pulse {
+  animation: nightPulse 1.5s ease-in-out infinite;
+}
