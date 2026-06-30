@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Cormorant_Garamond, Noto_Serif, Manrope } from "next
 import "./globals.css";
 import "./avalon.css";
 import "./deception.css";
+import "./weredog.css";
 
 const cormorant = Cormorant_Garamond({
   weight: ['400', '500', '600', '700'],

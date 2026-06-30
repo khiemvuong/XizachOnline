@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { GameEngine } from './server/game/GameEngine';
 import { AvalonEngine } from './server/game/AvalonEngine';
 import { DeceptionEngine } from './server/game/DeceptionEngine';
+import { WeredogEngine } from './server/game/WeredogEngine';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -26,6 +27,7 @@ app.prepare().then(() => {
   const gameEngine = new GameEngine(io);
   new AvalonEngine(io);
   new DeceptionEngine(io);
+  new WeredogEngine(io);
 
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
