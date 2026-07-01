@@ -72,7 +72,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const [roleMaskEnabled, setRoleMaskEnabled] = useState(true);
   const [isDiscussionBgmMuted, setIsDiscussionBgmMuted] = useState(() => {
     if (typeof window === "undefined") return false;
-    return sessionStorage.getItem("deception_bgm_muted") === "1";
+    return localStorage.getItem("deception_bgm_muted") === "1";
   });
   const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
   const [showReturnConfirm, setShowReturnConfirm] = useState(false);
@@ -93,14 +93,14 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         };
       }
 
-      let storedUserId = sessionStorage.getItem("xz_userId");
+      let storedUserId = localStorage.getItem("xz_userId");
       if (!storedUserId) {
         storedUserId = generateUserId();
-        sessionStorage.setItem("xz_userId", storedUserId);
+        localStorage.setItem("xz_userId", storedUserId);
       }
 
       // Prefer shared profile name, fall back to legacy session key
-      const storedPlayerName = profile.name || sessionStorage.getItem("deception_playerName");
+      const storedPlayerName = profile.name || localStorage.getItem("deception_playerName");
 
       return {
         userId: storedUserId,
@@ -208,7 +208,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
 
-    sessionStorage.setItem(
+    localStorage.setItem(
       "deception_bgm_muted",
       isDiscussionBgmMuted ? "1" : "0",
     );
@@ -267,7 +267,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       socket.emit("changeName", newName);
       socket.emit("updateAvatar", newAvatarUrl);
     }
-    sessionStorage.setItem("deception_playerName", newName);
+    localStorage.setItem("deception_playerName", newName);
     setJoinedName(newName);
     setNameDraft(newName);
   };
@@ -329,7 +329,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
           <button
             onClick={() => {
               const finalName = playerName.trim();
-              sessionStorage.setItem("deception_playerName", finalName);
+              localStorage.setItem("deception_playerName", finalName);
               updateProfile({ name: finalName });
               setJoinedName(finalName);
               setNameDraft(finalName);

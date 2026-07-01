@@ -53,7 +53,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   // Audio state & refs
   const [isLobbyMusicEnabled, setIsLobbyMusicEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
-    return sessionStorage.getItem("avalon_lobby_music_enabled") !== "0";
+    return localStorage.getItem("avalon_lobby_music_enabled") !== "0";
   });
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   const loseAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -72,14 +72,14 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
   // Setup initial random ID if none found
   useEffect(() => {
-    if (!sessionStorage.getItem("avalon_userId")) {
-      sessionStorage.setItem("avalon_userId", Math.random().toString(36).substr(2, 9));
+    if (!localStorage.getItem("avalon_userId")) {
+      localStorage.setItem("avalon_userId", Math.random().toString(36).substr(2, 9));
     }
   }, []);
 
   // Save Audio Setting
   useEffect(() => {
-    sessionStorage.setItem("avalon_lobby_music_enabled", isLobbyMusicEnabled ? "1" : "0");
+    localStorage.setItem("avalon_lobby_music_enabled", isLobbyMusicEnabled ? "1" : "0");
   }, [isLobbyMusicEnabled]);
 
   // Handle Joining
@@ -87,7 +87,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     if (!hasJoined || initialized.current) return;
     initialized.current = true;
 
-    const userId = sessionStorage.getItem("avalon_userId")!;
+    const userId = localStorage.getItem("avalon_userId")!;
     
     // Connect specifically to the /avalon namespace
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "";
@@ -212,7 +212,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   }
 
   // Helper variables (Derived from gameState to keep Topbar/Modals instantly snappy)
-  const userId = sessionStorage.getItem("avalon_userId")!;
+  const userId = localStorage.getItem("avalon_userId")!;
   const me = gameState?.players.find((p: AvalonPlayer) => p.userId === userId);
   const isSpectator = Boolean(me?.isSpectator);
   const isHandRaised = Boolean(me?.isHandRaised);
