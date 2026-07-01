@@ -483,6 +483,7 @@ export class WeredogEngine {
     room.witchTargetUserId = undefined;
     room.hunterTargetUserId = undefined;
     room.cupidLoverUserIds = undefined;
+    room.cupidLoversConfirmed = undefined;
     room.deathsThisNight = [];
     room.dayVotes = {};
     room.tiebreakerActive = false;
@@ -569,6 +570,7 @@ export class WeredogEngine {
     room.history = [];
     room.winner = undefined;
     room.cupidLoverUserIds = undefined;
+    room.cupidLoversConfirmed = undefined;
 
     this.addSystemMessage(room, "Trò chơi bắt đầu! Hãy xem vai trò của bạn.");
     this.broadcastState(roomId);
@@ -623,6 +625,11 @@ export class WeredogEngine {
 
   private advanceNightRole(roomId: string, room: WeredogRoom) {
     this.clearAutoConfirmTimer(roomId);
+    
+    if (room.currentNightActiveRole === "Cupid" && room.cupidLoverUserIds && room.cupidLoverUserIds.length === 2) {
+      room.cupidLoversConfirmed = true;
+    }
+
     room.currentNightRoleIndex++;
 
     if (room.currentNightRoleIndex >= room.activeNightRolesOrder.length) {
@@ -1369,20 +1376,34 @@ export class WeredogEngine {
         clone.players.forEach((p) => { delete p.hunterTargetUserId; });
       }
 
-      // Cupid lovers: only the lovers themselves know they are lovers
-      if (me && !me.isLover) {
-        clone.cupidLoverUserIds = undefined;
+      // Cupid lovers masking: Cupid sees lovers from end of Cupid phase, lovers see each other after host confirmation
+      const isLoversConfirmed = room.cupidLoversConfirmed === true;
+      if (me?.role === "Cupid" && isLoversConfirmed) {
+        // Cupid sees the lovers list and who they are
+        clone.cupidLoverUserIds = room.cupidLoverUserIds;
         clone.players.forEach((p) => {
-          p.isLover = false;
-          delete p.loverUserId;
+          if (room.cupidLoverUserIds?.includes(p.userId)) {
+            p.isLover = true;
+          } else {
+            p.isLover = false;
+            delete p.loverUserId;
+          }
         });
-      } else if (me?.isLover) {
-        // Lover sees who their partner is, but not other's role
+      } else if (me?.isLover && isLoversConfirmed) {
+        // Lovers see each other after host confirmation
+        clone.cupidLoverUserIds = undefined;
         clone.players.forEach((p) => {
           if (p.userId !== me.userId && p.userId !== me.loverUserId) {
             p.isLover = false;
             delete p.loverUserId;
           }
+        });
+      } else {
+        // Otherwise (unconfirmed, or normal player), hide all lover information
+        clone.cupidLoverUserIds = undefined;
+        clone.players.forEach((p) => {
+          p.isLover = false;
+          delete p.loverUserId;
         });
       }
 

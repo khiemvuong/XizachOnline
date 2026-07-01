@@ -155,6 +155,7 @@ export interface WeredogRoom {
   witchTargetUserId?: string | null;
   hunterTargetUserId?: string | null;
   cupidLoverUserIds?: string[]; // [userId1, userId2]
+  cupidLoversConfirmed?: boolean;
 
   // Day State
   deathsThisNight: string[]; // List of userIds of players who died tonight

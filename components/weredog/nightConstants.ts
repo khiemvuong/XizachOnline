@@ -148,6 +148,8 @@ export interface NightPlayer {
   visibleFrameType?: RoleDisplayConfig["frameType"];
   avatarUrl?: string | null;
   elderLives?: number;
+  isLover?: boolean;
+  loverUserId?: string;
 }
 
 // ─── Role Frame SVG Paths (Placeholder decorative borders) ───
