@@ -75,11 +75,17 @@ export default function WeredogHome() {
   };
 
   return (
-    <div className="weredog-theme weredog-vignette relative min-h-dvh w-full overflow-hidden flex flex-col justify-between py-8 px-4 sm:px-8">
+    <div 
+      className="relative min-h-dvh w-full overflow-hidden flex flex-col justify-between py-6 px-4 sm:px-8 bg-cover bg-center select-none"
+      style={{ backgroundImage: "url('/werewolf/weredog-lobby-bg.jpeg')" }}
+    >
+      {/* Dark gothic vignette overlay */}
+      <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/50 to-black/85 pointer-events-none z-0" />
+
       {/* Back to home */}
       <button
         onClick={() => router.push("/")}
-        className="absolute left-4 top-4 z-50 flex items-center gap-1.5 border border-var(--weredog-border) bg-[#222a2f]/90 px-3 py-2 text-xs font-bold uppercase tracking-widest text-[#829ea2] transition-all hover:bg-[#222a2f] hover:text-white active:scale-95 font-gothic-ui"
+        className="absolute left-4 top-4 z-50 flex items-center gap-1.5 border border-[#cda372]/30 bg-[#222a2f]/90 px-3 py-2 text-xs font-bold uppercase tracking-widest text-[#e1c7a5] hover:text-white hover:border-[#cda372]/60 hover:bg-[#3b1c26]/60 transition-all active:scale-95 font-gothic-ui pointer-events-auto cursor-pointer shadow-md rounded"
         aria-label="Quay về trang chủ"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
@@ -87,20 +93,20 @@ export default function WeredogHome() {
       </button>
 
       {/* Decorative Ornate Borders */}
-      <div className="pointer-events-none absolute inset-4 border border-[#445257]/30 border-double rounded-sm" />
+      <div className="pointer-events-none absolute inset-4 border border-[#cda372]/15 border-double rounded-md z-10" />
 
-      <main className="relative z-10 flex flex-col items-center justify-center my-auto">
-        <div className="weredog-card p-8 sm:p-12 max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 relative rounded-lg">
-          {/* Divider line for desktop */}
-          <div className="hidden md:block absolute left-1/2 top-8 bottom-8 w-px bg-[#445257]/30 -translate-x-1/2" />
+      <main className="relative z-20 flex flex-col items-center justify-center my-auto w-full">
+        <div className="weredog-card p-5 sm:p-10 landscape:p-6 max-w-4xl w-full grid grid-cols-1 landscape:grid-cols-2 sm:grid-cols-2 gap-6 sm:gap-10 relative rounded-xl border border-[#cda372]/30 bg-[#111318]/90 backdrop-blur-md shadow-[0_15px_50px_rgba(0,0,0,0.95)]">
+          {/* Divider line for desktop and landscape */}
+          <div className="hidden landscape:block sm:block absolute left-1/2 top-8 bottom-8 w-px bg-[#cda372]/20 -translate-x-1/2" />
 
           {/* Left section: Info & Create */}
-          <section className="flex flex-col items-center justify-center text-center space-y-6">
-            <div className="space-y-3">
-              <h1 className="font-gothic-heading text-4xl sm:text-5xl font-black tracking-wider text-[#829ea2] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+          <section className="flex flex-col items-center justify-center text-center space-y-4 landscape:space-y-3 sm:space-y-6">
+            <div className="space-y-2 landscape:space-y-1 sm:space-y-3">
+              <h1 className="font-gothic-heading text-3xl sm:text-5xl font-black tracking-wider text-transparent bg-clip-text bg-linear-to-r from-red-600 via-[#e1c7a5] to-red-600 drop-shadow-[0_2.5px_6px_rgba(0,0,0,0.95)]">
                 WEREDOG
               </h1>
-              <p className="font-gothic-label text-xs uppercase tracking-[0.25em] text-[#829ea2]/60">
+              <p className="font-gothic-label text-[9px] sm:text-xs uppercase tracking-[0.25em] text-[#829ea2]/60">
                 Gothic Fairytale Edition
               </p>
             </div>
@@ -109,20 +115,20 @@ export default function WeredogHome() {
               <button
                 onClick={handleCreate}
                 disabled={isBusy}
-                className="weredog-button w-full max-w-xs py-3.5 px-6 rounded font-gothic-heading text-lg font-bold tracking-widest uppercase disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_4px_15px_rgba(59,28,38,0.5)]"
+                className="w-full max-w-xs py-2.5 sm:py-3.5 px-6 rounded text-sm sm:text-base font-bold tracking-widest uppercase bg-linear-to-r from-[#5a1d2e] via-[#7c253c] to-[#5a1d2e] hover:from-[#7c253c] hover:to-[#5a1d2e] border border-red-500/30 text-white disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(239,68,68,0.25)] hover:shadow-[0_0_25px_rgba(239,68,68,0.45)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
                 {isBusy ? "Khởi tạo..." : "Tạo Phòng Mới"}
               </button>
             </div>
 
-            <p className="font-gothic-body text-sm italic max-w-xs text-[#829ea2]/80 leading-relaxed">
+            <p className="font-gothic-body text-xs sm:text-sm italic max-w-xs text-[#829ea2]/80 leading-relaxed">
               &quot;Khi trăng máu lên cao, bầy sói thức giấc tìm mồi. Liệu bạn sẽ sống sót hay bị nuốt chửng bởi bóng tối?&quot;
             </p>
           </section>
 
           {/* Right section: Join Room */}
-          <section className="flex flex-col items-center justify-center space-y-6">
-            <div className="bg-[#3b1c26]/20 border border-[#3b1c26]/50 rounded px-4 py-1.5 text-xs font-gothic-label uppercase tracking-widest text-[#829ea2]">
+          <section className="flex flex-col items-center justify-center space-y-4 landscape:space-y-3 sm:space-y-6">
+            <div className="bg-[#3b1c26]/30 border border-[#5a1d2e]/40 rounded-full px-4 py-1 text-[9px] sm:text-xs font-gothic-label uppercase tracking-widest text-[#e1c7a5]/90 shadow-sm">
               Nhập Mã Phòng
             </div>
 
@@ -133,10 +139,10 @@ export default function WeredogHome() {
                 return (
                   <div
                     key={index}
-                    className={`flex h-14 w-12 items-center justify-center border rounded text-2xl font-gothic-heading font-black transition-all ${
+                    className={`flex h-11 w-10 sm:h-14 sm:w-12 items-center justify-center border rounded text-xl sm:text-2xl font-gothic-heading font-black transition-all ${
                       filled
-                        ? "border-[#829ea2] bg-[#222a2f] text-[#829ea2] shadow-[0_0_10px_rgba(130,158,162,0.3)]"
-                        : "border-[#445257] bg-[#0b0d11]/40 text-[#445257]"
+                        ? "border-[#cda372] bg-[#222a2f] text-[#e1c7a5] shadow-[0_0_12px_rgba(205,163,114,0.3)]"
+                        : "border-[#445257] bg-[#0b0d11]/40 text-[#445257]/50"
                     }`}
                   >
                     {char}
@@ -146,13 +152,13 @@ export default function WeredogHome() {
             </div>
 
             {/* Custom Keypad */}
-            <div className="grid grid-cols-3 gap-2.5 w-full max-w-xs font-gothic-ui">
+            <div className="grid grid-cols-3 gap-2 w-full max-w-[240px] sm:max-w-xs font-gothic-ui">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => (
                 <button
                   key={digit}
                   onClick={() => handleKeyPress(digit)}
                   disabled={isBusy}
-                  className="flex h-12 items-center justify-center border border-[#445257]/60 bg-[#222a2f]/50 rounded text-[#cdd6d8] font-bold text-lg hover:bg-[#222a2f] active:bg-[#829ea2] active:text-[#0b0d11] transition-all disabled:opacity-50"
+                  className="flex h-9 sm:h-12 items-center justify-center border border-[#445257]/60 bg-[#222a2f]/50 hover:bg-[#3b1c26]/60 hover:border-[#cda372]/50 rounded text-[#cdd6d8] hover:text-white font-serif font-black text-base sm:text-lg transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {digit}
                 </button>
@@ -161,15 +167,15 @@ export default function WeredogHome() {
               <button
                 onClick={handleBackspace}
                 disabled={isBusy}
-                className="flex h-12 items-center justify-center border border-red-900/40 bg-red-950/20 text-red-400 rounded hover:bg-red-950/40 transition-all disabled:opacity-50"
+                className="flex h-9 sm:h-12 items-center justify-center border border-red-900/40 bg-red-950/20 text-red-400 rounded hover:bg-red-950/40 hover:text-red-300 transition-all disabled:opacity-50 cursor-pointer"
               >
-                <Delete className="h-5 w-5" />
+                <Delete className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
 
               <button
                 onClick={() => handleKeyPress("0")}
                 disabled={isBusy}
-                className="flex h-12 items-center justify-center border border-[#445257]/60 bg-[#222a2f]/50 rounded text-[#cdd6d8] font-bold text-lg hover:bg-[#222a2f] active:bg-[#829ea2] active:text-[#0b0d11] transition-all disabled:opacity-50"
+                className="flex h-9 sm:h-12 items-center justify-center border border-[#445257]/60 bg-[#222a2f]/50 hover:bg-[#3b1c26]/60 hover:border-[#cda372]/50 rounded text-[#cdd6d8] hover:text-white font-serif font-black text-base sm:text-lg transition-all disabled:opacity-50 cursor-pointer"
               >
                 0
               </button>
@@ -177,19 +183,19 @@ export default function WeredogHome() {
               <button
                 onClick={handleJoin}
                 disabled={roomId.length !== 4 || isBusy}
-                className={`flex h-12 items-center justify-center rounded transition-all ${
+                className={`flex h-9 sm:h-12 items-center justify-center rounded transition-all cursor-pointer ${
                   roomId.length === 4 && !isBusy
-                    ? "bg-[#3b1c26] border border-[#5a1d2e] text-white hover:bg-[#551c2e] active:scale-95 shadow-[0_0_10px_rgba(59,28,38,0.5)]"
-                    : "bg-[#222a2f]/20 border border-[#445257]/40 text-[#445257]/60 cursor-not-allowed"
+                    ? "bg-[#5a1d2e] border border-amber-500/60 text-amber-200 hover:text-white hover:bg-amber-600 hover:border-white shadow-[0_0_10px_rgba(239,68,68,0.3)] animate-pulse"
+                    : "bg-[#222a2f]/20 border border-[#445257]/45 text-[#445257]/60 cursor-not-allowed"
                 }`}
               >
-                <LogIn className="h-5 w-5" />
+                <LogIn className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </div>
 
             {errorMsg && (
-              <div className="flex items-center gap-1.5 text-xs text-red-400 font-gothic-ui">
-                <ShieldAlert className="h-3.5 w-3.5" />
+              <div className="flex items-center justify-center gap-1.5 text-xs text-red-400 font-gothic-ui text-center mt-1 animate-bounce">
+                <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
             )}
@@ -198,7 +204,7 @@ export default function WeredogHome() {
       </main>
 
       {/* Footer Info */}
-      <footer className="text-center font-gothic-label text-[10px] tracking-[0.2em] text-[#829ea2]/40 select-none">
+      <footer className="text-center font-gothic-label text-[8px] sm:text-[10px] tracking-[0.2em] text-[#829ea2]/30 select-none z-20 mt-4">
         WEREDOG MULTIPLAYER ONLINE // DESIGNED WITH GOTHIC FAIRYTALE AESTHETICS
       </footer>
     </div>

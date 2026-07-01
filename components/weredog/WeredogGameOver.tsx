@@ -4,6 +4,9 @@ import { useRef } from "react";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import Image from "next/image";
 import WeredogHeader from "./WeredogHeader";
+import AvatarDisplay from "@/components/shared/AvatarDisplay";
+import RoleAccessory from "./RoleAccessory";
+import { ROLE_DISPLAY, type WeredogRoleName } from "./nightConstants";
 
 interface Player {
   id: string;
@@ -13,6 +16,9 @@ interface Player {
   isAlive: boolean;
   isHost: boolean;
   role?: string;
+  avatarUrl?: string | null;
+  isLover?: boolean;
+  loverUserId?: string;
 }
 
 interface WeredogGameOverProps {
@@ -20,6 +26,7 @@ interface WeredogGameOverProps {
   winner: "Villager" | "Wolf" | "Cupid" | string;
   players: Player[];
   onRestart?: () => void;
+  onBack?: () => void;
 }
 
 export default function WeredogGameOver({
@@ -27,13 +34,14 @@ export default function WeredogGameOver({
   winner,
   players,
   onRestart,
+  onBack,
 }: WeredogGameOverProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const scale = useSceneScale({
     viewportRef: containerRef,
     sceneWidth: 800,
-    sceneHeight: 380,
+    sceneHeight: 440,
     padding: 4,
     minScale: 0.4,
     maxScale: 2.2,
@@ -57,52 +65,52 @@ export default function WeredogGameOver({
     }
   > = {
     Villager: {
-      title: "PHE DÂN LÀNG CHIẾN THẮNG",
+      title: "THE VILLAGE SURVIVED",
       bgImage: "/werewolf/gameover_villager.jpeg",
       colorClass: "text-emerald-400",
       glowColor: "rgba(16,185,129,0.3)",
     },
     Wolf: {
-      title: "PHE MA SÓI CHIẾN THẮNG",
+      title: "THE WOLVES HUNTED",
       bgImage: "/werewolf/gameover_wolf.jpeg",
       colorClass: "text-red-500",
       glowColor: "rgba(239,68,68,0.3)",
     },
     Cupid: {
-      title: "PHE TÌNH NHÂN CHIẾN THẮNG",
-      bgImage: "/werewolf/gameover_cupid.jpeg",
+      title: "LOVE CONQUERS ALL",
+      bgImage: "/werewolf/gameover_villager.jpeg",
       colorClass: "text-rose-400",
       glowColor: "rgba(244,63,94,0.3)",
     },
   };
 
   const currentConfig = factionConfig[winner] || {
-    title: "KẾT THÚC TRÒ CHƠI",
+    title: "GAME OVER",
     bgImage: "/werewolf/weredog-lobby-bg.jpeg",
     colorClass: "text-amber-400",
     glowColor: "rgba(245,158,11,0.3)",
   };
 
-  // Role Metadata for Vietnamese translation, border colors and sub-icons
+  // Role Metadata for Vietnamese translation, border colors
   const getRoleMeta = (role?: string) => {
     switch (role) {
       case "Wolf":
-        return { name: "Ma Sói", icon: "🐺", border: "border-red-650", bg: "bg-red-950/65", text: "text-red-400" };
+        return { name: "Ma Sói", border: "border-red-650", text: "text-red-400" };
       case "Seer":
-        return { name: "Tiên Tri", icon: "🔮", border: "border-purple-500/50", bg: "bg-purple-950/50", text: "text-purple-400" };
+        return { name: "Tiên Tri", border: "border-purple-500/50", text: "text-purple-400" };
       case "Bodyguard":
-        return { name: "Bảo Vệ", icon: "🛡️", border: "border-amber-500/50", bg: "bg-amber-950/50", text: "text-amber-400" };
+        return { name: "Bảo Vệ", border: "border-amber-500/50", text: "text-amber-400" };
       case "Hunter":
-        return { name: "Thợ Săn", icon: "🎯", border: "border-teal-500/50", bg: "bg-teal-950/50", text: "text-teal-400" };
+        return { name: "Thợ Săn", border: "border-teal-500/50", text: "text-teal-400" };
       case "Witch":
-        return { name: "Phù Thủy", icon: "🧪", border: "border-emerald-500/50", bg: "bg-emerald-950/50", text: "text-emerald-400" };
+        return { name: "Phù Thủy", border: "border-emerald-500/50", text: "text-emerald-400" };
       case "Cupid":
-        return { name: "Cupid", icon: "❤️", border: "border-rose-500/50", bg: "bg-rose-950/50", text: "text-rose-400" };
+        return { name: "Cupid", border: "border-rose-500/50", text: "text-rose-400" };
       case "Elder":
-        return { name: "Già Làng", icon: "👑", border: "border-gray-400/50", bg: "bg-gray-950/50", text: "text-gray-300" };
+        return { name: "Già Làng", border: "border-gray-400/50", text: "text-gray-300" };
       case "Villager":
       default:
-        return { name: "Dân Làng", icon: "🐕", border: "border-slate-500/40", bg: "bg-slate-900/50", text: "text-slate-300" };
+        return { name: "Dân Làng", border: "border-slate-500/40", text: "text-slate-300" };
     }
   };
 
@@ -119,24 +127,50 @@ export default function WeredogGameOver({
         {/* Circular Avatar Wrapper */}
         <div className="relative">
           <div 
-            className={`w-12 h-12 sm:w-14 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-md ${
+            className={`rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-md relative overflow-visible ${
               isDead 
                 ? "border-red-950/35 bg-black/60 grayscale opacity-45" 
                 : `${meta.border} bg-[#222a2f]/80`
             }`}
+            style={{
+              width: "48px",
+              height: "48px",
+              boxShadow: isDead ? "none" : "0 4px 8px rgba(0,0,0,0.6)",
+              backgroundColor: isDead ? "rgba(11, 13, 17, 0.8)" : "rgba(34, 42, 47, 0.7)",
+              opacity: isDead ? 0.45 : 1,
+              filter: isDead ? "grayscale(1)" : "none",
+            }}
           >
-            {/* Avatar Emoji */}
-            <span className="text-xl sm:text-2xl select-none">{player.avatar}</span>
+            {/* Role frame decorator (Accessory) */}
+            {player.role && ROLE_DISPLAY[player.role as WeredogRoleName]?.frameType && (
+              <RoleAccessory 
+                frameType={ROLE_DISPLAY[player.role as WeredogRoleName].frameType} 
+                role={player.role as WeredogRoleName} 
+              />
+            )}
+
+            {/* Avatar image or fallback emoji */}
+            {player.avatarUrl || (player.avatar && (player.avatar.startsWith("/") || player.avatar.startsWith("http"))) ? (
+              <AvatarDisplay
+                avatarUrl={player.avatarUrl || player.avatar}
+                name={player.name}
+                size={48}
+                className={`w-full h-full rounded-full ${isDead ? "grayscale opacity-40" : ""}`}
+              />
+            ) : (
+              <span className="text-xl sm:text-2xl select-none">{player.avatar}</span>
+            )}
           </div>
 
-          {/* Small Round Role Icon Badge on Bottom-Right */}
-          <div 
-            className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border border-black/40 flex items-center justify-center text-[10px] sm:text-[11px] shadow-sm select-none ${
-              isDead ? "bg-red-950/50 border-red-500/20 grayscale" : meta.bg
-            }`}
-          >
-            {isDead ? "✕" : meta.icon}
-          </div>
+          {/* Lover Overlay (Cupid) */}
+          {player.isLover && (
+            <div 
+              className="absolute -bottom-1 -left-1 w-[18px] h-[18px] bg-slate-900 border border-pink-500 text-pink-400 rounded-full flex items-center justify-center text-[9px] shadow-[0_0_8px_rgba(236,72,153,0.5)] z-20 font-bold select-none" 
+              title="Cặp Đôi Tơ Hồng"
+            >
+              ❤️
+            </div>
+          )}
         </div>
 
         {/* Info Label underneath */}
@@ -173,7 +207,7 @@ export default function WeredogGameOver({
       {/* Main Container */}
       <div className="relative z-20 w-full h-full flex flex-col justify-between flex-1">
         {/* Header bar */}
-        <WeredogHeader roomId={roomId} title="Kết Thúc Trò Chơi" />
+        <WeredogHeader roomId={roomId} title="Kết Thúc Trò Chơi" onBack={onBack} />
 
         {/* Main content scaled stage */}
         <div
@@ -184,14 +218,15 @@ export default function WeredogGameOver({
             className="flex flex-col items-center justify-between py-2 pointer-events-none"
             style={{
               width: "800px",
+              height: "440px",
               transform: `scale(${scale})`,
               transformOrigin: "center center",
             }}
           >
             {/* Victory Announcement Header */}
-            <div className="text-center drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)] mb-1">
+            <div className="text-center drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)] mb-1 flex flex-col items-center gap-1">
               <h1
-                className={`font-gothic-label text-lg sm:text-xl md:text-2xl tracking-[0.12em] uppercase font-black ${currentConfig.colorClass}`}
+                className={`font-gothic-heading text-lg sm:text-xl md:text-2xl tracking-[0.12em] uppercase font-black ${currentConfig.colorClass}`}
                 style={{
                   textShadow: `0 0 10px ${currentConfig.glowColor}, 0 2px 4px rgba(0,0,0,0.9)`,
                 }}
@@ -201,7 +236,7 @@ export default function WeredogGameOver({
             </div>
 
             {/* Faction Rows (Humans Row on Top, Wolves Row on Bottom) */}
-            <div className="w-full max-w-[760px] flex flex-col gap-3.5 mb-2.5 justify-center">
+            <div className="w-full max-w-[760px] flex flex-col gap-2 mb-1.5 justify-center">
               
               {/* Row 1: Phe Con Người / Dân Làng */}
               <div className="flex flex-col bg-[#151a1d]/40 border border-[#445257]/15 rounded-lg p-2 shadow-md">
@@ -210,8 +245,8 @@ export default function WeredogGameOver({
                     Phe Con Người ({humans.length})
                   </span>
                 </div>
-                {/* Horizontal list of players */}
-                <div className="flex flex-row gap-2.5 overflow-x-auto justify-center pointer-events-auto pb-0.5">
+                {/* Wrapped list of players with vertical padding to prevent accessory clipping */}
+                <div className="flex flex-row flex-wrap gap-x-3.5 gap-y-6 justify-center pointer-events-auto pt-5 pb-2.5 px-2">
                   {humans.map(renderPlayerCard)}
                 </div>
               </div>
@@ -223,8 +258,8 @@ export default function WeredogGameOver({
                     Phe Ma Sói ({wolves.length})
                   </span>
                 </div>
-                {/* Horizontal list of players */}
-                <div className="flex flex-row gap-2.5 overflow-x-auto justify-center pointer-events-auto pb-0.5">
+                {/* Wrapped list of players with vertical padding to prevent accessory clipping */}
+                <div className="flex flex-row flex-wrap gap-x-3.5 gap-y-6 justify-center pointer-events-auto pt-5 pb-2.5 px-2">
                   {wolves.map(renderPlayerCard)}
                 </div>
               </div>

@@ -15,6 +15,11 @@ interface NightActionPanelProps {
   isHost?: boolean;
   onHostConfirm?: () => void;
   hostTimerSeconds?: number;
+  hasRoleActed?: boolean;
+  hostActionSummary?: string;
+  onWolfRevote?: () => void;
+  isActiveRoleDead?: boolean;
+  isElderDead?: boolean;
 }
 
 export default function NightActionPanel({
@@ -28,6 +33,11 @@ export default function NightActionPanel({
   isHost = false,
   onHostConfirm,
   hostTimerSeconds,
+  hasRoleActed = false,
+  hostActionSummary,
+  onWolfRevote,
+  isActiveRoleDead = false,
+  isElderDead = false,
 }: NightActionPanelProps) {
   const display = ROLE_DISPLAY[roleKey];
   const label = confirmLabel ?? display.confirmLabel;
@@ -52,16 +62,51 @@ export default function NightActionPanel({
 
         {isHost && onHostConfirm ? (
           <div className="flex flex-col items-center gap-2 mt-1">
+            {/* Host Action Summary Log */}
+            {hostActionSummary && (
+              <div className="bg-[#1b1c22]/90 border border-[#cda372]/30 rounded-lg px-3 py-1.5 max-w-[260px] text-center shadow-[0_4px_12px_rgba(0,0,0,0.6)] animate-fade-in mb-1">
+                <span className="font-serif italic text-xs text-[#e1c7a5] font-bold block leading-relaxed">
+                  {hostActionSummary}
+                </span>
+              </div>
+            )}
+
             {/* Timer status */}
-            <div className="flex items-center gap-1.5 text-[10px] font-gothic-ui uppercase tracking-widest text-[#829ea2]/60 select-none">
-              <span>Đếm ngược:</span>
-              <span className="font-mono font-bold text-red-400">{hostTimerSeconds ?? 10}s</span>
+            <div className="flex items-center gap-1.5 text-[10px] font-serif uppercase tracking-widest text-[#829ea2]/60 select-none">
+              {hasRoleActed ? (
+                isActiveRoleDead ? (
+                  <span className="text-red-400 font-bold animate-pulse">⚠️ VAI TRÒ NÀY ĐÃ CHẾT! TỰ ĐỘNG BỎ QUA...</span>
+                ) : isElderDead && roleKey !== "Wolf" ? (
+                  <span className="text-red-400 font-bold animate-pulse text-center">⚠️ GIÀ LÀNG ĐÃ CHẾT! VAI TRÒ NÀY MẤT CHỨC NĂNG. TỰ ĐỘNG BỎ QUA...</span>
+                ) : roleKey === "Wolf" && hostActionSummary?.includes("Bất đồng") ? (
+                  <span className="text-amber-400 font-bold">⚠️ Hòa phiếu! Quản trò hãy quyết định</span>
+                ) : (
+                  <>
+                    <span>Tự động chuyển tiếp sau:</span>
+                    <span className="font-mono font-bold text-rose-400">{hostTimerSeconds ?? 20}s</span>
+                  </>
+                )
+              ) : (
+                <span className="text-amber-500 font-bold animate-pulse">⏳ Đang chờ người chơi chọn...</span>
+              )}
             </div>
+
+            {onWolfRevote && roleKey === "Wolf" && hostActionSummary?.includes("Bất đồng") && (
+              <button
+                onClick={onWolfRevote}
+                className="px-4 py-1.5 rounded-full border border-amber-500/80 bg-[#1b1c22]/90 hover:bg-amber-500/20 text-amber-300 hover:text-white text-[10px] font-serif font-bold uppercase tracking-wider transition-all cursor-pointer mt-1 mb-2 shadow-[0_2px_8px_rgba(245,158,11,0.2)] pointer-events-auto"
+              >
+                🔄 Yêu Cầu Sói Vote Lại
+              </button>
+            )}
 
             {/* Large plaque confirm button */}
             <button
               onClick={onHostConfirm}
-              className="relative w-[200px] h-[52px] transition-all duration-200 group hover:scale-[1.03] active:scale-95 cursor-pointer mt-1"
+              disabled={!hasRoleActed}
+              className={`relative w-[200px] h-[52px] transition-all duration-200 group mt-1 ${
+                hasRoleActed ? "hover:scale-[1.03] active:scale-95 cursor-pointer" : "opacity-40 cursor-not-allowed"
+              }`}
             >
               {/* Plaque SVG */}
               <svg
@@ -153,6 +198,25 @@ export default function NightActionPanel({
   }
 
   // ── Active Turn View ──
+  if (isElderDead && roleKey !== "Wolf") {
+    return (
+      <div className="w-full flex flex-col items-center justify-center gap-2 animate-fade-in text-center max-w-[280px]">
+        <h1 
+          className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-shadow-maroon text-red-500"
+          style={{ 
+            textShadow: "0 0 10px rgba(239,68,68,0.35), 0 2px 4px rgba(0,0,0,0.9)",
+          }}
+        >
+          {display.actionHeading}
+        </h1>
+
+        <div className="bg-red-950/40 border border-red-500/25 rounded-lg p-3 text-red-400 text-xs sm:text-sm font-serif leading-relaxed mt-2 shadow-md">
+          ⚠️ GIÀ LÀNG ĐÃ CHẾT! Bạn đã mất đi sức mạnh chức năng đêm nay.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full flex flex-col items-center gap-2 animate-fade-in text-center max-w-[280px]">
       {/* Large Gothic Heading */}

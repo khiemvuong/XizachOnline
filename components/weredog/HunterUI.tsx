@@ -49,6 +49,7 @@ export default function HunterUI({
         disabledIds={disabledIds}
         highlightColor={display.highlightColor}
         glowColor={display.glowColor}
+        myUserId={myUserId}
         centerContent={
           <NightActionPanel
             roleKey="Hunter"

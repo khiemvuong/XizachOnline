@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
-import { useSceneScale } from "@/hooks/useSceneScale";
+import { useState, useMemo } from "react";
 import NightPlayerCircle from "./NightPlayerCircle";
-import NightActionPanel from "./NightActionPanel";
 import Image from "next/image";
 import WeredogHeader from "./WeredogHeader";
 
@@ -14,6 +12,7 @@ interface Player {
   avatar: string;
   isAlive: boolean;
   isHost: boolean;
+  voteWeight?: number;
 }
 
 interface WeredogDayVotingProps {
@@ -30,6 +29,7 @@ interface WeredogDayVotingProps {
   onVoteSubmit?: (targetUserId: string) => void;
   onHostConfirm?: () => void;
   onHostTiebreakDecide?: (action: "revote" | "skip") => void;
+  onBack?: () => void;
 }
 
 export default function WeredogDayVoting({
@@ -44,39 +44,32 @@ export default function WeredogDayVoting({
   onVoteSubmit,
   onHostConfirm,
   onHostTiebreakDecide,
+  onBack,
 }: WeredogDayVotingProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  const scale = useSceneScale({
-    viewportRef: containerRef,
-    sceneWidth: 800,
-    sceneHeight: 380,
-    padding: 4,
-    minScale: 0.4,
-    maxScale: 2.2,
-  });
 
   const myVote = votes[myUserId];
   const hasVoted = !!myVote;
 
-  // Tally votes for display if voting is public or confirmed
+  // Tally votes for display if voting is public or confirmed (scaled by voter weight)
   const voteCounts = useMemo(() => {
     const tallies: Record<string, number> = {};
-    Object.values(votes).forEach((targetId) => {
+    Object.entries(votes).forEach(([voterUserId, targetId]) => {
       if (targetId && targetId !== "skip") {
-        tallies[targetId] = (tallies[targetId] ?? 0) + 1;
+        const voter = players.find((p) => p.userId === voterUserId);
+        const weight = voter?.voteWeight ?? 1;
+        tallies[targetId] = (tallies[targetId] ?? 0) + weight;
       }
     });
     return tallies;
-  }, [votes]);
+  }, [votes, players]);
 
-  // Dead players, host, and self cannot be target of voting
+  // Dead players and host cannot be target of voting (can vote for self)
   const disabledIds = useMemo(() => {
     return players
-      .filter((p) => !p.isAlive || p.isHost || p.userId === myUserId)
+      .filter((p) => !p.isAlive || p.isHost)
       .map((p) => p.userId);
-  }, [players, myUserId]);
+  }, [players]);
 
   const handleSelect = (userId: string) => {
     if (hasVoted) return;
@@ -93,15 +86,20 @@ export default function WeredogDayVoting({
   const decoratedPlayers = useMemo(() => {
     return players.map((p) => {
       const hasPlayerVoted = !!votes[p.userId];
+      let name = p.name;
+      if (hasPlayerVoted) name += " ✓";
+      if (p.userId === myUserId) name += " (Bạn)";
       return {
         ...p,
-        name: hasPlayerVoted ? `${p.name} ✓` : p.name,
+        name,
       };
     });
-  }, [players, votes]);
+  }, [players, votes, myUserId]);
 
   const totalAlive = players.filter((p) => p.isAlive && !p.isHost).length;
   const votedCount = Object.keys(votes).length;
+
+
 
   // Render central action content
   const renderCenterContent = () => {
@@ -155,7 +153,12 @@ export default function WeredogDayVoting({
             <div className="pointer-events-auto">
               <button
                 onClick={onHostConfirm}
-                className="relative w-[200px] h-[52px] hover:scale-[1.03] active:scale-95 transition-all duration-200 cursor-pointer group"
+                disabled={votedCount < totalAlive}
+                className={`relative w-[200px] h-[52px] transition-all duration-200 group ${
+                  votedCount < totalAlive
+                    ? "opacity-40 cursor-not-allowed"
+                    : "hover:scale-[1.03] active:scale-95 cursor-pointer"
+                }`}
               >
                 {/* Plaque SVG */}
                 <svg
@@ -226,22 +229,28 @@ export default function WeredogDayVoting({
     if (hasVoted) {
       const votedPlayer = myVote !== "skip" ? players.find(p => p.userId === myVote) : null;
       return (
-        <div className="w-full flex flex-col items-center justify-center gap-1.5 animate-fade-in text-center max-w-[280px]">
+        <div className="w-full flex flex-col items-center justify-center gap-1.5 py-2 animate-fade-in text-center max-w-[280px]">
           <h1 
             className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-emerald-400 text-shadow-maroon"
             style={{ textShadow: "0 0 10px rgba(16,185,129,0.2), 0 2px 4px rgba(0,0,0,0.9)" }}
           >
             ĐÃ BỎ PHIẾU
           </h1>
-          <p className="font-gothic-body text-[#829ea2]/80 text-[10px] sm:text-xs leading-tight">
+          <p className="font-gothic-body text-[#829ea2]/80 text-[10px] sm:text-xs leading-tight mb-1">
             Bạn đã chọn:{" "}
             <span className="text-white font-bold uppercase tracking-wider font-gothic-label">
               {votedPlayer ? votedPlayer.name : "Bỏ Qua Treo Cổ"}
             </span>
           </p>
-          <p className="font-gothic-body text-[#445257] text-[9px] sm:text-[10px] italic leading-tight mt-1 animate-pulse">
-            Đang đợi quản trò chốt kết quả...
-          </p>
+          <button
+            onClick={() => {
+              onVoteSubmit?.("cancel");
+              setSelectedId(null);
+            }}
+            className="px-4 py-1.5 rounded-full border border-amber-500/80 bg-[#1b1c22]/90 hover:bg-amber-500/20 text-amber-300 hover:text-white text-[10px] font-serif font-bold uppercase tracking-wider transition-all cursor-pointer mt-1 pointer-events-auto shadow-[0_2px_8px_rgba(245,158,11,0.2)]"
+          >
+            ❌ HỦY PHIẾU
+          </button>
         </div>
       );
     }
@@ -276,13 +285,13 @@ export default function WeredogDayVoting({
           <button
             onClick={handleConfirmVote}
             disabled={!selectedId}
-            className="relative w-[200px] h-[52px] hover:scale-[1.03] active:scale-95 transition-all duration-200 cursor-pointer group disabled:opacity-30 disabled:pointer-events-none mt-1"
+            className="relative w-[220px] h-[52px] hover:scale-[1.03] active:scale-95 transition-all duration-200 cursor-pointer group disabled:opacity-30 disabled:pointer-events-none mt-1"
           >
             {/* Plaque SVG */}
             <svg
-              width="200"
+              width="220"
               height="32"
-              viewBox="0 0 200 32"
+              viewBox="0 0 220 32"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
               className="absolute top-[10px] left-0 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]"
@@ -294,7 +303,7 @@ export default function WeredogDayVoting({
                 </linearGradient>
               </defs>
               <path
-                d="M 12 2 L 188 2 L 194 8 L 194 10 L 200 16 L 194 22 L 194 24 L 188 30 L 12 30 L 6 24 L 6 22 L 0 16 L 6 10 L 6 8 Z"
+                d="M 12 2 L 208 2 L 214 8 L 214 10 L 220 16 L 214 22 L 214 24 L 208 30 L 12 30 L 6 24 L 6 22 L 0 16 L 6 10 L 6 8 Z"
                 fill="url(#plaqueGradConfirmVote)"
                 stroke="#cda372"
                 strokeWidth="1.5"
@@ -303,10 +312,10 @@ export default function WeredogDayVoting({
 
             {/* Button label */}
             <span
-              className="absolute left-0 w-[140px] text-center top-[26px] -translate-y-1/2 font-gothic-body text-xs sm:text-sm font-black uppercase tracking-wider select-none text-[#e1c7a5]"
+              className="absolute left-5 top-[26px] -translate-y-1/2 font-gothic-body text-xs font-black uppercase tracking-wider select-none text-[#e1c7a5]"
               style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
             >
-              BỎ PHIẾU
+              BỎ PHIẾU TREO CỔ
             </span>
 
             {/* Wax seal */}
@@ -338,22 +347,69 @@ export default function WeredogDayVoting({
       {/* Main Container */}
       <div className="relative z-20 w-full h-full flex flex-col justify-between flex-1">
         {/* Header bar */}
-        <WeredogHeader roomId={roomId} title="Bỏ Phiếu Treo Cổ" />
+        <WeredogHeader roomId={roomId} title={`Bỏ Phiếu Treo Cổ — Ngày ${dayNumber}`} onBack={onBack} />
+        
+        {/* Main Content Area (Split into Left Sidebar and Right Player Circle side-by-side) */}
+        <div className="flex-1 w-full flex flex-row items-center justify-between px-6 py-4 gap-6 overflow-hidden">
+          
+          {/* Left Sidebar: Public Votes (Relative flex item, no longer absolute) */}
+          <div className="w-[160px] h-full bg-[#111318]/95 border border-[#cda372]/20 rounded-lg p-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.85)] z-40 flex flex-col select-none pointer-events-auto shrink-0">
+            <span className="font-serif text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#e1c7a5] border-b border-[#cda372]/20 pb-1 mb-2 block text-center">
+              Danh sách bỏ phiếu
+            </span>
+            <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-[#cda372]/20 scrollbar-track-transparent space-y-2">
+              {players
+                .filter((p) => p.isAlive && !p.isHost)
+                .map((p) => {
+                  const targetId = votes[p.userId];
+                  const targetPlayer = targetId
+                    ? targetId === "skip"
+                      ? { name: "Bỏ qua" }
+                      : players.find((x) => x.userId === targetId)
+                    : null;
+                  const isElder = p.voteWeight && p.voteWeight > 1;
 
-        {/* Main Content Area */}
-        <div ref={containerRef} className="flex-1 w-full relative overflow-hidden flex items-center justify-center">
-          <div className="w-full h-full flex flex-col justify-center items-center relative">
-            <NightPlayerCircle
-              players={decoratedPlayers}
-              selectedIds={selectedId && selectedId !== "skip" ? [selectedId] : []}
-              onSelectPlayer={isAlive && !hasVoted && !isHost ? handleSelect : undefined}
-              disabledIds={disabledIds}
-              showVotes={voteCounts}
-              highlightColor="#e1c7a5"
-              glowColor="rgba(225,199,165,0.4)"
-              centerContent={renderCenterContent()}
-            />
+                  return (
+                    <div
+                      key={p.userId}
+                      className="flex items-center justify-between border-b border-[#445257]/10 pb-1 text-[9px] sm:text-[10px] font-serif uppercase tracking-wider font-bold w-full"
+                      style={{ color: targetPlayer ? (targetId === "skip" ? "#829ea2" : "#f43f5e") : "#445257" }}
+                    >
+                      <span className="text-[#e1c7a5] truncate max-w-[50px]" title={p.name}>
+                        {p.name}
+                        {isElder && <span className="text-amber-400 text-[8px] ml-0.5 font-bold">(x2)</span>}
+                      </span>
+                      <span className="opacity-40 font-normal mx-0.5">→</span>
+                      <span 
+                        className={`truncate max-w-[50px] text-right ${targetPlayer ? "text-white font-black" : "italic text-[#445257]/50"}`}
+                        title={targetPlayer ? targetPlayer.name : "Đang chọn..."}
+                      >
+                        {targetPlayer ? targetPlayer.name : "..."}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
+
+          {/* Right Area: Player Circle (Flex-1) */}
+          <div className="flex-1 h-full relative overflow-hidden flex items-center justify-center">
+            <div className="w-full h-full flex flex-col justify-center items-center relative">
+              <NightPlayerCircle
+                players={decoratedPlayers}
+                selectedIds={selectedId && selectedId !== "skip" ? [selectedId] : []}
+                onSelectPlayer={isAlive && !hasVoted && !isHost ? handleSelect : undefined}
+                disabledIds={disabledIds}
+                showVotes={voteCounts}
+                highlightColor="#e1c7a5"
+                glowColor="rgba(225,199,165,0.4)"
+                myUserId={myUserId}
+                centerContent={renderCenterContent()}
+                minScale={0.95}
+              />
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

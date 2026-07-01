@@ -106,6 +106,7 @@ export interface WeredogPlayer {
   isLover: boolean; // Cupid pairing status
   loverUserId?: string; // Cupid partner ID
   hasVoted?: boolean;
+  voteWeight?: number;
 }
 
 export interface WeredogChatMessage {
@@ -164,4 +165,5 @@ export interface WeredogRoom {
   // History logs
   history: WeredogHistoryRecord[];
   winner?: 'Villager' | 'Wolf' | 'Cupid' | 'Abandoned';
+  isElderDead?: boolean;
 }

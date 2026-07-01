@@ -14,6 +14,8 @@ interface WitchPotionUIProps {
   hasSavePotion: boolean;
   hasKillPotion: boolean;
   wolfVictimUserId?: string | null;
+  witchActionSelected?: WitchAction;
+  witchTargetUserId?: string | null;
   onChooseAction?: (action: WitchAction) => void;
   onUsePotion?: (targetUserId?: string) => void;
 }
@@ -25,6 +27,8 @@ export default function WitchPotionUI({
   hasSavePotion,
   hasKillPotion,
   wolfVictimUserId,
+  witchActionSelected,
+  witchTargetUserId,
   onChooseAction,
   onUsePotion,
 }: WitchPotionUIProps) {
@@ -73,6 +77,8 @@ export default function WitchPotionUI({
           disabledIds={disabledIds}
           highlightColor={display.highlightColor}
           glowColor={display.glowColor}
+          myUserId={myUserId}
+          bittenUserIds={wolfVictimUserId ? [wolfVictimUserId] : []}
           centerContent={
             <div className="w-full flex flex-col items-center gap-3 animate-fade-in text-center max-w-[280px]">
               {/* Large Gothic Heading */}
@@ -147,6 +153,9 @@ export default function WitchPotionUI({
           disabledIds={disabledIds}
           highlightColor="#10b981"
           glowColor="rgba(16, 185, 129, 0.4)"
+          myUserId={myUserId}
+          bittenUserIds={wolfVictimUserId ? [wolfVictimUserId] : []}
+          savedUserIds={wolfVictimUserId ? [wolfVictimUserId] : []}
           centerContent={
             <NightActionPanel
               roleKey="Witch"
@@ -185,6 +194,9 @@ export default function WitchPotionUI({
           disabledIds={disabledIds}
           highlightColor="#dc2626"
           glowColor="rgba(220, 38, 38, 0.4)"
+          myUserId={myUserId}
+          bittenUserIds={wolfVictimUserId ? [wolfVictimUserId] : []}
+          poisonedUserIds={killTarget ? [killTarget] : []}
           centerContent={
             <NightActionPanel
               roleKey="Witch"
@@ -221,6 +233,10 @@ export default function WitchPotionUI({
         disabledIds={disabledIds}
         highlightColor={display.highlightColor}
         glowColor={display.glowColor}
+        myUserId={myUserId}
+        bittenUserIds={wolfVictimUserId ? [wolfVictimUserId] : []}
+        poisonedUserIds={witchActionSelected === "kill" && witchTargetUserId ? [witchTargetUserId] : (action === "kill" && killTarget ? [killTarget] : [])}
+        savedUserIds={witchActionSelected === "save" && witchTargetUserId ? [witchTargetUserId] : (action === "save" && wolfVictimUserId ? [wolfVictimUserId] : [])}
         centerContent={
           <NightActionPanel roleKey="Witch" isMyTurn={isMyTurn} hasActed={hasActed} />
         }

@@ -24,10 +24,18 @@ export default function BodyguardUI({
   const [hasActed, setHasActed] = useState(false);
   const display = ROLE_DISPLAY.Bodyguard;
 
-  // Cannot protect same person two nights in a row
+  // Cannot protect same person two nights in a row (can protect self)
   const disabledIds = players
-    .filter(p => !p.isAlive || p.isHost || p.userId === myUserId || p.userId === lastProtectedUserId)
+    .filter(p => !p.isAlive || p.isHost || p.userId === lastProtectedUserId)
     .map(p => p.userId);
+
+  // Reset local state when it's no longer my turn (handled safely during render phase)
+  const [prevIsMyTurn, setPrevIsMyTurn] = useState(isMyTurn);
+  if (isMyTurn !== prevIsMyTurn) {
+    setPrevIsMyTurn(isMyTurn);
+    setHasActed(false);
+    setSelectedId(null);
+  }
 
   const handleSelect = (userId: string) => {
     if (hasActed) return;
@@ -50,6 +58,7 @@ export default function BodyguardUI({
         disabledIds={disabledIds}
         highlightColor={display.highlightColor}
         glowColor={display.glowColor}
+        myUserId={myUserId}
         centerContent={
           <NightActionPanel
             roleKey="Bodyguard"

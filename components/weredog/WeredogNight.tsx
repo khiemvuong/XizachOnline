@@ -20,7 +20,6 @@ interface WeredogNightProps {
   currentActiveRole: WeredogRoleName;
   nightNumber: number;
   roleIndex: number;
-  totalRoles: number;
   activeNightRoles: WeredogRoleName[];
   // Wolf-specific
   wolfVotes?: Record<string, string>;
@@ -34,6 +33,13 @@ interface WeredogNightProps {
   // Witch-specific
   witchHasSave?: boolean;
   witchHasKill?: boolean;
+  // Extra action trackers for Host countdown
+  bodyguardTargetUserId?: string | null;
+  seerTargetUserId?: string | null;
+  witchActionSelected?: "save" | "kill" | "none";
+  witchTargetUserId?: string | null;
+  hunterTargetUserId?: string | null;
+  cupidLoverUserIds?: string[];
   // Callbacks
   onWolfVote?: (targetUserId: string) => void;
   onWolfRevote?: () => void;
@@ -45,17 +51,19 @@ interface WeredogNightProps {
   onWitchUsePotion?: (targetUserId?: string) => void;
   onHostConfirm?: () => void;
   roomId?: string;
+  onBack?: () => void;
+  isElderDead?: boolean;
 }
 
 export default function WeredogNight({
   players,
   myUserId,
   myRole,
+  isElderDead = false,
   isHost,
   currentActiveRole,
   nightNumber,
   roleIndex,
-  totalRoles,
   activeNightRoles,
   wolfVotes,
   wolfVictimUserId,
@@ -64,6 +72,12 @@ export default function WeredogNight({
   hunterCurrentTarget,
   witchHasSave = true,
   witchHasKill = true,
+  bodyguardTargetUserId,
+  seerTargetUserId,
+  witchActionSelected,
+  witchTargetUserId,
+  hunterTargetUserId,
+  cupidLoverUserIds,
   onWolfVote,
   onWolfRevote,
   onBodyguardProtect,
@@ -74,32 +88,150 @@ export default function WeredogNight({
   onWitchUsePotion,
   onHostConfirm,
   roomId,
+  onBack,
 }: WeredogNightProps) {
   const isMyTurn = myRole === currentActiveRole && !isHost;
   const display = ROLE_DISPLAY[currentActiveRole];
 
-  const [timeLeft, setTimeLeft] = useState(10);
+  const [timeLeft, setTimeLeft] = useState(20);
+  const [hasConfirmedThisPhase, setHasConfirmedThisPhase] = useState(false);
 
-  // Reset timer when active role changes
-  useEffect(() => {
-    setTimeLeft(10);
-  }, [currentActiveRole]);
+  const isActiveRoleDead = (() => {
+    if (currentActiveRole === "Wolf") {
+      const wolves = players.filter((p) => p.role === "Wolf" && !p.isHost);
+      return wolves.length === 0 || wolves.every((w) => !w.isAlive);
+    }
+    const rolePlayer = players.find((p) => p.role === currentActiveRole && !p.isHost);
+    return rolePlayer ? !rolePlayer.isAlive : true;
+  })();
+
+  const hasRoleActed = (() => {
+    if (isActiveRoleDead) {
+      return true;
+    }
+    if (isElderDead && currentActiveRole !== "Wolf") {
+      return true;
+    }
+    if (currentActiveRole === "Cupid") {
+      return !!cupidLoverUserIds && cupidLoverUserIds.length === 2;
+    }
+    if (currentActiveRole === "Bodyguard") {
+      return !!bodyguardTargetUserId;
+    }
+    if (currentActiveRole === "Wolf") {
+      return wolfVictimUserId !== undefined;
+    }
+    if (currentActiveRole === "Seer") {
+      return !!seerTargetUserId;
+    }
+    if (currentActiveRole === "Witch") {
+      return witchActionSelected === "none" || !!witchTargetUserId;
+    }
+    if (currentActiveRole === "Hunter") {
+      return !!hunterTargetUserId;
+    }
+    return false;
+  })();
+
+  const hostSelectedIds = (() => {
+    if (currentActiveRole === "Cupid") {
+      return cupidLoverUserIds || [];
+    }
+    if (currentActiveRole === "Bodyguard") {
+      return bodyguardTargetUserId ? [bodyguardTargetUserId] : [];
+    }
+    if (currentActiveRole === "Wolf") {
+      return wolfVictimUserId ? [wolfVictimUserId] : [];
+    }
+    if (currentActiveRole === "Seer") {
+      return seerTargetUserId ? [seerTargetUserId] : [];
+    }
+    if (currentActiveRole === "Witch") {
+      return witchTargetUserId ? [witchTargetUserId] : [];
+    }
+    if (currentActiveRole === "Hunter") {
+      return hunterTargetUserId ? [hunterTargetUserId] : [];
+    }
+    return [];
+  })();
+
+  const hostActionSummary = (() => {
+    const getPlayerName = (uid?: string | null) => {
+      if (!uid) return "";
+      const p = players.find(x => x.userId === uid);
+      return p ? p.name : "";
+    };
+
+    if (currentActiveRole === "Cupid" && cupidLoverUserIds && cupidLoverUserIds.length === 2) {
+      return `Đã ghép đôi: ${getPlayerName(cupidLoverUserIds[0])} & ${getPlayerName(cupidLoverUserIds[1])}`;
+    }
+    if (currentActiveRole === "Bodyguard" && bodyguardTargetUserId) {
+      return `Đã bảo vệ: ${getPlayerName(bodyguardTargetUserId)}`;
+    }
+    if (currentActiveRole === "Wolf") {
+      if (wolfVictimUserId === null) {
+        return "Bất đồng ý kiến (vòng bỏ phiếu hòa)!";
+      }
+      if (wolfVictimUserId) {
+        return `Đã thống nhất cắn: ${getPlayerName(wolfVictimUserId)}`;
+      }
+    }
+    if (currentActiveRole === "Seer" && seerTargetUserId) {
+      const resultText = seerResult === "Wolf" ? "Chó Sói" : seerResult === "Human" ? "Dân Thường" : "Dân Thường";
+      return `Đã soi: ${getPlayerName(seerTargetUserId)} (${resultText})`;
+    }
+    if (currentActiveRole === "Witch" && witchActionSelected) {
+      if (witchActionSelected === "save" && witchTargetUserId) {
+        return `Đã cứu: ${getPlayerName(witchTargetUserId)}`;
+      }
+      if (witchActionSelected === "kill" && witchTargetUserId) {
+        return `Đã độc sát: ${getPlayerName(witchTargetUserId)}`;
+      }
+      if (witchActionSelected === "none") {
+        return `Quyết định không dùng thuốc`;
+      }
+    }
+    if (currentActiveRole === "Hunter" && hunterTargetUserId) {
+      return `Đã ngắm bắn: ${getPlayerName(hunterTargetUserId)}`;
+    }
+    return "";
+  })();
+
+  // Track prev values to reset timer and confirmation flag during render phase
+  const [prevActiveRole, setPrevActiveRole] = useState(currentActiveRole);
+  const [prevHasRoleActed, setPrevHasRoleActed] = useState(hasRoleActed);
+
+  if (currentActiveRole !== prevActiveRole || hasRoleActed !== prevHasRoleActed) {
+    setPrevActiveRole(currentActiveRole);
+    setPrevHasRoleActed(hasRoleActed);
+    setTimeLeft(20);
+    setHasConfirmedThisPhase(false);
+  }
 
   // Countdown timer
   useEffect(() => {
-    if (!isHost || !onHostConfirm) return;
+    if (!isHost || !onHostConfirm || hasConfirmedThisPhase) return;
+    if (!hasRoleActed) return; // Do not count down until player has acted!
+    if (currentActiveRole === "Wolf" && wolfVictimUserId === null) return; // No countdown on tie
+
     if (timeLeft <= 0) {
-      onHostConfirm();
-      return;
+      // Defer state update to next tick to avoid synchronous setState inside effect body
+      const timer = setTimeout(() => {
+        setHasConfirmedThisPhase(true);
+        onHostConfirm();
+      }, 0);
+      return () => clearTimeout(timer);
     }
     const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => clearTimeout(timer);
-  }, [timeLeft, isHost, onHostConfirm]);
+  }, [timeLeft, isHost, onHostConfirm, hasRoleActed, hasConfirmedThisPhase, currentActiveRole, wolfVictimUserId]);
 
   const handleHostConfirm = useCallback(() => {
+    if (hasConfirmedThisPhase) return;
+    setHasConfirmedThisPhase(true);
     setTimeLeft(0);
     onHostConfirm?.();
-  }, [onHostConfirm]);
+  }, [onHostConfirm, hasConfirmedThisPhase]);
 
   // ── Render the role-specific action UI ──
   const renderRoleUI = () => {
@@ -115,11 +247,19 @@ export default function WeredogNight({
         <div className="w-full h-full flex flex-col justify-center items-center relative">
           <NightPlayerCircle
             players={players}
-            selectedIds={[]}
+            selectedIds={hostSelectedIds}
             disabledIds={[]}
             showVotes={voteCounts}
             highlightColor={display.highlightColor}
             glowColor={display.glowColor}
+            myUserId={myUserId}
+            bittenUserIds={wolfVictimUserId ? [wolfVictimUserId] : []}
+            protectedUserIds={bodyguardTargetUserId ? [bodyguardTargetUserId] : []}
+            aimedUserIds={hunterTargetUserId ? [hunterTargetUserId] : []}
+            loverUserIds={cupidLoverUserIds || []}
+            inspectedUserIds={seerTargetUserId ? [seerTargetUserId] : []}
+            poisonedUserIds={witchActionSelected === "kill" && witchTargetUserId ? [witchTargetUserId] : []}
+            savedUserIds={witchActionSelected === "save" && witchTargetUserId ? [witchTargetUserId] : []}
             centerContent={
               <NightActionPanel
                 roleKey={currentActiveRole}
@@ -128,6 +268,11 @@ export default function WeredogNight({
                 isHost={true}
                 onHostConfirm={handleHostConfirm}
                 hostTimerSeconds={timeLeft}
+                hasRoleActed={hasRoleActed}
+                hostActionSummary={hostActionSummary}
+                onWolfRevote={onWolfRevote}
+                isActiveRoleDead={isActiveRoleDead}
+                isElderDead={isElderDead}
               />
             }
           />
@@ -137,16 +282,37 @@ export default function WeredogNight({
 
     const commonProps = { players, myUserId, isMyTurn };
 
+    if (isElderDead && currentActiveRole !== "Wolf" && isMyTurn) {
+      const allPlayerIds = players.map(p => p.userId);
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center relative">
+          <NightPlayerCircle
+            players={players}
+            selectedIds={[]}
+            disabledIds={allPlayerIds}
+            highlightColor={display.highlightColor}
+            glowColor={display.glowColor}
+            myUserId={myUserId}
+            centerContent={
+              <NightActionPanel
+                roleKey={currentActiveRole}
+                isMyTurn={isMyTurn}
+                hasActed={false}
+                isElderDead={isElderDead}
+              />
+            }
+          />
+        </div>
+      );
+    }
+
     switch (currentActiveRole) {
       case "Wolf":
         return (
           <WolfVoteUI
             {...commonProps}
             wolfVotes={wolfVotes}
-            wolfVictimUserId={wolfVictimUserId}
             onVote={onWolfVote}
-            onRevote={onWolfRevote}
-            onConfirm={undefined}
           />
         );
 
@@ -164,6 +330,7 @@ export default function WeredogNight({
           <SeerUI
             {...commonProps}
             seerResult={seerResult}
+            seerTargetUserId={seerTargetUserId}
             onInspect={onSeerInspect}
           />
         );
@@ -192,6 +359,8 @@ export default function WeredogNight({
             hasSavePotion={witchHasSave}
             hasKillPotion={witchHasKill}
             wolfVictimUserId={wolfVictimUserId}
+            witchActionSelected={witchActionSelected}
+            witchTargetUserId={witchTargetUserId}
             onChooseAction={onWitchChooseAction}
             onUsePotion={onWitchUsePotion}
           />
@@ -225,8 +394,9 @@ export default function WeredogNight({
         <WeredogHeader
           roomId={roomId}
           title={`Đêm ${nightNumber}`}
+          onBack={onBack}
           centerContent={
-            <div className="flex items-center justify-center gap-2.5 sm:gap-5 overflow-x-auto py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-auto max-w-[65%] sm:max-w-[75%] md:max-w-none">
+            <div className="flex flex-wrap items-center justify-center gap-y-1.5 gap-x-2.5 sm:gap-x-5 py-1 w-full text-center">
               {activeNightRoles.map((role, i) => {
                 const roleDisplay = ROLE_DISPLAY[role];
                 const isActive = i === roleIndex;

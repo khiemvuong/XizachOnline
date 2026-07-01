@@ -6,102 +6,10 @@ import {
   CIRCLE_POSITIONS,
   ROLE_FRAME_COLORS,
   type NightPlayer,
-  type RoleDisplayConfig,
 } from "./nightConstants";
+import AvatarDisplay from "@/components/shared/AvatarDisplay";
 
-// ─── Role Frame Decorators (SVG overlays around avatar) ───
-
-function RoleFrameDecorator({ frameType, size }: { frameType: RoleDisplayConfig["frameType"]; size: number }) {
-  const colors = ROLE_FRAME_COLORS[frameType];
-  const r = size / 2;
-  const strokeW = 2;
-
-  // Each frame type gets a unique decorative element on top of the circle border
-  switch (frameType) {
-    case "wolf":
-      // Wolf fangs at bottom
-      return (
-        <svg className="absolute inset-0 pointer-events-none" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* Left fang */}
-          <path d={`M ${r - 6} ${size - 4} L ${r - 3} ${size + 4} L ${r} ${size - 4}`} fill={colors.border} opacity={0.9} />
-          {/* Right fang */}
-          <path d={`M ${r} ${size - 4} L ${r + 3} ${size + 4} L ${r + 6} ${size - 4}`} fill={colors.border} opacity={0.9} />
-          {/* Ear accents at top */}
-          <path d={`M ${r - 12} 6 L ${r - 7} -4 L ${r - 2} 6`} fill={colors.border} opacity={0.7} />
-          <path d={`M ${r + 2} 6 L ${r + 7} -4 L ${r + 12} 6`} fill={colors.border} opacity={0.7} />
-        </svg>
-      );
-
-    case "shiba":
-      // Shiba ears at top (rounded, friendly)
-      return (
-        <svg className="absolute inset-0 pointer-events-none" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <path d={`M ${r - 14} 8 Q ${r - 10} -6 ${r - 4} 5`} fill={colors.border} opacity={0.7} stroke={colors.border} strokeWidth={strokeW} />
-          <path d={`M ${r + 4} 5 Q ${r + 10} -6 ${r + 14} 8`} fill={colors.border} opacity={0.7} stroke={colors.border} strokeWidth={strokeW} />
-        </svg>
-      );
-
-    case "owl":
-      // Owl horn tufts at top
-      return (
-        <svg className="absolute inset-0 pointer-events-none" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <path d={`M ${r - 10} 5 L ${r - 12} -5 L ${r - 5} 3`} fill="none" stroke={colors.border} strokeWidth={strokeW} strokeLinecap="round" />
-          <path d={`M ${r + 5} 3 L ${r + 12} -5 L ${r + 10} 5`} fill="none" stroke={colors.border} strokeWidth={strokeW} strokeLinecap="round" />
-          {/* Small eye circles */}
-          <circle cx={r - 6} cy={r - 2} r={2} fill="none" stroke={colors.border} strokeWidth={1} opacity={0.5} />
-          <circle cx={r + 6} cy={r - 2} r={2} fill="none" stroke={colors.border} strokeWidth={1} opacity={0.5} />
-        </svg>
-      );
-
-    case "rose":
-      // Rose petals accent
-      return (
-        <svg className="absolute inset-0 pointer-events-none" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={r - 10} cy={size - 3} r={3} fill={colors.border} opacity={0.6} />
-          <circle cx={r - 6} cy={size - 6} r={2.5} fill={colors.border} opacity={0.5} />
-          <circle cx={r + 10} cy={size - 3} r={3} fill={colors.border} opacity={0.6} />
-          <circle cx={r + 6} cy={size - 6} r={2.5} fill={colors.border} opacity={0.5} />
-        </svg>
-      );
-
-    case "potion":
-      // Potion bubbles
-      return (
-        <svg className="absolute inset-0 pointer-events-none" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={r + 12} cy={8} r={2.5} fill={colors.border} opacity={0.5} />
-          <circle cx={r + 15} cy={14} r={1.5} fill={colors.border} opacity={0.4} />
-          <circle cx={r - 13} cy={size - 8} r={2} fill={colors.border} opacity={0.4} />
-        </svg>
-      );
-
-    case "shield":
-      // Shield crest at bottom
-      return (
-        <svg className="absolute inset-0 pointer-events-none" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <path 
-            d={`M ${r - 6} ${size - 2} L ${r} ${size + 5} L ${r + 6} ${size - 2}`} 
-            fill={colors.border} opacity={0.6} 
-            stroke={colors.border} strokeWidth={1}
-          />
-        </svg>
-      );
-
-    case "crown":
-      // Crown at top
-      return (
-        <svg className="absolute inset-0 pointer-events-none" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <path 
-            d={`M ${r - 10} 4 L ${r - 7} -3 L ${r - 3} 2 L ${r} -5 L ${r + 3} 2 L ${r + 7} -3 L ${r + 10} 4`} 
-            fill="none" stroke={colors.border} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" 
-            opacity={0.8}
-          />
-        </svg>
-      );
-
-    default:
-      return null;
-  }
-}
+import RoleAccessory from "./RoleAccessory";
 
 // ─── Single Player Node ───
 
@@ -114,6 +22,14 @@ interface PlayerNodeProps {
   glowColor?: string;
   voteCount?: number;
   size: number;
+  myUserId?: string;
+  isBitten?: boolean;
+  isProtected?: boolean;
+  isAimed?: boolean;
+  isLover?: boolean;
+  isInspected?: boolean;
+  isPoisoned?: boolean;
+  isSaved?: boolean;
 }
 
 function PlayerNode({
@@ -125,6 +41,14 @@ function PlayerNode({
   glowColor = "rgba(130, 158, 162, 0.4)",
   voteCount,
   size,
+  myUserId,
+  isBitten = false,
+  isProtected = false,
+  isAimed = false,
+  isLover = false,
+  isInspected = false,
+  isPoisoned = false,
+  isSaved = false,
 }: PlayerNodeProps) {
   const isDead = !player.isAlive;
   const canClick = !isDead && !isDisabled && !player.isHost && onSelect;
@@ -162,14 +86,23 @@ function PlayerNode({
         }}
       >
         {/* Role frame decorator */}
-        {player.visibleFrameType && !isDead && (
-          <RoleFrameDecorator frameType={player.visibleFrameType} size={size} />
+        {player.visibleFrameType && (
+          <RoleAccessory frameType={player.visibleFrameType} role={player.role} />
         )}
 
-        {/* Avatar emoji */}
-        <span className={`select-none ${isDead ? "opacity-40" : ""}`} style={{ fontSize: size * 0.45 }}>
-          {player.avatar}
-        </span>
+        {/* Avatar emoji or Image */}
+        {player.avatarUrl || (player.avatar && (player.avatar.startsWith("/") || player.avatar.startsWith("http"))) ? (
+          <AvatarDisplay
+            avatarUrl={player.avatarUrl || player.avatar}
+            name={player.name}
+            size={size - 6}
+            className={`w-full h-full rounded-full ${isDead ? "grayscale opacity-40" : ""}`}
+          />
+        ) : (
+          <span className={`select-none ${isDead ? "opacity-40" : ""}`} style={{ fontSize: size * 0.45 }}>
+            {player.avatar || player.name.charAt(0).toUpperCase()}
+          </span>
+        )}
 
         {/* Dead overlay */}
         {isDead && (
@@ -199,16 +132,98 @@ function PlayerNode({
             {voteCount}
           </div>
         )}
+
+        {/* Protected Overlay (Bodyguard) */}
+        {isProtected && (
+          <div 
+            className="absolute -bottom-1.5 -right-1.5 w-5 h-5 bg-slate-900 border border-sky-400 text-sky-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(56,189,248,0.5)] z-20 font-bold select-none animate-bounce" 
+            title="Được Bảo Vệ"
+            style={{ animationDuration: "2s" }}
+          >
+            🛡️
+          </div>
+        )}
+
+        {/* Bitten Overlay (Wolf) */}
+        {isBitten && (
+          <div 
+            className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-slate-900 border border-rose-600 text-rose-500 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(244,63,94,0.6)] z-20 font-bold select-none animate-pulse" 
+            title="Bị Sói Cắn"
+          >
+            🩸
+          </div>
+        )}
+
+        {/* Aimed Overlay (Hunter) */}
+        {isAimed && (
+          <div 
+            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-slate-900 border border-amber-500 text-amber-500 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(245,158,11,0.5)] z-20 font-bold select-none" 
+            title="Bị Nhắm Bắn"
+          >
+            🎯
+          </div>
+        )}
+
+        {/* Lover Overlay (Cupid) */}
+        {isLover && (
+          <div 
+            className="absolute -bottom-1.5 -left-1.5 w-5 h-5 bg-slate-900 border border-pink-500 text-pink-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_10px_rgba(236,72,153,0.5)] z-20 font-bold select-none" 
+            title="Cặp Đôi Tơ Hồng"
+          >
+            ❤️
+          </div>
+        )}
+
+        {/* Inspected Overlay (Seer) */}
+        {isInspected && (
+          <div 
+            className="absolute top-1/2 -translate-y-1/2 -left-2 w-5 h-5 bg-slate-900 border border-purple-500 text-purple-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(168,85,247,0.5)] z-20 font-bold select-none" 
+            title="Bị Tiên Tri Soi"
+          >
+            🔮
+          </div>
+        )}
+
+        {/* Poisoned Overlay (Witch) */}
+        {isPoisoned && (
+          <div 
+            className="absolute top-1/2 -translate-y-1/2 -right-2 w-5 h-5 bg-slate-900 border border-emerald-500 text-emerald-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(16,185,129,0.5)] z-20 font-bold select-none" 
+            title="Bị Phù Thủy Độc Sát"
+          >
+            💀
+          </div>
+        )}
+
+        {/* Saved Overlay (Witch) */}
+        {isSaved && (
+          <div 
+            className="absolute -top-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-slate-900 border border-teal-400 text-teal-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(45,212,191,0.5)] z-20 font-bold select-none animate-pulse" 
+            title="Được Phù Thủy Cứu"
+          >
+            💚
+          </div>
+        )}
+
+        {/* Elder Remaining Lives Overlay (1 Life left) */}
+        {player.role === "Elder" && player.elderLives === 1 && (
+          <div 
+            className="absolute -bottom-2 -right-2 bg-[#40121a]/95 border border-red-500/80 text-red-300 px-1 py-0.5 rounded text-[7px] font-gothic-label tracking-widest font-black uppercase shadow-[0_0_8px_rgba(239,68,68,0.4)] z-20 select-none animate-pulse" 
+            title="Còn 1 Mạng"
+          >
+            SOS
+          </div>
+        )}
       </div>
 
       {/* Player name */}
       <span
-        className={`font-gothic-body text-[9px] sm:text-[10px] font-semibold tracking-wide max-w-[60px] truncate transition-colors ${
+        className={`font-gothic-body text-[11px] sm:text-[12px] font-semibold tracking-wide max-w-[85px] truncate transition-colors ${
           isDead ? "text-[#445257] line-through" : isSelected ? "text-white" : "text-[#829ea2]"
         }`}
         style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
       >
         {player.name}
+        {player.userId === myUserId && " (Bạn)"}
       </span>
 
       {/* Host badge */}
@@ -233,6 +248,15 @@ interface NightPlayerCircleProps {
   highlightColor?: string;
   glowColor?: string;
   centerContent?: ReactNode;
+  myUserId?: string;
+  bittenUserIds?: string[];
+  protectedUserIds?: string[];
+  aimedUserIds?: string[];
+  loverUserIds?: string[];
+  inspectedUserIds?: string[];
+  poisonedUserIds?: string[];
+  savedUserIds?: string[];
+  minScale?: number;
 }
 
 export default function NightPlayerCircle({
@@ -245,6 +269,15 @@ export default function NightPlayerCircle({
   highlightColor = "#829ea2",
   glowColor = "rgba(130, 158, 162, 0.4)",
   centerContent,
+  myUserId,
+  bittenUserIds = [],
+  protectedUserIds = [],
+  aimedUserIds = [],
+  loverUserIds = [],
+  inspectedUserIds = [],
+  poisonedUserIds = [],
+  savedUserIds = [],
+  minScale = 0.4,
 }: NightPlayerCircleProps) {
   const handleSelect = (userId: string) => {
     if (!onSelectPlayer) return;
@@ -269,7 +302,7 @@ export default function NightPlayerCircle({
 
   // Filter out host from player slots (host is moderator, not in circle)
   const gamePlayers = players.filter(p => !p.isHost);
-  const avatarSize = gamePlayers.length > 8 ? 44 : 52;
+  const avatarSize = gamePlayers.length > 8 ? 54 : 70;
   const total = gamePlayers.length;
 
   // Symmetrically map player count to CIRCLE_POSITIONS indexes
@@ -303,7 +336,7 @@ export default function NightPlayerCircle({
     sceneWidth: 800,
     sceneHeight: 380,
     padding: 4,
-    minScale: 0.4,
+    minScale: minScale,
     maxScale: 2.2, // Allow zoom up to 2.2x on desktop screens
   });
 
@@ -344,6 +377,14 @@ export default function NightPlayerCircle({
                 glowColor={glowColor}
                 voteCount={voteCount}
                 size={avatarSize}
+                myUserId={myUserId}
+                isBitten={bittenUserIds.includes(player.userId)}
+                isProtected={protectedUserIds.includes(player.userId)}
+                isAimed={aimedUserIds.includes(player.userId)}
+                isLover={loverUserIds.includes(player.userId)}
+                isInspected={inspectedUserIds.includes(player.userId)}
+                isPoisoned={poisonedUserIds.includes(player.userId)}
+                isSaved={savedUserIds.includes(player.userId)}
               />
             </div>
           );

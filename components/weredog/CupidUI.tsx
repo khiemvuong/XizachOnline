@@ -60,6 +60,7 @@ export default function CupidUI({
         disabledIds={disabledIds}
         highlightColor={display.highlightColor}
         glowColor={display.glowColor}
+        myUserId={myUserId}
         centerContent={
           <NightActionPanel
             roleKey="Cupid"
@@ -71,10 +72,14 @@ export default function CupidUI({
           >
             {/* Show paired lovers */}
             {selectedIds.length > 0 && (
-              <div className="flex items-center gap-1 text-[9px] font-gothic-label uppercase tracking-widest text-pink-400 mt-0.5 animate-fade-in">
-                <span>{lover1?.name ?? "?"}</span>
-                <span className="text-[#445257]">-</span>
-                <span>{lover2?.name ?? "?"}</span>
+              <div className="flex flex-col items-center gap-1 mt-2.5 animate-fade-in w-full">
+                <div className="flex items-center gap-2 bg-pink-950/35 border border-pink-500/25 px-3 py-1.5 rounded-full shadow-[0_2px_8px_rgba(236,72,153,0.15)]">
+                  <div className="flex items-center gap-1.5 text-xs sm:text-sm font-serif font-bold text-pink-200">
+                    <span>{lover1?.name ?? "?"}</span>
+                    <span className="text-pink-500 font-black">❤</span>
+                    <span>{lover2?.name ?? "?"}</span>
+                  </div>
+                </div>
               </div>
             )}
           </NightActionPanel>

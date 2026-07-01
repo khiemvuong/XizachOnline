@@ -1,7 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 // ─── Player Circle Positions (Full circle, 12 slots max) ───
 
 export const CIRCLE_POSITIONS = [
@@ -148,6 +146,8 @@ export interface NightPlayer {
   role?: WeredogRoleName;
   /** Visible role frame — only visible to self, seer (if inspected), and host */
   visibleFrameType?: RoleDisplayConfig["frameType"];
+  avatarUrl?: string | null;
+  elderLives?: number;
 }
 
 // ─── Role Frame SVG Paths (Placeholder decorative borders) ───

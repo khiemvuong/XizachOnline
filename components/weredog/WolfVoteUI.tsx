@@ -10,10 +10,7 @@ interface WolfVoteUIProps {
   myUserId: string;
   isMyTurn: boolean;
   wolfVotes?: Record<string, string>; // wolfUserId -> targetUserId
-  wolfVictimUserId?: string | null;
   onVote?: (targetUserId: string) => void;
-  onRevote?: () => void;
-  onConfirm?: () => void;
 }
 
 export default function WolfVoteUI({
@@ -21,15 +18,19 @@ export default function WolfVoteUI({
   myUserId,
   isMyTurn,
   wolfVotes = {},
-  wolfVictimUserId,
   onVote,
-  onRevote,
-  onConfirm,
 }: WolfVoteUIProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const display = ROLE_DISPLAY.Wolf;
   const myVote = wolfVotes[myUserId];
-  const hasActed = !!myVote;
+  const [selectedId, setSelectedId] = useState<string | null>(myVote || null);
+  const hasActed = !!selectedId && selectedId === myVote;
+
+  // React official pattern: adjust state during render when prop changes
+  const [prevMyVote, setPrevMyVote] = useState<string | null | undefined>(myVote);
+  if (myVote !== prevMyVote) {
+    setPrevMyVote(myVote);
+    setSelectedId(myVote || null);
+  }
 
   // Compute vote counts per target
   const voteCounts = useMemo(() => {
@@ -40,14 +41,49 @@ export default function WolfVoteUI({
     return counts;
   }, [wolfVotes]);
 
+  const me = players.find(p => p.userId === myUserId);
+  const isMeDead = me ? !me.isAlive : false;
+
   // Wolves and their vote status
   const allWolves = players.filter(p => p.role === "Wolf" && p.isAlive);
+
+  if (isMeDead) {
+    const allPlayerIds = players.map(p => p.userId);
+    return (
+      <div className="w-full h-full flex flex-col justify-center items-center relative">
+        <NightPlayerCircle
+          players={players}
+          selectedIds={[]}
+          disabledIds={allPlayerIds}
+          showVotes={voteCounts}
+          highlightColor={display.highlightColor}
+          glowColor={display.glowColor}
+          myUserId={myUserId}
+          centerContent={
+            <div className="w-full flex flex-col items-center justify-center gap-2 animate-fade-in text-center max-w-[280px]">
+              <h1 
+                className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-shadow-maroon text-red-500"
+                style={{ 
+                  textShadow: "0 0 10px rgba(239,68,68,0.35), 0 2px 4px rgba(0,0,0,0.9)",
+                }}
+              >
+                {display.actionHeading}
+              </h1>
+
+              <div className="bg-red-950/40 border border-red-500/25 rounded-lg p-3 text-red-400 text-xs sm:text-sm font-serif leading-relaxed mt-2 shadow-md">
+                ⚠️ BẠN ĐÃ CHẾT! Không thể tham gia đi săn đêm nay.
+              </div>
+            </div>
+          }
+        />
+      </div>
+    );
+  }
   const disabledIds = players
-    .filter(p => p.role === "Wolf" || !p.isAlive || p.isHost)
+    .filter(p => !p.isAlive || p.isHost)
     .map(p => p.userId);
 
   const handleSelect = (userId: string) => {
-    if (hasActed) return;
     setSelectedId(prev => (prev === userId ? null : userId));
   };
 
@@ -62,11 +98,12 @@ export default function WolfVoteUI({
       <NightPlayerCircle
         players={players}
         selectedIds={selectedId ? [selectedId] : []}
-        onSelectPlayer={isMyTurn && !hasActed ? handleSelect : undefined}
+        onSelectPlayer={isMyTurn ? handleSelect : undefined}
         disabledIds={disabledIds}
         showVotes={voteCounts}
         highlightColor={display.highlightColor}
         glowColor={display.glowColor}
+        myUserId={myUserId}
         centerContent={
           <NightActionPanel
             roleKey="Wolf"
@@ -85,39 +122,23 @@ export default function WolfVoteUI({
                   return (
                     <div
                       key={w.userId}
-                      className=" text-white flex items-center gap-2 text-xs sm:text-sm font-gothic-label uppercase tracking-widest font-bold"
-                      style={{ color: targetPlayer ? "#f43f5e" : "#445257" }}
+                      className="flex items-center gap-2 bg-red-950/20 border border-red-500/10 px-3 py-1 rounded-full text-xs sm:text-sm font-serif font-bold transition-all shadow-sm"
+                      style={{ 
+                        color: targetPlayer ? "#fca5a5" : "#445257",
+                        borderColor: targetPlayer ? "rgba(239, 68, 68, 0.25)" : "rgba(68, 82, 87, 0.15)"
+                      }}
                     >
-                      <span>{w.name}</span>
-                      <span className="opacity-40 font-normal">→</span>
-                      <span className={targetPlayer ? "text-white font-black" : "italic text-[#445257]"}>
-                        {targetPlayer ? targetPlayer.name : "..."}
+                      <span className="text-red-300 font-semibold">{w.name}</span>
+                      <span className="text-red-500 font-black opacity-60">🩸</span>
+                      <span className={targetPlayer ? "text-white font-black" : "italic text-[#445257]/60 font-normal"}>
+                        {targetPlayer ? targetPlayer.name : "Đang chọn..."}
                       </span>
                     </div>
                   );
                 })}
               </div>
             )}
-
-            {/* Revote button */}
-            {isMyTurn && hasActed && onRevote && (
-              <button
-                onClick={onRevote}
-                className="mt-0.5 px-2 py-0.5 text-[9px] uppercase tracking-wider font-gothic-ui font-bold text-[#829ea2] border border-[#445257]/40 rounded hover:bg-[#222a2f] transition-colors cursor-pointer"
-              >
-                Bỏ Phiếu Lại
-              </button>
-            )}
-
-            {/* Final Target display */}
-            {wolfVictimUserId !== undefined && (
-              <span className="font-gothic-label text-[9px] uppercase tracking-widest text-red-400 mt-0.5">
-                {wolfVictimUserId
-                  ? `Mục tiêu: ${players.find(p => p.userId === wolfVictimUserId)?.name}`
-                  : "Hòa phiếu"}
-              </span>
-            )}
-          </NightActionPanel>
+           </NightActionPanel>
         }
       />
     </div>
