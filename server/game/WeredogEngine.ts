@@ -258,7 +258,7 @@ export class WeredogEngine {
       players: [],
       state: "LOBBY",
       settings: {
-        wolfCount: 2,
+        wolfCount: 1,
         enabledRoles: [],
         discussionTimeSeconds: 180,
       },
