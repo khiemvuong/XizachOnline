@@ -10,7 +10,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/werewolf",
+        destination: "/weredog",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
-

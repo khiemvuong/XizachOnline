@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Cormorant_Garamond, Noto_Serif, Manrope } from "next/font/google";
+import { Geist, Geist_Mono, Cormorant_Garamond, Noto_Serif, Manrope, Lora, Cinzel_Decorative } from "next/font/google";
 import "./globals.css";
 import "./avalon.css";
 import "./deception.css";
+import "./weredog.css";
 
 const cormorant = Cormorant_Garamond({
   weight: ['400', '500', '600', '700'],
@@ -21,6 +22,19 @@ const manrope = Manrope({
   weight: ['400', '500', '600', '700', '800'],
   subsets: ['vietnamese', 'latin'],
   variable: '--font-manrope',
+});
+
+const lora = Lora({
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
+  subsets: ['vietnamese', 'latin'],
+  variable: '--font-lora',
+});
+
+const cinzelDecorative = Cinzel_Decorative({
+  weight: ['400', '700'],
+  subsets: ['latin'],
+  variable: '--font-cinzel-decorative',
 });
 
 const geistSans = Geist({
@@ -56,7 +70,7 @@ export default function RootLayout({
     <html
       lang="vi"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} ${notoSerif.variable} ${manrope.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} ${notoSerif.variable} ${manrope.variable} ${lora.variable} ${cinzelDecorative.variable} h-full antialiased`}
     >
       <head>
         {/* iOS PWA: hides Safari UI completely when launched from home screen */}

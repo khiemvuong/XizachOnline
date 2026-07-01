@@ -23,7 +23,8 @@
     "react-easy-crop": "^5.5.7",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "use-sound": "^5.0.0"
+    "use-sound": "^5.0.0",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

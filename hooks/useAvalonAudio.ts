@@ -172,6 +172,18 @@ export function useAvalonAudio({
     playedGameOverWinnerRef.current = gameWinner;
   }, [gamePhase, gameWinner, isLobbyMusicEnabled, winAudioRef, loseAudioRef]);
 
+  // Stop all audio tracks on unmount
+  useEffect(() => {
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      stopAudio(lobbyAudioRef.current, true);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      stopAudio(winAudioRef.current, true);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      stopAudio(loseAudioRef.current, true);
+    };
+  }, [winAudioRef, loseAudioRef]);
+
   // Method to manually unlock audio on interaction (for Safari)
   const unlockAudio = useCallback(() => {
     [
