@@ -379,10 +379,10 @@ export default function NightPlayerCircle({
                 size={avatarSize}
                 myUserId={myUserId}
                 isBitten={bittenUserIds.includes(player.userId)}
-                isProtected={protectedUserIds.includes(player.userId)}
+                isProtected={player.isProtected || protectedUserIds.includes(player.userId)}
                 isAimed={aimedUserIds.includes(player.userId)}
                 isLover={player.isLover || loverUserIds.includes(player.userId)}
-                isInspected={inspectedUserIds.includes(player.userId)}
+                isInspected={player.isInspected || inspectedUserIds.includes(player.userId)}
                 isPoisoned={poisonedUserIds.includes(player.userId)}
                 isSaved={savedUserIds.includes(player.userId)}
               />

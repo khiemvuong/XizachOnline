@@ -131,6 +131,7 @@ export interface WeredogHistoryRecord {
 export interface WeredogRoom {
   id: string;
   players: WeredogPlayer[];
+  playerMap?: Map<string, WeredogPlayer>; // Cache for O(1) lookups by userId
   state: WeredogGameState;
   settings: {
     wolfCount: number;
@@ -138,6 +139,11 @@ export interface WeredogRoom {
     discussionTimeSeconds: number;
   };
   messages: WeredogChatMessage[];
+  messageStartIndex: number; // For circular message buffer (Phase 2)
+
+  // Performance caches 
+  _alivePlayersCache?: WeredogPlayer[]; // Cached alive players
+  _aliveCacheInvalidated?: boolean; // Cache validity flag
 
   // Game tracking
   nightNumber: number;

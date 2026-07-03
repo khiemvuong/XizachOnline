@@ -10,13 +10,63 @@ import { ROLE_CONFIGS } from "./WeredogTypes";
 export class WeredogEngine {
   private rooms: Map<string, WeredogRoom> = new Map();
   private io: Namespace;
-  private chatRateLimits: Map<string, number[]> = new Map();
+  private chatRateLimits: Map<string, { count: number; resetAt: number }> = new Map();
   private autoConfirmTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private emptyRoomCleanupTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private broadcastDebounced: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   constructor(server: Server) {
     this.io = server.of("/weredog");
     this.setupListeners();
+  }
+
+  // ─── Constants ───
+  
+  private readonly MAX_HISTORY_RECORDS = 30; // Keep last 30 nights
+
+  // ─── Performance Optimizations ───
+
+  /**
+   * Debounced broadcast: batches rapid state updates to ~60fps
+   * Reduces broadcast storms during rapid actions (wolf voting, chat spam)
+   */
+  private scheduleBroadcast(roomId: string) {
+    const existing = this.broadcastDebounced.get(roomId);
+    if (existing) clearTimeout(existing);
+    
+    const timer = setTimeout(() => {
+      this.broadcastDebounced.delete(roomId);
+      this.broadcastStateImmediate(roomId);
+    }, 16); // ~60fps batching
+    
+    this.broadcastDebounced.set(roomId, timer);
+  }
+
+  /**
+   * Immediate broadcast: for critical updates that need instant feedback
+   * Use for: game over, role reveal, critical errors
+   */
+  private broadcastStateImmediate(roomId: string) {
+    this.broadcastState(roomId);
+  }
+
+  /**
+   * Sync playerMap for O(1) lookups instead of O(n) array searches
+   * Call after: join, leave, player state changes
+   */
+  private syncPlayerMap(room: WeredogRoom) {
+    room.playerMap = new Map(room.players.map(p => [p.userId, p]));
+  }
+
+  /**
+   * Clear broadcast debounce timer on room cleanup
+   */
+  private clearBroadcastDebounce(roomId: string) {
+    const timer = this.broadcastDebounced.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.broadcastDebounced.delete(roomId);
+    }
   }
 
   // ─── Helpers ───
@@ -25,26 +75,34 @@ export class WeredogEngine {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   }
 
-  private addSystemMessage(room: WeredogRoom, text: string) {
-    room.messages.push({
-      senderId: "system",
-      senderName: "Hệ thống",
-      text,
-      timestamp: Date.now(),
-    });
-    if (room.messages.length > 50) room.messages.shift();
-  }
+
 
   private getActivePlayers(room: WeredogRoom): WeredogPlayer[] {
     return room.players.filter((p) => !p.isSpectator && !p.isHost);
   }
 
+  /**
+   * Invalidate alive players cache (call when player dies)
+   */
+  private invalidateAliveCache(room: WeredogRoom) {
+    room._aliveCacheInvalidated = true;
+  }
+
   private getAlivePlayers(room: WeredogRoom): WeredogPlayer[] {
-    return this.getActivePlayers(room).filter((p) => p.isAlive);
+    // Return cached result if valid
+    if (!room._aliveCacheInvalidated && room._alivePlayersCache) {
+      return room._alivePlayersCache;
+    }
+    
+    // Recalculate and cache
+    room._alivePlayersCache = this.getActivePlayers(room).filter((p) => p.isAlive);
+    room._aliveCacheInvalidated = false;
+    return room._alivePlayersCache;
   }
 
   private findPlayer(room: WeredogRoom, userId: string): WeredogPlayer | undefined {
-    return room.players.find((p) => p.userId === userId);
+    // O(1) lookup via map, fallback to O(n) array search
+    return room.playerMap?.get(userId) ?? room.players.find((p) => p.userId === userId);
   }
 
   private findHost(room: WeredogRoom): WeredogPlayer | undefined {
@@ -84,6 +142,7 @@ export class WeredogEngine {
       if (!room) return;
       if (room.players.some((p) => p.status === "connected")) return;
       this.clearAutoConfirmTimer(roomId);
+      this.clearBroadcastDebounce(roomId);
       this.rooms.delete(roomId);
     }, 15000);
     this.emptyRoomCleanupTimers.set(roomId, timer);
@@ -263,6 +322,7 @@ export class WeredogEngine {
         discussionTimeSeconds: 180,
       },
       messages: [],
+      messageStartIndex: 0,
       nightNumber: 0,
       activeNightRolesOrder: [],
       currentNightRoleIndex: -1,
@@ -314,7 +374,8 @@ export class WeredogEngine {
     }
 
     socket.join(roomId);
-    this.broadcastState(roomId);
+    this.syncPlayerMap(room);
+    this.scheduleBroadcast(roomId);
   }
 
   private leaveRoom(roomId: string, socketId: string) {
@@ -343,6 +404,7 @@ export class WeredogEngine {
       if (room.settings.wolfCount > maxWolves) {
         room.settings.wolfCount = maxWolves;
       }
+      this.syncPlayerMap(room);
     }
 
     // If wolf disconnected mid-vote, check if remaining wolves all voted
@@ -350,19 +412,30 @@ export class WeredogEngine {
       this.checkWolfVoteComplete(roomId, room);
     }
 
-    this.broadcastState(roomId);
+    this.scheduleBroadcast(roomId);
   }
 
   // ─── Chat ───
 
   private chatMessage(roomId: string, userId: string, text: string) {
     if (!text || text.length > 500) return;
+    
+    // O(1) rate limiting with counter and time window
     const now = Date.now();
-    let userStamps = this.chatRateLimits.get(userId) || [];
-    userStamps = userStamps.filter((t) => now - t < 10000);
-    if (userStamps.length >= 10) return;
-    userStamps.push(now);
-    this.chatRateLimits.set(userId, userStamps);
+    const limit = this.chatRateLimits.get(userId);
+    
+    if (limit) {
+      if (now < limit.resetAt) {
+        if (limit.count >= 10) return; // Rate limited
+        limit.count++;
+      } else {
+        // Reset window expired, start new window
+        limit.count = 1;
+        limit.resetAt = now + 10000;
+      }
+    } else {
+      this.chatRateLimits.set(userId, { count: 1, resetAt: now + 10000 });
+    }
 
     const room = this.rooms.get(roomId);
     if (!room) return;
@@ -375,8 +448,13 @@ export class WeredogEngine {
       text,
       timestamp: Date.now(),
     });
-    if (room.messages.length > 50) room.messages.shift();
-    this.broadcastState(roomId);
+    
+    // Use circular buffer: track start index instead of shifting
+    if (room.messages.length > 50) {
+      room.messageStartIndex = (room.messageStartIndex || 0) + 1;
+    }
+    
+    this.scheduleBroadcast(roomId);
   }
 
   // ─── Settings ───
@@ -401,7 +479,7 @@ export class WeredogEngine {
     }
 
     room.settings = { ...room.settings, ...settings };
-    this.broadcastState(roomId);
+    this.scheduleBroadcast(roomId);
   }
 
   // ─── Lobby Actions ───
@@ -412,7 +490,7 @@ export class WeredogEngine {
     const player = this.findPlayer(room, userId);
     if (!player || player.isHost) return;
     player.isSpectator = !player.isSpectator;
-    this.broadcastState(roomId);
+    this.scheduleBroadcast(roomId);
   }
 
   private changeName(roomId: string, userId: string, newName: string) {
@@ -474,6 +552,7 @@ export class WeredogEngine {
     this.clearAutoConfirmTimer(roomId);
     room.state = "LOBBY";
     room.nightNumber = 0;
+    room.messageStartIndex = 0;
     room.wolfVotes = {};
     room.wolfVictimUserId = undefined;
     room.bodyguardTargetUserId = undefined;
@@ -510,7 +589,6 @@ export class WeredogEngine {
       if (!p.isHost) p.isSpectator = false;
     });
 
-    this.addSystemMessage(room, "Trở về phòng chờ.");
     this.broadcastState(roomId);
   }
 
@@ -572,7 +650,6 @@ export class WeredogEngine {
     room.cupidLoverUserIds = undefined;
     room.cupidLoversConfirmed = undefined;
 
-    this.addSystemMessage(room, "Trò chơi bắt đầu! Hãy xem vai trò của bạn.");
     this.broadcastState(roomId);
   }
 
@@ -619,7 +696,6 @@ export class WeredogEngine {
       return;
     }
 
-    this.addSystemMessage(room, `🌙 Đêm ${room.nightNumber} bắt đầu. Mọi người nhắm mắt ngủ.`);
     this.broadcastState(roomId);
   }
 
@@ -654,7 +730,7 @@ export class WeredogEngine {
     if (!target || !target.isAlive) return;
 
     room.wolfVotes[userId] = targetUserId;
-    this.broadcastState(roomId);
+    this.scheduleBroadcast(roomId);
 
     this.checkWolfVoteComplete(roomId, room);
   }
@@ -688,7 +764,7 @@ export class WeredogEngine {
       this.clearAutoConfirmTimer(roomId); // Do not auto-confirm / remove countdown on tie
     }
 
-    this.broadcastState(roomId);
+    this.scheduleBroadcast(roomId);
   }
 
   private wolfRevote(roomId: string, userId: string) {
@@ -972,6 +1048,11 @@ export class WeredogEngine {
       record.cupidLovers = [...room.cupidLoverUserIds];
     }
     room.history.push(record);
+    
+    // Limit history size to prevent unbounded growth
+    if (room.history.length > this.MAX_HISTORY_RECORDS) {
+      room.history.shift();
+    }
 
     room.deathsThisNight = deaths;
 
@@ -980,7 +1061,6 @@ export class WeredogEngine {
     if (winner) {
       room.winner = winner;
       room.state = "GAME_OVER";
-      this.addSystemMessage(room, this.getWinMessage(winner));
       this.broadcastState(roomId);
       return;
     }
@@ -991,20 +1071,15 @@ export class WeredogEngine {
     room.tiebreakerActive = false;
     room.tiebreakerCandidates = [];
 
-    const deathCount = deaths.length;
-    if (deathCount === 0) {
-      this.addSystemMessage(room, "☀️ Trời sáng. Đêm qua bình yên, không ai chết.");
-    } else {
-      const deadNames = deaths.map((id) => this.findPlayer(room, id)?.name ?? "???").join(", ");
-      this.addSystemMessage(room, `☀️ Trời sáng. Đêm qua có ${deathCount} người chết: ${deadNames}.`);
-    }
-
     this.broadcastState(roomId);
   }
 
   private killPlayer(room: WeredogRoom, player: WeredogPlayer, deaths: string[]) {
     player.isAlive = false;
     deaths.push(player.userId);
+    
+    // Invalidate alive players cache
+    this.invalidateAliveCache(room);
 
     // If Elder dies, disable all non-wolf abilities
     if (player.role === "Elder") {
@@ -1076,7 +1151,7 @@ export class WeredogEngine {
       }
     }
 
-    this.broadcastState(roomId);
+    this.scheduleBroadcast(roomId);
   }
 
   private hostConfirmDayVote(roomId: string, userId: string) {
@@ -1118,7 +1193,6 @@ export class WeredogEngine {
 
     // If only 'skip' is top or all tied with skip included: skip
     if (topCandidates.length === 1 && topCandidates[0][0] === "skip") {
-      this.addSystemMessage(room, "Kết quả vote: Skip. Không ai bị treo cổ.");
       this.transitionToNight(roomId, room);
       return;
     }
@@ -1127,7 +1201,6 @@ export class WeredogEngine {
       // Clear winner
       const victimId = topCandidates[0][0];
       if (victimId === "skip") {
-        this.addSystemMessage(room, "Kết quả vote: Skip. Không ai bị treo cổ.");
         this.transitionToNight(roomId, room);
         return;
       }
@@ -1140,7 +1213,6 @@ export class WeredogEngine {
 
     if (nonSkipCandidates.length === 0) {
       // All top votes are skip
-      this.addSystemMessage(room, "Kết quả vote: Skip. Không ai bị treo cổ.");
       this.transitionToNight(roomId, room);
       return;
     }
@@ -1154,8 +1226,6 @@ export class WeredogEngine {
     // Multiple non-skip candidates tied: host decides
     room.tiebreakerActive = true;
     room.tiebreakerCandidates = nonSkipCandidates.map(([id]) => id);
-    const names = room.tiebreakerCandidates.map((id) => this.findPlayer(room, id)?.name ?? "???").join(", ");
-    this.addSystemMessage(room, `Hòa phiếu giữa: ${names}. Quản trò quyết định vote lại hoặc skip.`);
     this.broadcastState(roomId);
   }
 
@@ -1169,14 +1239,12 @@ export class WeredogEngine {
     room.tiebreakerCandidates = [];
 
     if (decision === "skip") {
-      this.addSystemMessage(room, "Quản trò quyết định: Skip. Không ai bị treo cổ.");
       this.transitionToNight(roomId, room);
     } else {
       // Revote: reset day votes
       room.dayVotes = {};
       room.state = "DAY_VOTING";
       this.getAlivePlayers(room).forEach((p) => (p.hasVoted = false));
-      this.addSystemMessage(room, "Quản trò quyết định: Vote lại!");
       this.broadcastState(roomId);
     }
   }
@@ -1188,7 +1256,6 @@ export class WeredogEngine {
     if (!player?.isHost) return;
 
     room.state = "DAY_VOTING";
-    this.addSystemMessage(room, "Quản trò đã bắt đầu bỏ phiếu treo cổ.");
     this.broadcastState(roomId);
   }
 
@@ -1209,12 +1276,7 @@ export class WeredogEngine {
       // Cupid heartbreak
       this.resolveHeartbreak(room, deaths);
 
-      const victimName = victim.name;
-      this.addSystemMessage(room, `Kết quả vote: ${victimName} bị treo cổ.`);
-      if (deaths.length > 1) {
-        const extraDeaths = deaths.slice(1).map((id) => this.findPlayer(room, id)?.name ?? "???").join(", ");
-        this.addSystemMessage(room, `${extraDeaths} cũng chết theo.`);
-      }
+      // Player lynch processed
     }
 
     // Check win condition
@@ -1222,7 +1284,6 @@ export class WeredogEngine {
     if (winner) {
       room.winner = winner;
       room.state = "GAME_OVER";
-      this.addSystemMessage(room, this.getWinMessage(winner));
       this.broadcastState(roomId);
       return;
     }
@@ -1316,11 +1377,14 @@ export class WeredogEngine {
   }
 
   private buildPlayerView(room: WeredogRoom, me: WeredogPlayer | undefined): Partial<WeredogRoom> {
-    const clone: WeredogRoom = JSON.parse(JSON.stringify(room));
+    const clone: WeredogRoom = structuredClone(room);
     const isHost = me?.isHost;
     const isGameActive = room.state !== "LOBBY" && room.state !== "GAME_OVER";
 
     clone.isElderDead = this.isElderDead(room);
+    
+    // Slice messages from circular buffer start index
+    clone.messages = room.messages.slice(room.messageStartIndex || 0);
 
     // Host (moderator) sees everything
     if (isHost) return clone;

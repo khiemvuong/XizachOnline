@@ -150,6 +150,8 @@ export interface NightPlayer {
   elderLives?: number;
   isLover?: boolean;
   loverUserId?: string;
+  isInspected?: boolean;
+  isProtected?: boolean;
 }
 
 // ─── Role Frame SVG Paths (Placeholder decorative borders) ───
