@@ -14,6 +14,8 @@ import WeredogNight from "./WeredogNight";
 import WeredogDayStart from "./WeredogDayStart";
 import WeredogDayVoting from "./WeredogDayVoting";
 import WeredogGameOver from "./WeredogGameOver";
+import WeredogChat from "./WeredogChat";
+import WeredogHistory from "./WeredogHistory";
 import { type WeredogRoleName, type NightPlayer, type RoleDisplayConfig, ROLE_DISPLAY } from "./nightConstants";
 
 const EMOJIS = ["🐶", "🐺", "🦊", "🦁", "🐯", "🐼", "🐻", "🐨", "🐸", "🐔", "🐧", "🐦"];
@@ -52,6 +54,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
     hostTiebreakerDecision,
     returnToLobby,
     transferHost,
+    sendMessage,
   } = useWeredogStore();
 
   const router = useRouter();
@@ -150,19 +153,46 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
   // Setup derived visible players (with role frames resolved)
   const visiblePlayers: NightPlayer[] = onlinePlayers.map((p) => {
     let frameType: RoleDisplayConfig["frameType"] | undefined = undefined;
+    let isInspected = false;
+    let isProtected = false;
+
     if (isHost || p.userId === userId) {
       frameType = p.role ? ROLE_DISPLAY[p.role]?.frameType : undefined;
     } else if (me?.role === "Wolf" && p.role === "Wolf") {
       frameType = "wolf";
-    } else if (me?.role === "Seer" && gameState.history) {
-      const record = gameState.history.find((h) => h.seerTargetUserId === p.userId);
-      if (record && record.seerResult) {
-        frameType = record.seerResult === "Wolf" ? "wolf" : "shiba";
+    }
+
+    // Seer logic
+    if (me?.role === "Seer") {
+      if (gameState.seerTargetUserId === p.userId && gameState.seerResult) {
+        frameType = gameState.seerResult === "Wolf" ? "wolf" : "shiba";
+        isInspected = true;
+      } else if (gameState.history) {
+        const record = gameState.history.find((h) => h.seerTargetUserId === p.userId);
+        if (record && record.seerResult) {
+          frameType = record.seerResult === "Wolf" ? "wolf" : "shiba";
+          isInspected = true;
+        }
       }
     }
+
+    // Bodyguard logic
+    if (me?.role === "Bodyguard") {
+      if (gameState.bodyguardTargetUserId === p.userId) {
+        isProtected = true;
+      } else if (gameState.history) {
+        const record = gameState.history.find((h) => h.bodyguardTargetUserId === p.userId);
+        if (record) {
+          isProtected = true;
+        }
+      }
+    }
+
     return {
       ...p,
       visibleFrameType: frameType,
+      isInspected,
+      isProtected,
     };
   });
 
@@ -318,6 +348,28 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
           )}
         </div>
       </div>
+
+      {/* Chat Component - Available during all phases */}
+      {gameState && (
+        <WeredogChat
+          messages={gameState.messages || []}
+          myUserId={userId}
+          onSendMessage={sendMessage}
+        />
+      )}
+
+      {/* History Component - Available for Seer and Bodyguard during active game phases */}
+      {gameState && (stateNum === 3 || stateNum === 4 || stateNum === 5) && (
+        <WeredogHistory
+          history={gameState.history || []}
+          myRole={myRole}
+          players={visiblePlayers}
+          currentNightNumber={gameState.nightNumber}
+          currentSeerTargetUserId={gameState.seerTargetUserId}
+          currentSeerResult={gameState.seerResult}
+          currentBodyguardTargetUserId={gameState.bodyguardTargetUserId}
+        />
+      )}
 
       {showLeaveConfirmModal && (
         <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">

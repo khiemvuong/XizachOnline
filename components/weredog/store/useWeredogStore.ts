@@ -12,6 +12,7 @@ interface WeredogState {
   connect: (roomId: string, profile: { name: string; avatarUrl: string | null }) => void;
   disconnect: () => void;
   updateProfile: (name: string, avatarUrl: string | null) => void;
+  sendMessage: (text: string) => void;
   startGame: () => void;
   playerReady: () => void;
   updateSettings: (settings: { wolfCount: number; enabledRoles: string[] }) => void;
@@ -44,10 +45,10 @@ export const useWeredogStore = create<WeredogState>((set, get) => ({
   connect: (roomId, profile) => {
     if (typeof window === "undefined") return;
 
-    let storedUserId = localStorage.getItem("xz_userId");
+    let storedUserId = sessionStorage.getItem("xz_userId");
     if (!storedUserId) {
       storedUserId = Math.random().toString(36).substring(2, 10);
-      localStorage.setItem("xz_userId", storedUserId);
+      sessionStorage.setItem("xz_userId", storedUserId);
     }
     set({ userId: storedUserId });
 
@@ -98,6 +99,13 @@ export const useWeredogStore = create<WeredogState>((set, get) => ({
     if (socket) {
       socket.emit("changeName", name);
       socket.emit("updateAvatar", avatarUrl);
+    }
+  },
+
+  sendMessage: (text) => {
+    const socket = get().socket;
+    if (socket) {
+      socket.emit("chatMessage", text);
     }
   },
 
