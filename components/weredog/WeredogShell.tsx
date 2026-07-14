@@ -292,6 +292,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
               witchActionSelected={gameState.witchActionSelected}
               witchTargetUserId={gameState.witchTargetUserId}
               hunterTargetUserId={gameState.hunterTargetUserId}
+              hunterCurrentTarget={me?.hunterTargetUserId}
               cupidLoverUserIds={gameState.cupidLoverUserIds}
               witchHasSave={me?.witchHasSaveBottle ?? true}
               witchHasKill={me?.witchHasKillBottle ?? true}

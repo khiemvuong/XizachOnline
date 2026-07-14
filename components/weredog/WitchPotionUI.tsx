@@ -95,9 +95,10 @@ export default function WitchPotionUI({
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row items-center gap-2 mt-1">
                 <button
+                  type="button"
                   onClick={() => handleChooseAction("save")}
                   disabled={!hasSavePotion}
-                  className={`w-[110px] py-2 rounded-lg border text-[11px] font-gothic-ui font-black uppercase tracking-wider transition-all shadow-[0_2px_8px_rgba(0,0,0,0.5)] cursor-pointer ${
+                  className={`w-[110px] py-2 rounded-lg border text-[11px] font-gothic-ui font-black uppercase tracking-wider transition-[background-color,border-color,color,box-shadow,transform,opacity] shadow-[0_2px_8px_rgba(0,0,0,0.5)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11] ${
                     hasSavePotion
                       ? "border-emerald-500/40 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-900/30 hover:scale-[1.04] hover:border-emerald-500/85"
                       : "border-[#445257]/30 text-[#445257] bg-transparent cursor-not-allowed opacity-40"
@@ -107,9 +108,10 @@ export default function WitchPotionUI({
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => handleChooseAction("kill")}
                   disabled={!hasKillPotion}
-                  className={`w-[110px] py-2 rounded-lg border text-[11px] font-gothic-ui font-black uppercase tracking-wider transition-all shadow-[0_2px_8px_rgba(0,0,0,0.5)] cursor-pointer ${
+                  className={`w-[110px] py-2 rounded-lg border text-[11px] font-gothic-ui font-black uppercase tracking-wider transition-[background-color,border-color,color,box-shadow,transform,opacity] shadow-[0_2px_8px_rgba(0,0,0,0.5)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11] ${
                     hasKillPotion
                       ? "border-red-500/40 text-red-400 bg-red-950/20 hover:bg-red-900/30 hover:scale-[1.04] hover:border-red-500/85"
                       : "border-[#445257]/30 text-[#445257] bg-transparent cursor-not-allowed opacity-40"
@@ -119,8 +121,9 @@ export default function WitchPotionUI({
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => handleChooseAction("none")}
-                  className="w-[110px] py-2 rounded-lg border border-[#445257]/45 text-[#829ea2] text-[11px] font-gothic-ui font-black uppercase tracking-wider hover:bg-[#222a2f] hover:text-white hover:scale-[1.04] transition-all cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+                  className="w-[110px] py-2 rounded-lg border border-[#445257]/45 text-[#829ea2] text-[11px] font-gothic-ui font-black uppercase tracking-wider hover:bg-[#222a2f] hover:text-white hover:scale-[1.04] transition-[background-color,color,box-shadow,transform] cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#829ea2]/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11]"
                 >
                   Bỏ Qua
                 </button>
@@ -171,8 +174,9 @@ export default function WitchPotionUI({
                 </span>
               )}
               <button
+                type="button"
                 onClick={() => setAction(null)}
-                className="px-3 py-1 rounded border border-[#445257]/50 text-[#829ea2] text-[9px] font-gothic-ui font-bold uppercase tracking-wider hover:bg-[#222a2f] hover:text-white transition-all cursor-pointer mt-2"
+                className="px-3 py-1 rounded border border-[#445257]/50 text-[#829ea2] text-[9px] font-gothic-ui font-bold uppercase tracking-wider hover:bg-[#222a2f] hover:text-white transition-[background-color,color] cursor-pointer mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#829ea2]/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11]"
               >
                 ← Quay Lại
               </button>
@@ -212,8 +216,9 @@ export default function WitchPotionUI({
                 </span>
               )}
               <button
+                type="button"
                 onClick={() => setAction(null)}
-                className="px-3 py-1 rounded border border-[#445257]/50 text-[#829ea2] text-[9px] font-gothic-ui font-bold uppercase tracking-wider hover:bg-[#222a2f] hover:text-white transition-all cursor-pointer mt-2"
+                className="px-3 py-1 rounded border border-[#445257]/50 text-[#829ea2] text-[9px] font-gothic-ui font-bold uppercase tracking-wider hover:bg-[#222a2f] hover:text-white transition-[background-color,color] cursor-pointer mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#829ea2]/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11]"
               >
                 ← Quay Lại
               </button>

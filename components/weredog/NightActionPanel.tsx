@@ -45,13 +45,13 @@ export default function NightActionPanel({
   // ── Spectator / Not My Turn View ──
   if (!isMyTurn) {
     const isSleepRole = roleKey === "Villager" || roleKey === "Elder";
-    const headingText = isSleepRole ? display.actionHeading : `ĐANG CHỜ ${display.nameVi.toUpperCase()}...`;
+    const headingText = isSleepRole ? display.actionHeading : `CHỜ ${display.nameVi.toUpperCase()}...`;
 
     return (
-      <div className="w-full flex flex-col items-center justify-center gap-2 py-2 animate-fade-in text-center max-w-[280px]">
+      <div className="w-full flex flex-col items-center justify-center py-2 animate-fade-in text-center max-w-[280px]">
         {/* Large Gothic Heading */}
         <h1 
-          className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-2 text-shadow-maroon"
+          className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
           style={{ 
             textShadow: `0 0 10px ${display.glowColor}, 0 2px 4px rgba(0,0,0,0.9)`,
             color: display.highlightColor
@@ -61,7 +61,7 @@ export default function NightActionPanel({
         </h1>
 
         {isHost && onHostConfirm ? (
-          <div className="flex flex-col items-center gap-2 mt-1">
+          <div className="flex flex-col items-center gap-2">
             {/* Host Action Summary Log */}
             {hostActionSummary && (
               <div className="bg-[#1b1c22]/90 border border-[#cda372]/30 rounded-lg px-3 py-1.5 max-w-[260px] text-center shadow-[0_4px_12px_rgba(0,0,0,0.6)] animate-fade-in mb-1">
@@ -87,14 +87,15 @@ export default function NightActionPanel({
                   </>
                 )
               ) : (
-                <span className="text-amber-500 font-bold animate-pulse">⏳ Đang chờ người chơi chọn...</span>
+                <span className="text-amber-500 font-bold">⏳ Đang chờ người chơi chọn...</span>
               )}
             </div>
 
             {onWolfRevote && roleKey === "Wolf" && hostActionSummary?.includes("Bất đồng") && (
               <button
+                type="button"
                 onClick={onWolfRevote}
-                className="px-4 py-1.5 rounded-full border border-amber-500/80 bg-[#1b1c22]/90 hover:bg-amber-500/20 text-amber-300 hover:text-white text-[10px] font-serif font-bold uppercase tracking-wider transition-all cursor-pointer mt-1 mb-2 shadow-[0_2px_8px_rgba(245,158,11,0.2)] pointer-events-auto"
+                className="px-4 py-1.5 rounded-full border border-amber-500/80 bg-[#1b1c22]/90 hover:bg-amber-500/20 text-amber-300 hover:text-white text-[10px] font-serif font-bold uppercase tracking-wider transition-[background-color,color,box-shadow,transform] cursor-pointer mt-1 mb-2 shadow-[0_2px_8px_rgba(245,158,11,0.2)] pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11]"
               >
                 🔄 Yêu Cầu Sói Vote Lại
               </button>
@@ -102,9 +103,10 @@ export default function NightActionPanel({
 
             {/* Large plaque confirm button */}
             <button
+              type="button"
               onClick={onHostConfirm}
               disabled={!hasRoleActed}
-              className={`relative w-[200px] h-[52px] transition-all duration-200 group mt-1 ${
+              className={`relative w-[200px] h-[52px] transition-[opacity,transform] duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11] ${
                 hasRoleActed ? "hover:scale-[1.03] active:scale-95 cursor-pointer" : "opacity-40 cursor-not-allowed"
               }`}
             >
@@ -153,7 +155,7 @@ export default function NightActionPanel({
               >
                 <Image
                   src="/werewolf/logo.png"
-                  alt="Seal"
+                  alt=""
                   width={44}
                   height={44}
                   className="w-full h-full object-cover"
@@ -180,7 +182,7 @@ export default function NightActionPanel({
       <div className="w-full flex flex-col items-center justify-center gap-1.5 animate-fade-in text-center max-w-[280px]">
         {/* Large Gothic Heading */}
         <h1 
-          className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-shadow-maroon"
+          className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
           style={{ 
             textShadow: `0 0 10px ${display.glowColor}, 0 2px 4px rgba(0,0,0,0.9)`,
             color: display.highlightColor
@@ -202,7 +204,7 @@ export default function NightActionPanel({
     return (
       <div className="w-full flex flex-col items-center justify-center gap-2 animate-fade-in text-center max-w-[280px]">
         <h1 
-          className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-shadow-maroon text-red-500"
+          className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon text-red-500"
           style={{ 
             textShadow: "0 0 10px rgba(239,68,68,0.35), 0 2px 4px rgba(0,0,0,0.9)",
           }}
@@ -218,10 +220,10 @@ export default function NightActionPanel({
   }
 
   return (
-    <div className="w-full flex flex-col items-center gap-2 animate-fade-in text-center max-w-[280px]">
+    <div className="w-full flex flex-col items-center animate-fade-in text-center max-w-[280px]">
       {/* Large Gothic Heading */}
       <h1 
-        className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-shadow-maroon"
+        className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
         style={{ 
           textShadow: `0 0 10px ${display.glowColor}, 0 2px 4px rgba(0,0,0,0.9)`,
           color: display.highlightColor
@@ -236,9 +238,10 @@ export default function NightActionPanel({
       {/* Confirm button — Gothic plaque style */}
       {onConfirm && label && (
         <button
+          type="button"
           onClick={onConfirm}
           disabled={confirmDisabled}
-          className={`relative w-[200px] h-[52px] transition-all duration-200 group mt-1.5 ${
+          className={`relative w-[200px] h-[52px] transition-[opacity,transform] duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11] ${
             confirmDisabled
               ? "opacity-40 cursor-not-allowed"
               : "hover:scale-[1.03] active:scale-95 cursor-pointer"
@@ -289,7 +292,7 @@ export default function NightActionPanel({
           >
             <Image
               src="/werewolf/logo.png"
-              alt="Seal"
+              alt=""
               width={44}
               height={44}
               className="w-full h-full object-cover"

@@ -62,7 +62,7 @@ export default function WolfVoteUI({
           centerContent={
             <div className="w-full flex flex-col items-center justify-center gap-2 animate-fade-in text-center max-w-[280px]">
               <h1 
-                className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-shadow-maroon text-red-500"
+                className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon text-red-500"
                 style={{ 
                   textShadow: "0 0 10px rgba(239,68,68,0.35), 0 2px 4px rgba(0,0,0,0.9)",
                 }}
@@ -71,7 +71,7 @@ export default function WolfVoteUI({
               </h1>
 
               <div className="bg-red-950/40 border border-red-500/25 rounded-lg p-3 text-red-400 text-xs sm:text-sm font-serif leading-relaxed mt-2 shadow-md">
-                ⚠️ BẠN ĐÃ CHẾT! Không thể tham gia đi săn đêm nay.
+                ⚠️ BẠN ĐÃ CHẾT!
               </div>
             </div>
           }

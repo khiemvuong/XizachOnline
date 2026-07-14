@@ -100,6 +100,10 @@ export class WeredogEngine {
     return room._alivePlayersCache;
   }
 
+  private isLivingGamePlayer(player: WeredogPlayer | undefined): player is WeredogPlayer {
+    return !!player && player.isAlive && !player.isHost && !player.isSpectator;
+  }
+
   private findPlayer(room: WeredogRoom, userId: string): WeredogPlayer | undefined {
     // O(1) lookup via map, fallback to O(n) array search
     return room.playerMap?.get(userId) ?? room.players.find((p) => p.userId === userId);
@@ -475,7 +479,7 @@ export class WeredogEngine {
     }
     if (settings.enabledRoles !== undefined) {
       const validRoles: WeredogRole[] = ["Bodyguard", "Seer", "Hunter", "Cupid", "Witch", "Elder"];
-      settings.enabledRoles = settings.enabledRoles.filter((r) => validRoles.includes(r));
+      settings.enabledRoles = [...new Set(settings.enabledRoles.filter((r) => validRoles.includes(r)))];
     }
 
     room.settings = { ...room.settings, ...settings };
@@ -588,6 +592,7 @@ export class WeredogEngine {
       p.hasVoted = false;
       if (!p.isHost) p.isSpectator = false;
     });
+    this.invalidateAliveCache(room);
 
     this.broadcastState(roomId);
   }
@@ -622,6 +627,10 @@ export class WeredogEngine {
     const roles: WeredogRole[] = [];
     for (let i = 0; i < room.settings.wolfCount; i++) roles.push("Wolf");
     for (const r of room.settings.enabledRoles) roles.push(r);
+    if (roles.length > totalPlayers) {
+      if (socket) socket.emit("weredogError", `Số vai tro (${roles.length}) vuot qua so nguoi choi (${totalPlayers}). Hay giam bot vai tro dac biet hoac so soi.`);
+      return;
+    }
     while (roles.length < totalPlayers) roles.push("Villager");
     // Shuffle
     for (let i = roles.length - 1; i > 0; i--) {
@@ -642,6 +651,7 @@ export class WeredogEngine {
       p.elderLives = p.role === "Elder" ? 2 : 0;
       p.hasVoted = false;
     });
+    this.invalidateAliveCache(room);
 
     room.state = "ROLE_REVEAL";
     room.nightNumber = 0;
@@ -667,6 +677,7 @@ export class WeredogEngine {
     room.seerResult = undefined;
     room.witchActionSelected = undefined;
     room.witchTargetUserId = undefined;
+    room.hunterTargetUserId = undefined;
     room.deathsThisNight = [];
 
     // Determine night action order based on assigned roles (alive or dead) with nightPriority
@@ -721,13 +732,43 @@ export class WeredogEngine {
 
   // ── Wolf Vote ──
 
+  private isCurrentNightRoleResolved(room: WeredogRoom): boolean {
+    const role = room.currentNightActiveRole;
+    if (!role) return false;
+
+    if (role === "Wolf") {
+      const connectedAliveWolves = this.getAlivePlayers(room).filter((p) => p.role === "Wolf" && p.status === "connected");
+      if (connectedAliveWolves.length === 0) return true;
+      return room.wolfVictimUserId !== undefined;
+    }
+
+    const actor = this.getActivePlayers(room).find((p) => p.role === role);
+    if (!actor || !actor.isAlive || actor.status === "disconnected") return true;
+    if (this.isElderDead(room)) return true;
+
+    switch (role) {
+      case "Cupid":
+        return room.nightNumber !== 1 || (!!room.cupidLoverUserIds && room.cupidLoverUserIds.length === 2);
+      case "Bodyguard":
+        return !!room.bodyguardTargetUserId;
+      case "Seer":
+        return !!room.seerTargetUserId;
+      case "Witch":
+        return room.witchActionSelected === "none" || !!room.witchTargetUserId;
+      case "Hunter":
+        return !!room.hunterTargetUserId;
+      default:
+        return true;
+    }
+  }
+
   private wolfVote(roomId: string, userId: string, targetUserId: string) {
     const room = this.rooms.get(roomId);
     if (!room || room.state !== "NIGHT_ACTION" || room.currentNightActiveRole !== "Wolf") return;
     const player = this.findPlayer(room, userId);
     if (!player || player.role !== "Wolf" || !player.isAlive) return;
     const target = this.findPlayer(room, targetUserId);
-    if (!target || !target.isAlive) return;
+    if (!this.isLivingGamePlayer(target)) return;
 
     room.wolfVotes[userId] = targetUserId;
     this.scheduleBroadcast(roomId);
@@ -794,7 +835,7 @@ export class WeredogEngine {
     const player = this.findPlayer(room, userId);
     if (!player || player.role !== "Bodyguard" || !player.isAlive) return;
     const target = this.findPlayer(room, targetUserId);
-    if (!target || !target.isAlive) return;
+    if (!this.isLivingGamePlayer(target)) return;
 
     // Cannot protect same person two nights in a row
     if (player.protectedLastNightUserId === targetUserId) return;
@@ -820,7 +861,7 @@ export class WeredogEngine {
     const player = this.findPlayer(room, userId);
     if (!player || player.role !== "Seer" || !player.isAlive) return;
     const target = this.findPlayer(room, targetUserId);
-    if (!target || !target.isAlive || target.userId === userId) return;
+    if (!this.isLivingGamePlayer(target) || target.userId === userId) return;
 
     room.seerTargetUserId = targetUserId;
     room.seerResult = target.role === "Wolf" ? "Wolf" : "Human";
@@ -843,7 +884,7 @@ export class WeredogEngine {
     const player = this.findPlayer(room, userId);
     if (!player || player.role !== "Hunter" || !player.isAlive) return;
     const target = this.findPlayer(room, targetUserId);
-    if (!target || !target.isAlive || target.userId === userId) return;
+    if (!this.isLivingGamePlayer(target) || target.userId === userId) return;
 
     player.hunterTargetUserId = targetUserId;
     room.hunterTargetUserId = targetUserId;
@@ -870,7 +911,7 @@ export class WeredogEngine {
 
     const p1 = this.findPlayer(room, userId1);
     const p2 = this.findPlayer(room, userId2);
-    if (!p1 || !p2 || !p1.isAlive || !p2.isAlive) return;
+    if (!this.isLivingGamePlayer(p1) || !this.isLivingGamePlayer(p2)) return;
 
     room.cupidLoverUserIds = [userId1, userId2];
     p1.isLover = true;
@@ -940,11 +981,12 @@ export class WeredogEngine {
 
     if (room.witchActionSelected === "save") {
       // Save the bitten person (targetUserId is implicit: wolfVictimUserId)
+      if (!room.wolfVictimUserId) return;
       room.witchTargetUserId = room.wolfVictimUserId ?? undefined;
       player.witchHasSaveBottle = false;
     } else if (room.witchActionSelected === "kill" && targetUserId) {
       const target = this.findPlayer(room, targetUserId);
-      if (!target || !target.isAlive || target.userId === userId) return;
+      if (!this.isLivingGamePlayer(target) || target.userId === userId) return;
       room.witchTargetUserId = targetUserId;
       player.witchHasKillBottle = false;
     } else {
@@ -968,6 +1010,7 @@ export class WeredogEngine {
     if (!room || room.state !== "NIGHT_ACTION") return;
     const player = this.findPlayer(room, userId);
     if (!player?.isHost) return;
+    if (!this.isCurrentNightRoleResolved(room)) return;
 
     this.advanceNightRole(roomId, room);
     this.broadcastState(roomId);
@@ -1134,6 +1177,10 @@ export class WeredogEngine {
       player.hasVoted = false;
       this.clearAutoConfirmTimer(roomId);
     } else {
+      if (targetUserId !== "skip") {
+        const target = this.findPlayer(room, targetUserId);
+        if (!this.isLivingGamePlayer(target)) return;
+      }
       room.dayVotes[userId] = targetUserId;
       player.hasVoted = true;
 
