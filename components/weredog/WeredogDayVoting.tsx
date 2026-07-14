@@ -137,7 +137,7 @@ export default function WeredogDayVoting({
       return (
         <div className="w-full flex flex-col items-center justify-center gap-2 py-2 animate-fade-in text-center max-w-[280px]">
           <h1 
-            className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-shadow-maroon"
+            className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
             style={{ 
               textShadow: "0 0 10px rgba(225,199,165,0.2), 0 2px 4px rgba(0,0,0,0.9)",
               color: "#e1c7a5"
@@ -259,7 +259,7 @@ export default function WeredogDayVoting({
     return (
       <div className="w-full flex flex-col items-center justify-center gap-2 py-2 animate-fade-in text-center max-w-[280px]">
         <h1 
-          className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-shadow-maroon"
+          className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
           style={{ 
             textShadow: "0 0 10px rgba(225,199,165,0.2), 0 2px 4px rgba(0,0,0,0.9)",
             color: "#e1c7a5"
@@ -275,7 +275,7 @@ export default function WeredogDayVoting({
             className={`px-3 py-1.5 border rounded-md text-[9px] sm:text-[10px] uppercase font-gothic-label tracking-widest font-black transition-all cursor-pointer hover:scale-105 active:scale-95 ${
               selectedId === "skip"
                 ? "bg-amber-950/40 text-amber-400 border-amber-500/60 shadow-[0_0_8px_rgba(245,158,11,0.25)]"
-                : "bg-black/45 text-[#829ea2]/35 border-[#445257]/35 hover:text-[#829ea2]/70"
+                : "bg-black/70 border-[#445257]/35 text-[#ffffff]"
             }`}
           >
             Bỏ Qua Treo Cổ

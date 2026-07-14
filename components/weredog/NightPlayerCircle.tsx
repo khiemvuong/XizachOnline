@@ -1,6 +1,16 @@
 "use client";
 
 import { type ReactNode, useRef } from "react";
+import {
+  EyeOpen,
+  Flask,
+  Heart2,
+  HeartPulse,
+  Paw,
+  Shield,
+  Target,
+} from "reicon-react";
+import type { IconComponent } from "reicon-react/createIcon";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import {
   CIRCLE_POSITIONS,
@@ -12,6 +22,100 @@ import AvatarDisplay from "@/components/shared/AvatarDisplay";
 import RoleAccessory from "./RoleAccessory";
 
 // ─── Single Player Node ───
+
+type NightStatusKind =
+  | "bitten"
+  | "protected"
+  | "aimed"
+  | "lover"
+  | "inspected"
+  | "poisoned"
+  | "saved";
+
+const NIGHT_STATUS_CONFIG: Record<
+  NightStatusKind,
+  {
+    label: string;
+    Icon: IconComponent;
+    iconColor: string;
+    positionClassName: string;
+    shellClassName: string;
+    iconClassName?: string;
+  }
+> = {
+  bitten: {
+    label: "Bị sói cắn",
+    Icon: Paw,
+    iconColor: "#fb7185",
+    positionClassName: "-left-5 -top-4",
+    shellClassName: "border-rose-400/90 bg-[#1b0b10]/95 text-rose-300 shadow-[0_0_18px_rgba(220,38,38,0.7)]",
+    iconClassName: "scale-[1.05]",
+  },
+  protected: {
+    label: "Được bảo vệ",
+    Icon: Shield,
+    iconColor: "#7dd3fc",
+    positionClassName: "-right-5 -bottom-4",
+    shellClassName: "border-sky-300/90 bg-[#081522]/95 text-sky-200 shadow-[0_0_18px_rgba(56,189,248,0.55)]",
+  },
+  aimed: {
+    label: "Bị thợ săn ngắm",
+    Icon: Target,
+    iconColor: "#fbbf24",
+    positionClassName: "-right-5 -top-4",
+    shellClassName: "border-amber-300/90 bg-[#211506]/95 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.55)]",
+  },
+  lover: {
+    label: "Cặp đôi Cupid",
+    Icon: Heart2,
+    iconColor: "#f472b6",
+    positionClassName: "-left-5 -bottom-4",
+    shellClassName: "border-pink-300/90 bg-[#230818]/95 text-pink-200 shadow-[0_0_18px_rgba(236,72,153,0.55)]",
+  },
+  inspected: {
+    label: "Đã được Tiên tri soi",
+    Icon: EyeOpen,
+    iconColor: "#c4b5fd",
+    positionClassName: "-left-6 top-1/2 -translate-y-1/2",
+    shellClassName: "border-violet-300/90 bg-[#140d25]/95 text-violet-200 shadow-[0_0_18px_rgba(167,139,250,0.55)]",
+  },
+  poisoned: {
+    label: "Bị ném bình độc",
+    Icon: Flask,
+    iconColor: "#bef264",
+    positionClassName: "-right-6 top-1/2 -translate-y-1/2",
+    shellClassName: "border-lime-300/90 bg-[#071a11]/95 text-lime-200 shadow-[0_0_18px_rgba(132,204,22,0.6)]",
+    iconClassName: "-rotate-12",
+  },
+  saved: {
+    label: "Được phù thủy cứu",
+    Icon: HeartPulse,
+    iconColor: "#5de861",
+    positionClassName: "left-1/2 -top-7 -translate-x-1/2",
+    shellClassName: "border-emerald-200/90 bg-[#06201d]/95 text-emerald-100 shadow-[0_0_18px_rgba(93,232,97,0.65)]",
+  },
+};
+
+function NightStatusMark({ kind }: { kind: NightStatusKind }) {
+  const config = NIGHT_STATUS_CONFIG[kind];
+  const Icon = config.Icon;
+
+  return (
+    <div
+      className={`absolute z-30 h-7 w-7 sm:h-8 sm:w-8 rounded-full border ${config.positionClassName} ${config.shellClassName} pointer-events-none select-none overflow-visible`}
+      title={config.label}
+      aria-hidden="true"
+    >
+      <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.2),transparent_42%,rgba(0,0,0,0.42))]" />
+      <Icon
+        size={21}
+        weight="Filled"
+        color={config.iconColor}
+        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_2px_6px_rgba(0,0,0,0.75)] sm:size-6 ${config.iconClassName ?? ""}`}
+      />
+    </div>
+  );
+}
 
 interface PlayerNodeProps {
   player: NightPlayer;
@@ -55,20 +159,37 @@ function PlayerNode({
   const frameColors = player.visibleFrameType
     ? ROLE_FRAME_COLORS[player.visibleFrameType]
     : null;
+  const activeStatuses: NightStatusKind[] = [
+    isBitten && "bitten",
+    isProtected && "protected",
+    isAimed && "aimed",
+    isLover && "lover",
+    isInspected && "inspected",
+    isPoisoned && "poisoned",
+    isSaved && "saved",
+  ].filter(Boolean) as NightStatusKind[];
+  const statusLabel = activeStatuses
+    .map((status) => NIGHT_STATUS_CONFIG[status].label)
+    .join(", ");
 
   return (
     <button
       type="button"
       onClick={canClick ? onSelect : undefined}
       disabled={!canClick}
-      className={`flex flex-col items-center gap-0.5 transition-all duration-200 group ${
-        canClick ? "cursor-pointer hover:scale-110" : "cursor-default"
+      className={`flex flex-col items-center gap-0.5 transition-[transform,opacity] duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11] ${
+        canClick ? "cursor-pointer hover:scale-[1.08] active:scale-95" : "cursor-default"
       }`}
-      aria-label={`${player.name}${isDead ? " (đã chết)" : ""}${isSelected ? " (đang chọn)" : ""}`}
+      aria-label={[
+        player.name,
+        isDead ? "đã chết" : "",
+        isSelected ? "đang chọn" : "",
+        statusLabel,
+      ].filter(Boolean).join(", ")}
     >
       {/* Avatar container */}
       <div
-        className="relative rounded-full flex items-center justify-center transition-all duration-300"
+        className="relative rounded-full flex items-center justify-center transition-[border-color,box-shadow,opacity,filter] duration-300"
         style={{
           width: size,
           height: size,
@@ -114,7 +235,7 @@ function PlayerNode({
         {/* Selection pulse ring */}
         {isSelected && (
           <div
-            className="absolute inset-[-4px] rounded-full animate-pulse pointer-events-none"
+            className="absolute inset-[-4px] rounded-full animate-pulse motion-reduce:animate-none pointer-events-none"
             style={{ border: `2px solid ${highlightColor}`, opacity: 0.5 }}
           />
         )}
@@ -133,76 +254,9 @@ function PlayerNode({
           </div>
         )}
 
-        {/* Protected Overlay (Bodyguard) */}
-        {isProtected && (
-          <div 
-            className="absolute -bottom-1.5 -right-1.5 w-5 h-5 bg-slate-900 border border-sky-400 text-sky-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(56,189,248,0.5)] z-20 font-bold select-none animate-bounce" 
-            title="Được Bảo Vệ"
-            style={{ animationDuration: "2s" }}
-          >
-            🛡️
-          </div>
-        )}
-
-        {/* Bitten Overlay (Wolf) */}
-        {isBitten && (
-          <div 
-            className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-slate-900 border border-rose-600 text-rose-500 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(244,63,94,0.6)] z-20 font-bold select-none animate-pulse" 
-            title="Bị Sói Cắn"
-          >
-            🩸
-          </div>
-        )}
-
-        {/* Aimed Overlay (Hunter) */}
-        {isAimed && (
-          <div 
-            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-slate-900 border border-amber-500 text-amber-500 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(245,158,11,0.5)] z-20 font-bold select-none" 
-            title="Bị Nhắm Bắn"
-          >
-            🎯
-          </div>
-        )}
-
-        {/* Lover Overlay (Cupid) */}
-        {isLover && (
-          <div 
-            className="absolute -bottom-1.5 -left-1.5 w-5 h-5 bg-slate-900 border border-pink-500 text-pink-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_10px_rgba(236,72,153,0.5)] z-20 font-bold select-none" 
-            title="Cặp Đôi Tơ Hồng"
-          >
-            ❤️
-          </div>
-        )}
-
-        {/* Inspected Overlay (Seer) */}
-        {isInspected && (
-          <div 
-            className="absolute top-1/2 -translate-y-1/2 -left-2 w-5 h-5 bg-slate-900 border border-purple-500 text-purple-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(168,85,247,0.5)] z-20 font-bold select-none" 
-            title="Bị Tiên Tri Soi"
-          >
-            🔮
-          </div>
-        )}
-
-        {/* Poisoned Overlay (Witch) */}
-        {isPoisoned && (
-          <div 
-            className="absolute top-1/2 -translate-y-1/2 -right-2 w-5 h-5 bg-slate-900 border border-emerald-500 text-emerald-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(16,185,129,0.5)] z-20 font-bold select-none" 
-            title="Bị Phù Thủy Độc Sát"
-          >
-            💀
-          </div>
-        )}
-
-        {/* Saved Overlay (Witch) */}
-        {isSaved && (
-          <div 
-            className="absolute -top-2 left-1/2 -translate-x-1/2 w-5 h-5 bg-slate-900 border border-teal-400 text-teal-400 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_8px_rgba(45,212,191,0.5)] z-20 font-bold select-none animate-pulse" 
-            title="Được Phù Thủy Cứu"
-          >
-            💚
-          </div>
-        )}
+        {activeStatuses.map((status) => (
+          <NightStatusMark key={status} kind={status} />
+        ))}
 
         {/* Elder Remaining Lives Overlay (1 Life left) */}
         {player.role === "Elder" && player.elderLives === 1 && (

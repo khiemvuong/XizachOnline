@@ -45,10 +45,10 @@ export const useWeredogStore = create<WeredogState>((set, get) => ({
   connect: (roomId, profile) => {
     if (typeof window === "undefined") return;
 
-    let storedUserId = localStorage.getItem("xz_userId");
+    let storedUserId = sessionStorage.getItem("xz_userId");
     if (!storedUserId) {
       storedUserId = Math.random().toString(36).substring(2, 10);
-      localStorage.setItem("xz_userId", storedUserId);
+      sessionStorage.setItem("xz_userId", storedUserId);
     }
     set({ userId: storedUserId });
 

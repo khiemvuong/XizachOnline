@@ -20,13 +20,26 @@ export default function HunterUI({
   currentTarget,
   onAim,
 }: HunterUIProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(currentTarget ?? null);
+  const isSelectableTarget = (userId?: string | null) => {
+    if (!userId) return false;
+    return players.some(p => p.userId === userId && p.isAlive && !p.isHost && p.userId !== myUserId);
+  };
+
+  const savedTargetId = isSelectableTarget(currentTarget) ? currentTarget ?? null : null;
+  const [selectedId, setSelectedId] = useState<string | null>(savedTargetId);
   const [hasActed, setHasActed] = useState(false);
   const display = ROLE_DISPLAY.Hunter;
 
   const disabledIds = players
     .filter(p => !p.isAlive || p.isHost || p.userId === myUserId)
     .map(p => p.userId);
+
+  const [prevIsMyTurn, setPrevIsMyTurn] = useState(isMyTurn);
+  if (isMyTurn !== prevIsMyTurn) {
+    setPrevIsMyTurn(isMyTurn);
+    setSelectedId(savedTargetId);
+    setHasActed(false);
+  }
 
   const handleSelect = (userId: string) => {
     if (hasActed) return;
@@ -39,6 +52,9 @@ export default function HunterUI({
       setHasActed(true);
     }
   };
+
+  const selectedPlayer = selectedId ? players.find(p => p.userId === selectedId) : null;
+  const isUsingSavedTarget = !!selectedId && selectedId === savedTargetId;
 
   return (
     <div className="w-full h-full flex flex-col justify-center items-center relative">
@@ -56,13 +72,14 @@ export default function HunterUI({
             isMyTurn={isMyTurn}
             hasActed={hasActed}
             onConfirm={handleConfirm}
-            confirmDisabled={!selectedId}
+            confirmDisabled={!selectedId || disabledIds.includes(selectedId)}
           >
-            {/* Show aim target info */}
             {selectedId && (
-              <span className="font-gothic-label text-[9px] uppercase tracking-widest text-amber-400 mt-0.5 animate-fade-in block">
-                Ngắm: {players.find(p => p.userId === selectedId)?.name}
-              </span>
+              <div className="mt-0.5 animate-fade-in text-center">
+                <span className="font-gothic-label text-[9px] uppercase tracking-widest text-amber-400 block">
+                  {isUsingSavedTarget ? "Đang ngắm" : "Ngắm"}: {selectedPlayer?.name}
+                </span>
+              </div>
             )}
           </NightActionPanel>
         }

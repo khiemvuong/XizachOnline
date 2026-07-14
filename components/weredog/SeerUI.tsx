@@ -24,7 +24,6 @@ export default function SeerUI({
 }: SeerUIProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hasActed, setHasActed] = useState(false);
-  const [localResult, setLocalResult] = useState<"Wolf" | "Human" | null>(null);
   const display = ROLE_DISPLAY.Seer;
 
   const disabledIds = players
@@ -36,7 +35,6 @@ export default function SeerUI({
   if (isMyTurn !== prevIsMyTurn) {
     setPrevIsMyTurn(isMyTurn);
     setHasActed(false);
-    setLocalResult(null);
     setSelectedId(null);
   }
 
@@ -49,14 +47,11 @@ export default function SeerUI({
     if (selectedId && onInspect) {
       onInspect(selectedId);
       setHasActed(true);
-      if (!seerResult) {
-        setLocalResult(Math.random() > 0.7 ? "Wolf" : "Human");
-      }
     }
   };
 
-  const revealedResult = seerResult || localResult;
-  const targetName = selectedId ? players.find(p => p.userId === selectedId)?.name : null;
+  const revealedResult = seerResult ?? null;
+  const targetName = players.find(p => p.userId === (selectedId ?? seerTargetUserId))?.name;
 
   // Build a map of all inspected players and their results (current night only)
   const inspectedPlayers = useMemo(() => {
