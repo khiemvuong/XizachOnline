@@ -99,7 +99,6 @@ export interface WeredogPlayer {
   // Gameplay status
   isAlive: boolean;
   protectedLastNightUserId?: string; // Bodyguard tracking
-  hunterTargetUserId?: string; // Hunter target tracking
   witchHasSaveBottle: boolean; // Witch save status
   witchHasKillBottle: boolean; // Witch kill status
   elderLives: number; // Elder extra lives (default 2)
@@ -124,7 +123,7 @@ export interface WeredogHistoryRecord {
   seerResult?: 'Wolf' | 'Human' | null;
   witchAction?: 'save' | 'kill' | 'none' | null;
   witchTargetUserId?: string | null;
-  hunterTargetUserId?: string | null;
+  hunterShotTargetUserId?: string | null;
   cupidLovers?: string[] | null; // [userId1, userId2] (Night 1 only)
 }
 
@@ -159,7 +158,9 @@ export interface WeredogRoom {
   seerResult?: 'Wolf' | 'Human' | null;
   witchActionSelected?: 'save' | 'kill' | 'none'; // temporary selection before target is picked
   witchTargetUserId?: string | null;
-  hunterTargetUserId?: string | null;
+  pendingHunterShotUserId?: string | null;
+  hunterShotTargetUserId?: string | null;
+  dayStartNextAction?: 'vote' | 'night';
   cupidLoverUserIds?: string[]; // [userId1, userId2]
   cupidLoversConfirmed?: boolean;
 
@@ -172,5 +173,7 @@ export interface WeredogRoom {
   // History logs
   history: WeredogHistoryRecord[];
   winner?: 'Villager' | 'Wolf' | 'Cupid' | 'Abandoned';
+  wolfParityPending?: boolean;
+  wolfParityAcknowledgedKey?: string;
   isElderDead?: boolean;
 }

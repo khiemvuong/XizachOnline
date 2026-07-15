@@ -6,7 +6,6 @@ import NightPlayerCircle from "./NightPlayerCircle";
 import WolfVoteUI from "./WolfVoteUI";
 import BodyguardUI from "./BodyguardUI";
 import SeerUI from "./SeerUI";
-import HunterUI from "./HunterUI";
 import CupidUI from "./CupidUI";
 import WitchPotionUI from "./WitchPotionUI";
 import { ROLE_DISPLAY, type NightPlayer, type WeredogRoleName } from "./nightConstants";
@@ -28,8 +27,6 @@ interface WeredogNightProps {
   lastProtectedUserId?: string | null;
   // Seer-specific
   seerResult?: "Wolf" | "Human" | null;
-  // Hunter-specific
-  hunterCurrentTarget?: string | null;
   // Witch-specific
   witchHasSave?: boolean;
   witchHasKill?: boolean;
@@ -38,14 +35,12 @@ interface WeredogNightProps {
   seerTargetUserId?: string | null;
   witchActionSelected?: "save" | "kill" | "none";
   witchTargetUserId?: string | null;
-  hunterTargetUserId?: string | null;
   cupidLoverUserIds?: string[];
   // Callbacks
   onWolfVote?: (targetUserId: string) => void;
   onWolfRevote?: () => void;
   onBodyguardProtect?: (targetUserId: string) => void;
   onSeerInspect?: (targetUserId: string) => void;
-  onHunterAim?: (targetUserId: string) => void;
   onCupidPair?: (userId1: string, userId2: string) => void;
   onWitchChooseAction?: (action: "save" | "kill" | "none") => void;
   onWitchUsePotion?: (targetUserId?: string) => void;
@@ -69,20 +64,17 @@ export default function WeredogNight({
   wolfVictimUserId,
   lastProtectedUserId,
   seerResult,
-  hunterCurrentTarget,
   witchHasSave = true,
   witchHasKill = true,
   bodyguardTargetUserId,
   seerTargetUserId,
   witchActionSelected,
   witchTargetUserId,
-  hunterTargetUserId,
   cupidLoverUserIds,
   onWolfVote,
   onWolfRevote,
   onBodyguardProtect,
   onSeerInspect,
-  onHunterAim,
   onCupidPair,
   onWitchChooseAction,
   onWitchUsePotion,
@@ -127,9 +119,6 @@ export default function WeredogNight({
     if (currentActiveRole === "Witch") {
       return witchActionSelected === "none" || !!witchTargetUserId;
     }
-    if (currentActiveRole === "Hunter") {
-      return !!hunterTargetUserId;
-    }
     return false;
   })();
 
@@ -148,9 +137,6 @@ export default function WeredogNight({
     }
     if (currentActiveRole === "Witch") {
       return witchTargetUserId ? [witchTargetUserId] : [];
-    }
-    if (currentActiveRole === "Hunter") {
-      return hunterTargetUserId ? [hunterTargetUserId] : [];
     }
     return [];
   })();
@@ -190,9 +176,6 @@ export default function WeredogNight({
       if (witchActionSelected === "none") {
         return `Quyết định không dùng thuốc`;
       }
-    }
-    if (currentActiveRole === "Hunter" && hunterTargetUserId) {
-      return `Đã ngắm bắn: ${getPlayerName(hunterTargetUserId)}`;
     }
     return "";
   })();
@@ -255,7 +238,7 @@ export default function WeredogNight({
             myUserId={myUserId}
             bittenUserIds={wolfVictimUserId ? [wolfVictimUserId] : []}
             protectedUserIds={bodyguardTargetUserId ? [bodyguardTargetUserId] : []}
-            aimedUserIds={hunterTargetUserId ? [hunterTargetUserId] : []}
+            aimedUserIds={[]}
             loverUserIds={cupidLoverUserIds || []}
             inspectedUserIds={seerTargetUserId ? [seerTargetUserId] : []}
             poisonedUserIds={witchActionSelected === "kill" && witchTargetUserId ? [witchTargetUserId] : []}
@@ -332,15 +315,6 @@ export default function WeredogNight({
             seerResult={seerResult}
             seerTargetUserId={seerTargetUserId}
             onInspect={onSeerInspect}
-          />
-        );
-
-      case "Hunter":
-        return (
-          <HunterUI
-            {...commonProps}
-            currentTarget={hunterCurrentTarget}
-            onAim={onHunterAim}
           />
         );
 

@@ -79,10 +79,10 @@ export const ROLE_DISPLAY: Record<WeredogRoleName, RoleDisplayConfig> = {
   },
   Hunter: {
     nameVi: "Thợ Săn",
-    actionTitle: "Thợ Săn Ngắm",
-    actionDesc: "Chọn một mục tiêu ngắm bắn. Nếu bạn chết, mục tiêu sẽ chết theo.",
+    actionTitle: "Phát Súng Cuối",
+    actionDesc: "Nếu bạn chết, bạn sẽ được chọn một người còn sống để bắn ở khoảnh khắc bình minh.",
     actionHeading: "THỢ SĂN...",
-    confirmLabel: "Xác Nhận Ngắm",
+    confirmLabel: "Bắn Mục Tiêu",
     highlightColor: "#f59e0b",
     glowColor: "rgba(245, 158, 11, 0.4)",
     frameType: "crown",

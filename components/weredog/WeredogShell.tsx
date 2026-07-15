@@ -43,11 +43,13 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
     wolfRevote,
     bodyguardProtect,
     seerInspect,
-    hunterAim,
+    hunterShoot,
     cupidPair,
     witchChooseAction,
     witchUsePotion,
     hostConfirmNightAction,
+    hostDeclareWolfWin,
+    hostContinueAfterWolfParity,
     startDayVoting,
     dayVote,
     hostConfirmDayVote,
@@ -205,6 +207,10 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
     gameState.state === "GAME_OVER" ? 6 : 1;
 
   const isLobby = stateNum === 1;
+  const alivePlayersForParity = gameState.players.filter((p) => p.isAlive && !p.isHost && !p.isSpectator);
+  const aliveWolfCount = alivePlayersForParity.filter((p) => p.role === "Wolf").length;
+  const aliveNonWolfCount = alivePlayersForParity.length - aliveWolfCount;
+  const shouldShowWolfParityModal = isHost && !!gameState.wolfParityPending && gameState.state !== "GAME_OVER";
 
   const shellClass = [
     "weredog-theme",
@@ -291,8 +297,6 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
               seerResult={gameState.seerResult}
               witchActionSelected={gameState.witchActionSelected}
               witchTargetUserId={gameState.witchTargetUserId}
-              hunterTargetUserId={gameState.hunterTargetUserId}
-              hunterCurrentTarget={me?.hunterTargetUserId}
               cupidLoverUserIds={gameState.cupidLoverUserIds}
               witchHasSave={me?.witchHasSaveBottle ?? true}
               witchHasKill={me?.witchHasKillBottle ?? true}
@@ -301,7 +305,6 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
               onWolfRevote={wolfRevote}
               onBodyguardProtect={bodyguardProtect}
               onSeerInspect={seerInspect}
-              onHunterAim={hunterAim}
               onCupidPair={cupidPair}
               onWitchChooseAction={witchChooseAction}
               onWitchUsePotion={witchUsePotion}
@@ -316,7 +319,11 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
               dayNumber={gameState.nightNumber}
               isHost={isHost}
               players={visiblePlayers}
+              myUserId={userId}
               deathsThisNight={gameState.deathsThisNight}
+              pendingHunterShotUserId={gameState.pendingHunterShotUserId}
+              dayStartNextAction={gameState.dayStartNextAction}
+              onHunterShoot={hunterShoot}
               onStartVoting={startDayVoting}
               onBack={handleBack}
             />
@@ -370,6 +377,42 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
           currentSeerResult={gameState.seerResult}
           currentBodyguardTargetUserId={gameState.bodyguardTargetUserId}
         />
+      )}
+
+      {shouldShowWolfParityModal && (
+        <div className="fixed inset-0 z-180 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in pointer-events-auto">
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-red-500/35 bg-[#0b0d11]/95 p-6 text-center shadow-[0_18px_60px_rgba(0,0,0,0.85)]">
+            <div className="absolute -top-24 left-1/2 h-44 w-64 -translate-x-1/2 rounded-full bg-red-700/25 blur-[70px]" />
+            <div className="relative">
+              <span className="font-gothic-label text-[10px] uppercase tracking-[0.35em] text-red-300/80">
+                Canh bạc của quản trò
+              </span>
+              <h3 className="mt-3 font-gothic-label text-2xl uppercase tracking-widest text-red-300 drop-shadow-[0_0_14px_rgba(248,113,113,0.35)]">
+                Sói đã cắn người
+              </h3>
+              <p className="mt-3 font-serif text-sm italic leading-relaxed text-[#e1c7a5]/90">
+                Trên bàn hiện còn <span className="font-black text-red-300">{aliveWolfCount}</span> sói và{" "}
+                <span className="font-black text-amber-200">{aliveNonWolfCount}</span> người không phải sói. Quản trò có thể cho sói thắng ngay, hoặc cho ván đấu tiếp tục nếu vẫn còn khả năng lật kèo.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <button
+                  type="button"
+                  onClick={hostDeclareWolfWin}
+                  className="rounded-lg border border-red-400/50 bg-red-950/70 px-5 py-2.5 font-gothic-label text-xs font-black uppercase tracking-widest text-red-100 transition-all hover:scale-[1.02] hover:bg-red-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
+                >
+                  Sói thắng
+                </button>
+                <button
+                  type="button"
+                  onClick={hostContinueAfterWolfParity}
+                  className="rounded-lg border border-[#cda372]/40 bg-[#1b1c22]/90 px-5 py-2.5 font-gothic-label text-xs font-black uppercase tracking-widest text-[#e1c7a5] transition-all hover:scale-[1.02] hover:bg-[#2a2020] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200"
+                >
+                  Chơi tiếp
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {showLeaveConfirmModal && (
