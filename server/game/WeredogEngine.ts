@@ -225,11 +225,6 @@ export class WeredogEngine {
           this.seerInspect(socket.data.roomId, socket.data.userId, targetUserId);
       });
 
-      socket.on("hunterAim", (targetUserId: string) => {
-        if (socket.data.roomId && socket.data.userId)
-          this.hunterAim(socket.data.roomId, socket.data.userId, targetUserId);
-      });
-
       socket.on("cupidPair", (payload: { userId1: string; userId2: string }) => {
         if (socket.data.roomId && socket.data.userId)
           this.cupidPair(socket.data.roomId, socket.data.userId, payload.userId1, payload.userId2);
@@ -252,11 +247,26 @@ export class WeredogEngine {
           this.hostConfirmNightAction(socket.data.roomId, socket.data.userId);
       });
 
+      socket.on("hostDeclareWolfWin", () => {
+        if (socket.data.roomId && socket.data.userId)
+          this.hostDeclareWolfWin(socket.data.roomId, socket.data.userId);
+      });
+
+      socket.on("hostContinueAfterWolfParity", () => {
+        if (socket.data.roomId && socket.data.userId)
+          this.hostContinueAfterWolfParity(socket.data.roomId, socket.data.userId);
+      });
+
       // ── Day actions ──
 
       socket.on("dayVote", (targetUserId: string | "skip") => {
         if (socket.data.roomId && socket.data.userId)
           this.dayVote(socket.data.roomId, socket.data.userId, targetUserId);
+      });
+
+      socket.on("hunterShoot", (targetUserId: string) => {
+        if (socket.data.roomId && socket.data.userId)
+          this.hunterShoot(socket.data.roomId, socket.data.userId, targetUserId);
       });
 
       socket.on("hostConfirmDayVote", () => {
@@ -564,7 +574,9 @@ export class WeredogEngine {
     room.seerResult = undefined;
     room.witchActionSelected = undefined;
     room.witchTargetUserId = undefined;
-    room.hunterTargetUserId = undefined;
+    room.pendingHunterShotUserId = undefined;
+    room.hunterShotTargetUserId = undefined;
+    room.dayStartNextAction = undefined;
     room.cupidLoverUserIds = undefined;
     room.cupidLoversConfirmed = undefined;
     room.deathsThisNight = [];
@@ -576,6 +588,8 @@ export class WeredogEngine {
     room.currentNightActiveRole = undefined;
     room.history = [];
     room.winner = undefined;
+    room.wolfParityPending = false;
+    room.wolfParityAcknowledgedKey = undefined;
 
     room.players = room.players.filter((p) => p.status === "connected");
     room.players.forEach((p) => {
@@ -585,7 +599,6 @@ export class WeredogEngine {
       p.isLover = false;
       p.loverUserId = undefined;
       p.protectedLastNightUserId = undefined;
-      p.hunterTargetUserId = undefined;
       p.witchHasSaveBottle = true;
       p.witchHasKillBottle = true;
       p.elderLives = 2;
@@ -645,7 +658,6 @@ export class WeredogEngine {
       p.isLover = false;
       p.loverUserId = undefined;
       p.protectedLastNightUserId = undefined;
-      p.hunterTargetUserId = undefined;
       p.witchHasSaveBottle = true;
       p.witchHasKillBottle = true;
       p.elderLives = p.role === "Elder" ? 2 : 0;
@@ -657,6 +669,11 @@ export class WeredogEngine {
     room.nightNumber = 0;
     room.history = [];
     room.winner = undefined;
+    room.wolfParityPending = false;
+    room.wolfParityAcknowledgedKey = undefined;
+    room.pendingHunterShotUserId = undefined;
+    room.hunterShotTargetUserId = undefined;
+    room.dayStartNextAction = undefined;
     room.cupidLoverUserIds = undefined;
     room.cupidLoversConfirmed = undefined;
 
@@ -677,7 +694,9 @@ export class WeredogEngine {
     room.seerResult = undefined;
     room.witchActionSelected = undefined;
     room.witchTargetUserId = undefined;
-    room.hunterTargetUserId = undefined;
+    room.pendingHunterShotUserId = undefined;
+    room.hunterShotTargetUserId = undefined;
+    room.dayStartNextAction = undefined;
     room.deathsThisNight = [];
 
     // Determine night action order based on assigned roles (alive or dead) with nightPriority
@@ -692,7 +711,6 @@ export class WeredogEngine {
     if (assignedRoles.has("Wolf")) nightRoles.push("Wolf");
     if (assignedRoles.has("Seer")) nightRoles.push("Seer");
     if (assignedRoles.has("Witch")) nightRoles.push("Witch");
-    if (assignedRoles.has("Hunter")) nightRoles.push("Hunter");
 
     // Sort by nightPriority
     nightRoles.sort((a, b) => ROLE_CONFIGS[a].nightPriority - ROLE_CONFIGS[b].nightPriority);
@@ -755,8 +773,6 @@ export class WeredogEngine {
         return !!room.seerTargetUserId;
       case "Witch":
         return room.witchActionSelected === "none" || !!room.witchTargetUserId;
-      case "Hunter":
-        return !!room.hunterTargetUserId;
       default:
         return true;
     }
@@ -877,27 +893,6 @@ export class WeredogEngine {
   }
 
   // ── Hunter ──
-
-  private hunterAim(roomId: string, userId: string, targetUserId: string) {
-    const room = this.rooms.get(roomId);
-    if (!room || room.state !== "NIGHT_ACTION" || room.currentNightActiveRole !== "Hunter") return;
-    const player = this.findPlayer(room, userId);
-    if (!player || player.role !== "Hunter" || !player.isAlive) return;
-    const target = this.findPlayer(room, targetUserId);
-    if (!this.isLivingGamePlayer(target) || target.userId === userId) return;
-
-    player.hunterTargetUserId = targetUserId;
-    room.hunterTargetUserId = targetUserId;
-
-    this.setAutoConfirmTimer(roomId, () => {
-      const r = this.rooms.get(roomId);
-      if (r && r.state === "NIGHT_ACTION" && r.currentNightActiveRole === "Hunter") {
-        this.advanceNightRole(roomId, r);
-        this.broadcastState(roomId);
-      }
-    });
-    this.broadcastState(roomId);
-  }
 
   // ── Cupid ──
 
@@ -1058,16 +1053,7 @@ export class WeredogEngine {
       }
     }
 
-    // 3. Hunter trigger: if hunter died this morning, shoot target (only if Elder is alive)
-    const hunter = this.getActivePlayers(room).find((p) => p.role === "Hunter");
-    if (!isElderDead && hunter && deaths.includes(hunter.userId) && hunter.hunterTargetUserId) {
-      const hunterTarget = this.findPlayer(room, hunter.hunterTargetUserId);
-      if (hunterTarget && hunterTarget.isAlive && !deaths.includes(hunterTarget.userId)) {
-        this.killPlayer(room, hunterTarget, deaths);
-      }
-    }
-
-    // 4. Cupid heartbreak: if one lover died, the other dies too
+    // 3. Cupid heartbreak: if one lover died, the other dies too
     this.resolveHeartbreak(room, deaths);
 
     // Update bodyguard tracking
@@ -1085,7 +1071,7 @@ export class WeredogEngine {
       seerResult: room.seerResult,
       witchAction: room.witchActionSelected ?? "none",
       witchTargetUserId: room.witchTargetUserId,
-      hunterTargetUserId: room.hunterTargetUserId,
+      hunterShotTargetUserId: room.hunterShotTargetUserId,
     };
     if (room.nightNumber === 1 && room.cupidLoverUserIds) {
       record.cupidLovers = [...room.cupidLoverUserIds];
@@ -1099,17 +1085,28 @@ export class WeredogEngine {
 
     room.deathsThisNight = deaths;
 
-    // Check win conditions
-    const winner = this.checkWinCondition(room);
-    if (winner) {
-      room.winner = winner;
-      room.state = "GAME_OVER";
+    if (this.applyImmediateWinner(roomId, room)) {
+      return;
+    }
+
+    const pendingHunterShotUserId = this.findPendingHunterShot(room, deaths, !isElderDead);
+    if (pendingHunterShotUserId) {
+      room.pendingHunterShotUserId = pendingHunterShotUserId;
+      room.hunterShotTargetUserId = undefined;
+      room.dayStartNextAction = "vote";
+      room.state = "DAY_START";
+      room.dayVotes = {};
+      room.tiebreakerActive = false;
+      room.tiebreakerCandidates = [];
       this.broadcastState(roomId);
       return;
     }
 
+    this.markWolfParityIfNeeded(room);
+
     // Transition to day
     room.state = "DAY_START";
+    room.dayStartNextAction = "vote";
     room.dayVotes = {};
     room.tiebreakerActive = false;
     room.tiebreakerCandidates = [];
@@ -1117,9 +1114,101 @@ export class WeredogEngine {
     this.broadcastState(roomId);
   }
 
+  private findPendingHunterShot(room: WeredogRoom, deaths: string[], canShoot: boolean): string | null {
+    if (!canShoot) return null;
+    const hunter = this.getActivePlayers(room).find((p) => p.role === "Hunter");
+    if (!hunter || !deaths.includes(hunter.userId)) return null;
+    return hunter.userId;
+  }
+
+  private applyImmediateWinner(roomId: string, room: WeredogRoom): boolean {
+    const winner = this.checkWinCondition(room);
+    if (!winner) return false;
+
+    room.winner = winner;
+    room.wolfParityPending = false;
+    room.state = "GAME_OVER";
+    this.broadcastState(roomId);
+    return true;
+  }
+
+  private wolfParityKey(room: WeredogRoom): string | null {
+    const alive = this.getAlivePlayers(room);
+    const wolves = alive.filter((p) => p.role === "Wolf");
+    const nonWolves = alive.filter((p) => p.role !== "Wolf");
+    if (wolves.length === 0 || wolves.length < nonWolves.length) return null;
+    return alive.map((p) => p.userId).sort().join("|");
+  }
+
+  private markWolfParityIfNeeded(room: WeredogRoom) {
+    const key = this.wolfParityKey(room);
+    room.wolfParityPending = !!key && room.wolfParityAcknowledgedKey !== key;
+  }
+
+  private hostDeclareWolfWin(roomId: string, userId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room || room.state === "LOBBY" || room.state === "GAME_OVER") return;
+    const player = this.findPlayer(room, userId);
+    if (!player?.isHost) return;
+
+    this.clearAutoConfirmTimer(roomId);
+    room.winner = "Wolf";
+    room.wolfParityPending = false;
+    room.state = "GAME_OVER";
+    this.broadcastState(roomId);
+  }
+
+  private hostContinueAfterWolfParity(roomId: string, userId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room || !room.wolfParityPending) return;
+    const player = this.findPlayer(room, userId);
+    if (!player?.isHost) return;
+
+    const key = this.wolfParityKey(room);
+    if (key) room.wolfParityAcknowledgedKey = key;
+    room.wolfParityPending = false;
+    this.broadcastState(roomId);
+  }
+
+  private hunterShoot(roomId: string, userId: string, targetUserId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room || room.state !== "DAY_START") return;
+    if (room.pendingHunterShotUserId !== userId) return;
+    const hunter = this.findPlayer(room, userId);
+    if (!hunter || hunter.role !== "Hunter") return;
+    const target = this.findPlayer(room, targetUserId);
+    if (!this.isLivingGamePlayer(target) || target.userId === userId) return;
+
+    const deaths = [...room.deathsThisNight];
+    room.hunterShotTargetUserId = targetUserId;
+    this.killPlayer(room, target, deaths);
+    this.resolveHeartbreak(room, deaths);
+    room.deathsThisNight = [...new Set(deaths)];
+    room.pendingHunterShotUserId = undefined;
+
+    if (this.applyImmediateWinner(roomId, room)) {
+      return;
+    }
+    this.markWolfParityIfNeeded(room);
+
+    if (room.dayStartNextAction === "night") {
+      if (room.wolfParityPending) {
+        room.state = "DAY_START";
+        this.broadcastState(roomId);
+        return;
+      }
+      this.transitionToNight(roomId, room);
+      return;
+    }
+
+    room.dayStartNextAction = "vote";
+    this.broadcastState(roomId);
+  }
+
   private killPlayer(room: WeredogRoom, player: WeredogPlayer, deaths: string[]) {
+    if (!player.isAlive) return;
     player.isAlive = false;
-    deaths.push(player.userId);
+    if (!deaths.includes(player.userId)) deaths.push(player.userId);
     
     // Invalidate alive players cache
     this.invalidateAliveCache(room);
@@ -1139,21 +1228,8 @@ export class WeredogEngine {
 
     if (deaths.includes(id1) && p2.isAlive && !deaths.includes(id2)) {
       this.killPlayer(room, p2, deaths);
-      // Check if hunter was heartbroken
-      if (p2.role === "Hunter" && p2.hunterTargetUserId) {
-        const ht = this.findPlayer(room, p2.hunterTargetUserId);
-        if (ht && ht.isAlive && !deaths.includes(ht.userId)) {
-          this.killPlayer(room, ht, deaths);
-        }
-      }
     } else if (deaths.includes(id2) && p1.isAlive && !deaths.includes(id1)) {
       this.killPlayer(room, p1, deaths);
-      if (p1.role === "Hunter" && p1.hunterTargetUserId) {
-        const ht = this.findPlayer(room, p1.hunterTargetUserId);
-        if (ht && ht.isAlive && !deaths.includes(ht.userId)) {
-          this.killPlayer(room, ht, deaths);
-        }
-      }
     }
   }
 
@@ -1167,6 +1243,7 @@ export class WeredogEngine {
   private dayVote(roomId: string, userId: string, targetUserId: string | "skip" | "cancel") {
     const room = this.rooms.get(roomId);
     if (!room || (room.state !== "DAY_START" && room.state !== "DAY_VOTING")) return;
+    if (room.pendingHunterShotUserId || room.wolfParityPending) return;
     const player = this.findPlayer(room, userId);
     if (!player || !player.isAlive || player.isHost) return;
 
@@ -1299,8 +1376,18 @@ export class WeredogEngine {
   private startDayVoting(roomId: string, userId: string) {
     const room = this.rooms.get(roomId);
     if (!room || room.state !== "DAY_START") return;
+    if (room.pendingHunterShotUserId || room.wolfParityPending) return;
     const player = this.findPlayer(room, userId);
     if (!player?.isHost) return;
+
+    if (room.dayStartNextAction === "night") {
+      if (room.wolfParityPending) {
+        this.broadcastState(roomId);
+        return;
+      }
+      this.transitionToNight(roomId, room);
+      return;
+    }
 
     room.state = "DAY_VOTING";
     this.broadcastState(roomId);
@@ -1310,27 +1397,45 @@ export class WeredogEngine {
     const deaths: string[] = [];
     const victim = this.findPlayer(room, victimId);
     if (victim && victim.isAlive) {
+      const hunterCanShoot = victim.role === "Hunter" && !this.isElderDead(room);
       this.killPlayer(room, victim, deaths);
-
-      // Hunter trigger on hanging
-      if (victim.role === "Hunter" && victim.hunterTargetUserId && !this.isElderDead(room)) {
-        const hunterTarget = this.findPlayer(room, victim.hunterTargetUserId);
-        if (hunterTarget && hunterTarget.isAlive && !deaths.includes(hunterTarget.userId)) {
-          this.killPlayer(room, hunterTarget, deaths);
-        }
-      }
 
       // Cupid heartbreak
       this.resolveHeartbreak(room, deaths);
+
+      room.deathsThisNight = deaths;
+      if (this.applyImmediateWinner(roomId, room)) {
+        return;
+      }
+
+      const pendingHunterShotUserId = this.findPendingHunterShot(room, deaths, hunterCanShoot);
+      if (pendingHunterShotUserId) {
+        room.pendingHunterShotUserId = pendingHunterShotUserId;
+        room.hunterShotTargetUserId = undefined;
+        room.dayStartNextAction = "night";
+        room.state = "DAY_START";
+        room.dayVotes = {};
+        room.tiebreakerActive = false;
+        room.tiebreakerCandidates = [];
+        this.broadcastState(roomId);
+        return;
+      }
 
       // Player lynch processed
     }
 
     // Check win condition
-    const winner = this.checkWinCondition(room);
-    if (winner) {
-      room.winner = winner;
-      room.state = "GAME_OVER";
+    if (this.applyImmediateWinner(roomId, room)) {
+      return;
+    }
+    this.markWolfParityIfNeeded(room);
+
+    if (room.wolfParityPending) {
+      room.state = "DAY_START";
+      room.dayStartNextAction = "night";
+      room.dayVotes = {};
+      room.tiebreakerActive = false;
+      room.tiebreakerCandidates = [];
       this.broadcastState(roomId);
       return;
     }
@@ -1359,7 +1464,7 @@ export class WeredogEngine {
     // All wolves dead -> Villagers win
     if (wolves.length === 0) return "Villager";
 
-    // Wolves >= non-wolves -> Wolf wins
+    // Wolves at parity are a host decision, not an automatic win.
     if (wolves.length >= nonWolves.length) {
       // Check Cupid third-party win: if exactly 2 alive, both are lovers, one wolf one villager
       if (alive.length === 2 && room.cupidLoverUserIds) {
@@ -1373,7 +1478,6 @@ export class WeredogEngine {
           if (hasWolf && hasNonWolf) return "Cupid";
         }
       }
-      return "Wolf";
     }
 
     // Check Cupid third-party win at any point: if only 2 alive and they are wolf+villager lovers
@@ -1479,12 +1583,6 @@ export class WeredogEngine {
         } else {
           clone.wolfVictimUserId = undefined;
         }
-      }
-
-      // Hide hunter target from non-hunter
-      if (me?.role !== "Hunter") {
-        clone.hunterTargetUserId = undefined;
-        clone.players.forEach((p) => { delete p.hunterTargetUserId; });
       }
 
       // Cupid lovers masking: Cupid sees lovers from end of Cupid phase, lovers see each other after host confirmation

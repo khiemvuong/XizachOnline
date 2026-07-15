@@ -22,11 +22,13 @@ interface WeredogState {
   wolfRevote: () => void;
   bodyguardProtect: (targetUserId: string) => void;
   seerInspect: (targetUserId: string) => void;
-  hunterAim: (targetUserId: string) => void;
+  hunterShoot: (targetUserId: string) => void;
   cupidPair: (userId1: string, userId2: string) => void;
   witchChooseAction: (action: "save" | "kill" | "none") => void;
   witchUsePotion: (targetUserId?: string) => void;
   hostConfirmNightAction: () => void;
+  hostDeclareWolfWin: () => void;
+  hostContinueAfterWolfParity: () => void;
   startDayVoting: () => void;
   dayVote: (targetUserId: string | "skip") => void;
   hostConfirmDayVote: () => void;
@@ -45,10 +47,10 @@ export const useWeredogStore = create<WeredogState>((set, get) => ({
   connect: (roomId, profile) => {
     if (typeof window === "undefined") return;
 
-    let storedUserId = sessionStorage.getItem("xz_userId");
+    let storedUserId = localStorage.getItem("xz_userId");
     if (!storedUserId) {
       storedUserId = Math.random().toString(36).substring(2, 10);
-      sessionStorage.setItem("xz_userId", storedUserId);
+      localStorage.setItem("xz_userId", storedUserId);
     }
     set({ userId: storedUserId });
 
@@ -151,9 +153,9 @@ export const useWeredogStore = create<WeredogState>((set, get) => ({
     if (socket) socket.emit("seerInspect", targetUserId);
   },
 
-  hunterAim: (targetUserId) => {
+  hunterShoot: (targetUserId) => {
     const socket = get().socket;
-    if (socket) socket.emit("hunterAim", targetUserId);
+    if (socket) socket.emit("hunterShoot", targetUserId);
   },
 
   cupidPair: (userId1, userId2) => {
@@ -174,6 +176,16 @@ export const useWeredogStore = create<WeredogState>((set, get) => ({
   hostConfirmNightAction: () => {
     const socket = get().socket;
     if (socket) socket.emit("hostConfirmNightAction");
+  },
+
+  hostDeclareWolfWin: () => {
+    const socket = get().socket;
+    if (socket) socket.emit("hostDeclareWolfWin");
+  },
+
+  hostContinueAfterWolfParity: () => {
+    const socket = get().socket;
+    if (socket) socket.emit("hostContinueAfterWolfParity");
   },
 
   // Day Actions

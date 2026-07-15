@@ -1,24 +1,22 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import Image from "next/image";
 import WeredogHeader from "./WeredogHeader";
-
-interface Player {
-  id: string;
-  userId: string;
-  name: string;
-  avatar: string;
-  isAlive: boolean;
-}
+import NightPlayerCircle from "./NightPlayerCircle";
+import { type NightPlayer } from "./nightConstants";
 
 interface WeredogDayStartProps {
   roomId?: string;
   dayNumber?: number;
   isHost: boolean;
-  players: Player[];
+  players: NightPlayer[];
+  myUserId: string;
   deathsThisNight: string[]; // userIds of players who died tonight
+  pendingHunterShotUserId?: string | null;
+  dayStartNextAction?: "vote" | "night";
+  onHunterShoot?: (targetUserId: string) => void;
   onStartVoting?: () => void;
   onBack?: () => void;
 }
@@ -28,10 +26,15 @@ export default function WeredogDayStart({
   dayNumber = 1,
   isHost,
   players,
+  myUserId,
   deathsThisNight,
+  pendingHunterShotUserId,
+  dayStartNextAction = "vote",
+  onHunterShoot,
   onStartVoting,
   onBack,
 }: WeredogDayStartProps) {
+  const [hunterSelectedId, setHunterSelectedId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scale = useSceneScale({
     viewportRef: containerRef,
@@ -41,6 +44,80 @@ export default function WeredogDayStart({
     minScale: 0.4,
     maxScale: 2.2,
   });
+  const pendingHunter = pendingHunterShotUserId
+    ? players.find((p) => p.userId === pendingHunterShotUserId)
+    : null;
+  const isHunterShooter = !!pendingHunterShotUserId && myUserId === pendingHunterShotUserId;
+  const hunterDisabledIds = players
+    .filter((p) => !p.isAlive || p.isHost || p.userId === pendingHunterShotUserId)
+    .map((p) => p.userId);
+  const hunterSelectedPlayer = hunterSelectedId
+    ? players.find((p) => p.userId === hunterSelectedId)
+    : null;
+  const continueLabel = dayStartNextAction === "night" ? "VÀO ĐÊM" : "BỎ PHIẾU TREO CỔ";
+
+  if (pendingHunterShotUserId) {
+    return (
+      <div
+        className="relative w-full h-full flex flex-col justify-between bg-cover bg-center overflow-hidden select-none"
+        style={{ backgroundImage: "url('/werewolf/weredog-lobby-bg.jpeg')" }}
+      >
+        <div className="absolute inset-0 bg-linear-to-t from-black/90 via-[#180b10]/55 to-[#2c2018]/70 pointer-events-none z-10" />
+
+        <div className="relative z-20 w-full h-full flex flex-col justify-between flex-1">
+          <WeredogHeader roomId={roomId} title={`Phát Súng Cuối - Ngày ${dayNumber}`} onBack={onBack} />
+
+          <div className="flex-1 w-full relative overflow-hidden flex items-center justify-center">
+            <NightPlayerCircle
+              players={players}
+              selectedIds={hunterSelectedId ? [hunterSelectedId] : []}
+              onSelectPlayer={isHunterShooter ? setHunterSelectedId : undefined}
+              disabledIds={hunterDisabledIds}
+              highlightColor="#f59e0b"
+              glowColor="rgba(245,158,11,0.45)"
+              myUserId={myUserId}
+              aimedUserIds={hunterSelectedId ? [hunterSelectedId] : []}
+              centerContent={
+                <div className="w-full max-w-[300px] animate-fade-in text-center">
+                  <span className="font-gothic-label text-[10px] uppercase tracking-[0.35em] text-amber-300/80">
+                    Thợ săn ngã xuống
+                  </span>
+                  <h1
+                    className="mt-2 font-gothic-heading text-2xl sm:text-3xl uppercase tracking-widest font-black text-amber-300"
+                    style={{ textShadow: "0 0 14px rgba(245,158,11,0.35), 0 2px 4px rgba(0,0,0,0.9)" }}
+                  >
+                    Final shot
+                  </h1>
+                  <p className="mt-2 font-serif text-xs sm:text-sm italic leading-relaxed text-[#e1c7a5]/85">
+                    {isHunterShooter
+                      ? "Chọn một người còn sống để bắn trước khi ngày mới tiếp tục."
+                      : `Đang chờ ${pendingHunter?.name ?? "Thợ săn"} chọn mục tiêu cuối cùng...`}
+                  </p>
+
+                  {isHunterShooter && (
+                    <div className="mt-4 flex flex-col items-center gap-2 pointer-events-auto">
+                      <p className="min-h-5 font-gothic-label text-[10px] uppercase tracking-widest text-amber-200">
+                        {hunterSelectedPlayer ? `Đang ngắm: ${hunterSelectedPlayer.name}` : "Chưa chọn mục tiêu"}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => hunterSelectedId && onHunterShoot?.(hunterSelectedId)}
+                        disabled={!hunterSelectedId}
+                        className="rounded-lg border border-amber-400/50 bg-[#3b1c26]/85 px-5 py-2.5 font-gothic-label text-xs font-black uppercase tracking-widest text-amber-100 shadow-[0_6px_20px_rgba(0,0,0,0.45)] transition-all hover:scale-[1.03] hover:bg-[#5a1d2e] disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200"
+                      >
+                        Bắn mục tiêu
+                      </button>
+                    </div>
+                  )}
+                </div>
+              }
+              minScale={0.9}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -54,7 +131,11 @@ export default function WeredogDayStart({
       <div className="relative z-20 w-full h-full flex flex-col justify-between flex-1">
         
         {/* Day header bar */}
-        <WeredogHeader roomId={roomId} title={`Bình Minh — Ngày ${dayNumber}`} onBack={onBack} />
+        <WeredogHeader
+          roomId={roomId}
+          title={dayStartNextAction === "night" ? `Phán quyết - Ngày ${dayNumber}` : `Bình Minh - Ngày ${dayNumber}`}
+          onBack={onBack}
+        />
 
         {/* Main Content Viewport */}
         <div ref={containerRef} className="flex-1 w-full relative overflow-hidden flex items-center justify-center pointer-events-none">
@@ -157,7 +238,7 @@ export default function WeredogDayStart({
                     className="absolute left-5 top-[26px] -translate-y-1/2 font-gothic-body text-[#e1c7a5] text-xs font-black uppercase tracking-wider select-none"
                     style={{ textShadow: "0 1.5px 3px rgba(0,0,0,0.8)" }}
                   >
-                    BỎ PHIẾU TREO CỔ
+                    {continueLabel}
                   </span>
 
                   {/* Wax Seal Right */}
@@ -177,7 +258,7 @@ export default function WeredogDayStart({
               ) : (
               <div className="flex flex-col items-center gap-1.5">
                 <span className="font-gothic-label text-[#829ea2]/65 text-[10px] sm:text-xs uppercase tracking-widest italic animate-pulse">
-                  Đang chờ quản trò khởi động bỏ phiếu...
+                  {dayStartNextAction === "night" ? "Đang chờ quản trò đưa làng vào đêm..." : "Đang chờ quản trò khởi động bỏ phiếu..."}
                 </span>
                 <div className="flex gap-1 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#829ea2]/40 animate-bounce" style={{ animationDelay: "0ms" }} />

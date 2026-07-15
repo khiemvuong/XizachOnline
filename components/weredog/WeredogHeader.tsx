@@ -29,11 +29,14 @@ export default function WeredogHeader({
   onBack,
 }: WeredogHeaderProps) {
   const [showCardModal, setShowCardModal] = useState(false);
-  const { gameState, userId } = useWeredogStore();
+  const [showWolfWinConfirm, setShowWolfWinConfirm] = useState(false);
+  const { gameState, userId, hostDeclareWolfWin } = useWeredogStore();
 
   const me = gameState?.players.find((p) => p.userId === userId);
   const myRole = me?.role as WeredogRoleName | undefined;
   const roleMeta = myRole ? ROLE_DISPLAY[myRole] : null;
+  const canHostDeclareWolfWin =
+    !!me?.isHost && !!gameState && gameState.state !== "LOBBY" && gameState.state !== "GAME_OVER";
 
   return (
     <div className="w-full bg-[#0b0d11]/85 border-b border-[#445257]/20 px-6 h-12 flex items-center justify-between relative select-none z-20">
@@ -74,6 +77,17 @@ export default function WeredogHeader({
 
       {/* Right side: Room Code & Profile */}
       <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3 select-none">
+        {canHostDeclareWolfWin && (
+          <button
+            type="button"
+            onClick={() => setShowWolfWinConfirm(true)}
+            className="flex items-center gap-1 px-2 py-1 sm:px-2.5 rounded bg-red-950/45 border border-red-500/35 hover:bg-red-900/70 hover:border-red-300/60 text-red-200 font-gothic-label tracking-widest text-[8px] sm:text-[10px] font-bold uppercase transition-all shadow-sm pointer-events-auto cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
+            title="Tuyên bố phe sói thắng"
+          >
+            Sói thắng
+          </button>
+        )}
+
         {gameState?.state === "NIGHT_ACTION" && myRole && roleMeta && (
           <button
             onClick={() => setShowCardModal(true)}
@@ -120,6 +134,39 @@ export default function WeredogHeader({
           </button>
         )}
       </div>
+
+      {showWolfWinConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 select-none pointer-events-auto">
+          <div className="absolute inset-0" onClick={() => setShowWolfWinConfirm(false)} />
+          <div className="relative w-full max-w-sm rounded-xl border border-red-500/35 bg-[#0b0d11]/95 p-5 text-center shadow-[0_16px_50px_rgba(0,0,0,0.85)]">
+            <h3 className="font-gothic-label text-xl uppercase tracking-widest text-red-300">
+              Xác nhận sói thắng?
+            </h3>
+            <p className="mt-3 font-serif text-xs italic leading-relaxed text-[#e1c7a5]/85">
+              Hành động này sẽ kết thúc ván ngay lập tức với phần thắng thuộc về phe Sói.
+            </p>
+            <div className="mt-5 flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowWolfWinConfirm(false)}
+                className="rounded bg-[#222a2f] px-4 py-2 font-serif text-xs font-bold uppercase tracking-wider text-[#829ea2] transition-all hover:bg-[#2f3940] hover:text-white"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowWolfWinConfirm(false);
+                  hostDeclareWolfWin();
+                }}
+                className="rounded border border-red-400/50 bg-red-950/70 px-4 py-2 font-serif text-xs font-bold uppercase tracking-wider text-red-100 transition-all hover:bg-red-800"
+              >
+                Sói thắng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Role Card Modal */}
       {showCardModal && myRole && roleMeta && (
