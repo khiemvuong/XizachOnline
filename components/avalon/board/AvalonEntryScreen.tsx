@@ -1,4 +1,4 @@
-import { ChevronsRight, Settings } from "lucide-react";
+import { ArrowLeft, ChevronsRight, Settings } from "lucide-react";
 import AvatarDisplay from "@/components/shared/AvatarDisplay";
 import { type PlayerProfile } from "@/hooks/usePlayerProfile";
 
@@ -6,15 +6,28 @@ export default function AvalonEntryScreen({
   onJoin,
   onRulesClick,
   onOpenProfile,
+  onBack,
   profile,
 }: {
   onJoin: () => void;
   onRulesClick: () => void;
   onOpenProfile: () => void;
+  onBack: () => void;
   profile: PlayerProfile;
 }) {
+  const hasProfileName = profile.name.trim().length > 0;
+
   return (
     <div className="avalon-entry-screen font-body text-primary-avalon h-dvh overflow-hidden flex items-center justify-center relative z-0 p-4">
+      <button
+        onClick={onBack}
+        className="absolute left-4 top-4 z-20 flex items-center gap-1.5 rounded-xl border border-(--outline-variant) bg-(--surface-container)/80 px-3 py-2 text-xs font-semibold text-(--on-surface-variant) shadow-lg backdrop-blur-md transition-all hover:bg-(--surface-container-high) hover:text-(--on-surface) active:scale-95"
+        aria-label="Quay lại sảnh Avalon"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Sảnh Avalon
+      </button>
+
       {/* Background Atmospheric Elements */}
       <div
         className="fixed inset-0 z-0 pointer-events-none"
@@ -95,17 +108,21 @@ export default function AvalonEntryScreen({
 
             <button
               onClick={() => {
-                if (profile.name.trim()) onJoin();
+                if (hasProfileName) {
+                  onJoin();
+                  return;
+                }
+
+                onOpenProfile();
               }}
-              disabled={!profile.name.trim()}
               className={`px-12 py-3.5 rounded-xl font-headline font-extrabold text-sm transform transition-all tracking-widest uppercase flex items-center justify-center gap-3 w-full
                   ${
-                    profile.name.trim()
+                    hasProfileName
                       ? "bg-primary-avalon hover:bg-white text-surface-dim-avalon shadow-[0_10px_30px_rgba(186,200,220,0.2)] active:scale-95 cursor-pointer"
-                      : "bg-[#1e2b3b] text-[#768497] cursor-not-allowed border border-[#44474c]/50"
+                      : "bg-[#1e2b3b] text-[#c4cedb] cursor-pointer border border-[#44474c]/50 hover:border-primary-avalon/50 hover:text-primary-avalon"
                   }`}
             >
-              Gia Nhập
+              {hasProfileName ? "Gia Nhập" : "Thiết Lập Danh Xưng"}
               <ChevronsRight className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { AvalonPlayer, AvalonRoom } from "@/server/game/AvalonTypes";
-import { useEffect, useState, useRef, useCallback, type FormEvent } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import RoleReveal from "../RoleReveal";
@@ -29,6 +29,21 @@ import AvalonTopBar from "./AvalonTopBar";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
 import PlayerProfileModal from "@/components/shared/PlayerProfileModal";
 
+function generateAvalonUserId() {
+  return Math.random().toString(36).slice(2, 11);
+}
+
+function getOrCreateAvalonUserId() {
+  if (typeof window === "undefined") return "";
+
+  const storedUserId = localStorage.getItem("avalon_userId");
+  if (storedUserId) return storedUserId;
+
+  const nextUserId = generateAvalonUserId();
+  localStorage.setItem("avalon_userId", nextUserId);
+  return nextUserId;
+}
+
 export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<AvalonRoom | null>(null);
@@ -49,6 +64,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const router = useRouter();
+  const userId = useMemo(() => getOrCreateAvalonUserId(), []);
 
   // Audio state & refs
   const [isLobbyMusicEnabled, setIsLobbyMusicEnabled] = useState(() => {
@@ -70,13 +86,6 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const previousRaisedIdsRef = useRef<Set<string>>(new Set());
   const hasRaiseSnapshotRef = useRef(false);
 
-  // Setup initial random ID if none found
-  useEffect(() => {
-    if (!localStorage.getItem("avalon_userId")) {
-      localStorage.setItem("avalon_userId", Math.random().toString(36).substr(2, 9));
-    }
-  }, []);
-
   // Save Audio Setting
   useEffect(() => {
     localStorage.setItem("avalon_lobby_music_enabled", isLobbyMusicEnabled ? "1" : "0");
@@ -84,10 +93,14 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
   // Handle Joining
   useEffect(() => {
-    if (!hasJoined || initialized.current) return;
-    initialized.current = true;
+    if (!hasJoined || !userId || initialized.current) return;
 
-    const userId = localStorage.getItem("avalon_userId")!;
+    const nameToUse = profile.name.trim();
+    if (!nameToUse) {
+      return;
+    }
+
+    initialized.current = true;
     
     // Connect specifically to the /avalon namespace
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "";
@@ -97,7 +110,6 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
     socketio.on("connect", () => {
       setSocket(socketio);
-      const nameToUse = profile.name || `Knight_${Math.floor(Math.random() * 1000)}`;
       socketio.emit("joinRoom", { roomId, playerName: nameToUse, userId, avatarUrl: profile.avatarUrl });
     });
 
@@ -113,7 +125,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
       socketio.disconnect();
       initialized.current = false;
     };
-  }, [hasJoined, roomId, profile.name, profile.avatarUrl]);
+  }, [hasJoined, roomId, profile.name, profile.avatarUrl, userId]);
 
   // Handle external rule open
   useEffect(() => {
@@ -170,6 +182,22 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     [chatText, socket]
   );
 
+  const handleEntryBack = useCallback(() => {
+    router.push("/avalon");
+  }, [router]);
+
+  const handleProfileSave = useCallback(
+    (newName: string, newAvatarUrl: string | null) => {
+      updateProfile({ name: newName, avatarUrl: newAvatarUrl });
+      if (socket) {
+        socket.emit("changeName", newName);
+        socket.emit("updateAvatar", newAvatarUrl);
+      }
+      setShowNameEditModal(false);
+    },
+    [socket, updateProfile]
+  );
+
   // Scroll to bottom when messages arrive
   useEffect(() => {
     if (showChat) chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -184,11 +212,26 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         <AvalonEntryScreen
           onRulesClick={() => setShowRules(true)}
           onOpenProfile={() => setShowNameEditModal(true)}
+          onBack={handleEntryBack}
           profile={profile}
           onJoin={() => {
+            if (!profile.name.trim()) {
+              setShowNameEditModal(true);
+              return;
+            }
+
             unlockAudio();
             setHasJoined(true);
           }}
+        />
+        <PlayerProfileModal
+          open={showNameEditModal}
+          onClose={() => setShowNameEditModal(false)}
+          name={profile.name}
+          avatarUrl={profile.avatarUrl}
+          userId={userId}
+          onSave={handleProfileSave}
+          themeClass="avalon-theme"
         />
       </>
     );
@@ -212,7 +255,6 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   }
 
   // Helper variables (Derived from gameState to keep Topbar/Modals instantly snappy)
-  const userId = localStorage.getItem("avalon_userId")!;
   const me = gameState?.players.find((p: AvalonPlayer) => p.userId === userId);
   const isSpectator = Boolean(me?.isSpectator);
   const isHandRaised = Boolean(me?.isHandRaised);
@@ -418,14 +460,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         name={me?.name || ""}
         avatarUrl={me?.avatarUrl ?? null}
         userId={userId}
-        onSave={(newName, newAvatarUrl) => {
-          updateProfile({ name: newName, avatarUrl: newAvatarUrl });
-          if (socket) {
-            socket.emit("changeName", newName);
-            socket.emit("updateAvatar", newAvatarUrl);
-          }
-          setShowNameEditModal(false);
-        }}
+        onSave={handleProfileSave}
       />
 
       {me && !isSpectator && (
