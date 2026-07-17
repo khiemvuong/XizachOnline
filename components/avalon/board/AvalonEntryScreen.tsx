@@ -13,6 +13,8 @@ export default function AvalonEntryScreen({
   onOpenProfile: () => void;
   profile: PlayerProfile;
 }) {
+  const hasProfileName = profile.name.trim().length > 0;
+
   return (
     <div className="avalon-entry-screen font-body text-primary-avalon h-dvh overflow-hidden flex items-center justify-center relative z-0 p-4">
       {/* Background Atmospheric Elements */}
@@ -95,17 +97,21 @@ export default function AvalonEntryScreen({
 
             <button
               onClick={() => {
-                if (profile.name.trim()) onJoin();
+                if (hasProfileName) {
+                  onJoin();
+                  return;
+                }
+
+                onOpenProfile();
               }}
-              disabled={!profile.name.trim()}
               className={`px-12 py-3.5 rounded-xl font-headline font-extrabold text-sm transform transition-all tracking-widest uppercase flex items-center justify-center gap-3 w-full
                   ${
-                    profile.name.trim()
+                    hasProfileName
                       ? "bg-primary-avalon hover:bg-white text-surface-dim-avalon shadow-[0_10px_30px_rgba(186,200,220,0.2)] active:scale-95 cursor-pointer"
-                      : "bg-[#1e2b3b] text-[#768497] cursor-not-allowed border border-[#44474c]/50"
+                      : "bg-[#1e2b3b] text-[#c4cedb] cursor-pointer border border-[#44474c]/50 hover:border-primary-avalon/50 hover:text-primary-avalon"
                   }`}
             >
-              Gia Nhập
+              {hasProfileName ? "Gia Nhập" : "Thiết Lập Danh Xưng"}
               <ChevronsRight className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
