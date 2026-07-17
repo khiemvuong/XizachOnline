@@ -1,4 +1,4 @@
-import { ChevronsRight, Settings } from "lucide-react";
+import { ArrowLeft, ChevronsRight, Settings } from "lucide-react";
 import AvatarDisplay from "@/components/shared/AvatarDisplay";
 import { type PlayerProfile } from "@/hooks/usePlayerProfile";
 
@@ -6,17 +6,28 @@ export default function AvalonEntryScreen({
   onJoin,
   onRulesClick,
   onOpenProfile,
+  onBack,
   profile,
 }: {
   onJoin: () => void;
   onRulesClick: () => void;
   onOpenProfile: () => void;
+  onBack: () => void;
   profile: PlayerProfile;
 }) {
   const hasProfileName = profile.name.trim().length > 0;
 
   return (
     <div className="avalon-entry-screen font-body text-primary-avalon h-dvh overflow-hidden flex items-center justify-center relative z-0 p-4">
+      <button
+        onClick={onBack}
+        className="absolute left-4 top-4 z-20 flex items-center gap-1.5 rounded-xl border border-(--outline-variant) bg-(--surface-container)/80 px-3 py-2 text-xs font-semibold text-(--on-surface-variant) shadow-lg backdrop-blur-md transition-all hover:bg-(--surface-container-high) hover:text-(--on-surface) active:scale-95"
+        aria-label="Quay lại sảnh Avalon"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Sảnh Avalon
+      </button>
+
       {/* Background Atmospheric Elements */}
       <div
         className="fixed inset-0 z-0 pointer-events-none"

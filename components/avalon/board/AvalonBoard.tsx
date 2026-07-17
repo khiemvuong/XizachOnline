@@ -182,6 +182,10 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
     [chatText, socket]
   );
 
+  const handleEntryBack = useCallback(() => {
+    router.push("/avalon");
+  }, [router]);
+
   const handleProfileSave = useCallback(
     (newName: string, newAvatarUrl: string | null) => {
       updateProfile({ name: newName, avatarUrl: newAvatarUrl });
@@ -208,6 +212,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         <AvalonEntryScreen
           onRulesClick={() => setShowRules(true)}
           onOpenProfile={() => setShowNameEditModal(true)}
+          onBack={handleEntryBack}
           profile={profile}
           onJoin={() => {
             if (!profile.name.trim()) {
