@@ -235,7 +235,7 @@ function PlayerNode({
         {/* Selection pulse ring */}
         {isSelected && (
           <div
-            className="absolute inset-[-4px] rounded-full animate-pulse motion-reduce:animate-none pointer-events-none"
+            className="absolute -inset-1 rounded-full animate-pulse motion-reduce:animate-none pointer-events-none"
             style={{ border: `2px solid ${highlightColor}`, opacity: 0.5 }}
           />
         )}
@@ -271,7 +271,7 @@ function PlayerNode({
 
       {/* Player name */}
       <span
-        className={`font-gothic-body text-[11px] sm:text-[12px] font-semibold tracking-wide max-w-[85px] truncate transition-colors ${
+        className={`font-gothic-body text-[11px] sm:text-[12px] font-semibold tracking-wide max-w-21.25 truncate transition-colors ${
           isDead ? "text-[#445257] line-through" : isSelected ? "text-white" : "text-[#829ea2]"
         }`}
         style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}

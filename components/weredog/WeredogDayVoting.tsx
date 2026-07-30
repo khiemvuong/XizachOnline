@@ -105,7 +105,7 @@ export default function WeredogDayVoting({
   const renderCenterContent = () => {
     if (tiebreakerActive && isHost) {
       return (
-        <div className="w-full flex flex-col items-center justify-center gap-2 py-2 animate-fade-in text-center max-w-[280px]">
+        <div className="w-full flex flex-col items-center justify-center gap-2 py-2 animate-fade-in text-center max-w-70">
           <h1 
             className="font-gothic-label text-base sm:text-lg md:text-xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-[#f43f5e] text-shadow-maroon"
             style={{ textShadow: "0 0 10px rgba(244,63,94,0.3), 0 2px 4px rgba(0,0,0,0.9)" }}
@@ -115,7 +115,7 @@ export default function WeredogDayVoting({
           <p className="font-gothic-body text-[#829ea2]/80 text-[10px] sm:text-xs leading-normal mb-2">
             Số phiếu bằng nhau! Hãy chọn cách giải quyết:
           </p>
-          <div className="flex flex-col gap-2 w-full max-w-[200px] pointer-events-auto">
+          <div className="flex flex-col gap-2 w-full max-w-50 pointer-events-auto">
             <button
               onClick={() => onHostTiebreakDecide?.("revote")}
               className="px-3 py-1.5 bg-[#3b1c26] hover:bg-[#551c2e] border border-red-500/30 rounded text-[10px] uppercase font-gothic-label tracking-widest font-black transition-all hover:scale-[1.02] active:scale-95 cursor-pointer text-red-400"
@@ -135,7 +135,7 @@ export default function WeredogDayVoting({
 
     if (isHost) {
       return (
-        <div className="w-full flex flex-col items-center justify-center gap-2 py-2 animate-fade-in text-center max-w-[280px]">
+        <div className="w-full flex flex-col items-center justify-center gap-2 py-2 animate-fade-in text-center max-w-70">
           <h1 
             className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
             style={{ 
@@ -154,7 +154,7 @@ export default function WeredogDayVoting({
               <button
                 onClick={onHostConfirm}
                 disabled={votedCount < totalAlive}
-                className={`relative w-[200px] h-[52px] transition-all duration-200 group ${
+                className={`relative w-50 h-13 transition-all duration-200 group ${
                   votedCount < totalAlive
                     ? "opacity-40 cursor-not-allowed"
                     : "hover:scale-[1.03] active:scale-95 cursor-pointer"
@@ -167,7 +167,7 @@ export default function WeredogDayVoting({
                   viewBox="0 0 200 32"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
-                  className="absolute top-[10px] left-0 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]"
+                  className="absolute top-2.5 left-0 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]"
                 >
                   <defs>
                     <linearGradient id="plaqueGradHostVote" x1="0" y1="0" x2="0" y2="1">
@@ -185,7 +185,7 @@ export default function WeredogDayVoting({
 
                 {/* Button label */}
                 <span
-                  className="absolute left-0 w-[140px] text-center top-[26px] -translate-y-1/2 font-gothic-body text-xs sm:text-sm font-black uppercase tracking-wider select-none text-[#e1c7a5]"
+                  className="absolute left-0 w-35 text-center top-6.5 -translate-y-1/2 font-gothic-body text-xs sm:text-sm font-black uppercase tracking-wider select-none text-[#e1c7a5]"
                   style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
                 >
                   XÁC NHẬN
@@ -212,7 +212,7 @@ export default function WeredogDayVoting({
 
     if (!isAlive) {
       return (
-        <div className="w-full flex flex-col items-center justify-center gap-1.5 animate-fade-in text-center max-w-[280px]">
+        <div className="w-full flex flex-col items-center justify-center gap-1.5 animate-fade-in text-center max-w-70">
           <h1 
             className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-red-500/80 text-shadow-maroon"
             style={{ textShadow: "0 0 10px rgba(220,38,38,0.2), 0 2px 4px rgba(0,0,0,0.9)" }}
@@ -229,7 +229,7 @@ export default function WeredogDayVoting({
     if (hasVoted) {
       const votedPlayer = myVote !== "skip" ? players.find(p => p.userId === myVote) : null;
       return (
-        <div className="w-full flex flex-col items-center justify-center gap-1.5 py-2 animate-fade-in text-center max-w-[280px]">
+        <div className="w-full flex flex-col items-center justify-center gap-1.5 py-2 animate-fade-in text-center max-w-70">
           <h1 
             className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight mb-1 text-emerald-400 text-shadow-maroon"
             style={{ textShadow: "0 0 10px rgba(16,185,129,0.2), 0 2px 4px rgba(0,0,0,0.9)" }}
@@ -257,7 +257,7 @@ export default function WeredogDayVoting({
 
     // Active Vote Input for Player
     return (
-      <div className="w-full flex flex-col items-center justify-center gap-2 py-2 animate-fade-in text-center max-w-[280px]">
+      <div className="w-full flex flex-col items-center justify-center gap-2 py-2 animate-fade-in text-center max-w-70">
         <h1 
           className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
           style={{ 
@@ -285,7 +285,7 @@ export default function WeredogDayVoting({
           <button
             onClick={handleConfirmVote}
             disabled={!selectedId}
-            className="relative w-[220px] h-[52px] hover:scale-[1.03] active:scale-95 transition-all duration-200 cursor-pointer group disabled:opacity-30 disabled:pointer-events-none mt-1"
+            className="relative w-55 h-13 hover:scale-[1.03] active:scale-95 transition-all duration-200 cursor-pointer group disabled:opacity-30 disabled:pointer-events-none mt-1"
           >
             {/* Plaque SVG */}
             <svg
@@ -294,7 +294,7 @@ export default function WeredogDayVoting({
               viewBox="0 0 220 32"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="absolute top-[10px] left-0 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]"
+              className="absolute top-2.5 left-0 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]"
             >
               <defs>
                 <linearGradient id="plaqueGradConfirmVote" x1="0" y1="0" x2="0" y2="1">
@@ -312,7 +312,7 @@ export default function WeredogDayVoting({
 
             {/* Button label */}
             <span
-              className="absolute left-5 top-[26px] -translate-y-1/2 font-gothic-body text-xs font-black uppercase tracking-wider select-none text-[#e1c7a5]"
+              className="absolute left-5 top-6.5 -translate-y-1/2 font-gothic-body text-xs font-black uppercase tracking-wider select-none text-[#e1c7a5]"
               style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
             >
               BỎ PHIẾU TREO CỔ
@@ -353,7 +353,7 @@ export default function WeredogDayVoting({
         <div className="flex-1 w-full flex flex-row items-center justify-between px-6 py-4 gap-6 overflow-hidden">
           
           {/* Left Sidebar: Public Votes (Relative flex item, no longer absolute) */}
-          <div className="w-[160px] h-full bg-[#111318]/95 border border-[#cda372]/20 rounded-lg p-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.85)] z-40 flex flex-col select-none pointer-events-auto shrink-0">
+          <div className="w-40 h-full bg-[#111318]/95 border border-[#cda372]/20 rounded-lg p-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.85)] z-40 flex flex-col select-none pointer-events-auto shrink-0">
             <span className="font-serif text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#e1c7a5] border-b border-[#cda372]/20 pb-1 mb-2 block text-center">
               Danh sách bỏ phiếu
             </span>
@@ -375,13 +375,13 @@ export default function WeredogDayVoting({
                       className="flex items-center justify-between border-b border-[#445257]/10 pb-1 text-[9px] sm:text-[10px] font-serif uppercase tracking-wider font-bold w-full"
                       style={{ color: targetPlayer ? (targetId === "skip" ? "#829ea2" : "#f43f5e") : "#445257" }}
                     >
-                      <span className="text-[#e1c7a5] truncate max-w-[50px]" title={p.name}>
+                      <span className="text-[#e1c7a5] truncate max-w-12.5" title={p.name}>
                         {p.name}
                         {isElder && <span className="text-amber-400 text-[8px] ml-0.5 font-bold">(x2)</span>}
                       </span>
                       <span className="opacity-40 font-normal mx-0.5">→</span>
                       <span 
-                        className={`truncate max-w-[50px] text-right ${targetPlayer ? "text-white font-black" : "italic text-[#445257]/50"}`}
+                        className={`truncate max-w-12.5 text-right ${targetPlayer ? "text-white font-black" : "italic text-[#445257]/50"}`}
                         title={targetPlayer ? targetPlayer.name : "Đang chọn..."}
                       >
                         {targetPlayer ? targetPlayer.name : "..."}

@@ -4,6 +4,7 @@ import { GameEngine } from "./server/game/GameEngine";
 import { AvalonEngine } from "./server/game/AvalonEngine";
 import { DeceptionEngine } from "./server/game/DeceptionEngine";
 import { WeredogEngine } from "./server/game/WeredogEngine";
+import { GlitcherEngine } from "./server/game/GlitcherEngine";
 
 const port = parseInt(process.env.PORT || "3000", 10);
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || "*")
@@ -33,6 +34,7 @@ const gameEngine = new GameEngine(io);
 new AvalonEngine(io);
 new DeceptionEngine(io);
 new WeredogEngine(io);
+new GlitcherEngine(io);
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);

@@ -418,7 +418,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
       {showLeaveConfirmModal && (
         <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in">
           <div className="w-full max-w-sm bg-[#0b0d11] border border-[#5a1d2e]/50 rounded-xl shadow-2xl p-6 relative overflow-hidden">
-            <div className="absolute -top-[120px] left-1/2 -translate-x-1/2 w-[240px] h-[150px] bg-red-900/20 blur-[60px] rounded-full pointer-events-none" />
+            <div className="absolute -top-30 left-1/2 -translate-x-1/2 w-60 h-37.5 bg-red-900/20 blur-[60px] rounded-full pointer-events-none" />
 
             <h3 className="font-serif italic font-extrabold text-[#e1c7a5] text-lg uppercase tracking-wide mb-2 drop-shadow-md">
               {isHost ? "Rời Phòng & Hủy Trận?" : "Thoát Khỏi Trận Đấu?"}
