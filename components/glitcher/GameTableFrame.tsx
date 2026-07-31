@@ -6,7 +6,6 @@ import { ArrowLeft } from "lucide-react";
 import type { GlitcherClientState } from "@/server/game/GlitcherTypes";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import BrandMark from "./BrandMark";
-import GlitcherTimer from "./GlitcherTimer";
 import PhaseRail from "./PhaseRail";
 
 const GLITCHER_SCENE_WIDTH = 1440;
@@ -14,14 +13,11 @@ const GLITCHER_SCENE_HEIGHT = 810;
 
 const PHASE_LABELS: Record<GlitcherClientState["state"], string> = {
   LOBBY: "Phòng chờ",
-  ROLE_REVEAL: "Dữ liệu vai",
-  QUESTION_ROUND: "Câu hỏi",
-  PERFORMANCE_SETUP: "Chuẩn bị vị trí",
-  PERFORMANCE: "Diễn không lời",
-  DISCUSSION: "Thảo luận",
-  VOTING: "Khóa phiếu",
-  REVEAL: "Giải mã dữ liệu",
-  TOUR_SUMMARY: "Tổng kết tour",
+  ROLE_REVEAL: "Xem vai",
+  PERFORMANCE_AND_QUESTIONS: "Diễn & Hỏi đáp",
+  DISCUSSION: "Thảo luận & Bỏ phiếu",
+  VOTING: "Thảo luận & Bỏ phiếu",
+  REVEAL: "Kết quả ván đấu",
 };
 
 export default function GameTableFrame({
@@ -32,7 +28,7 @@ export default function GameTableFrame({
   onExit,
 }: {
   gameState: GlitcherClientState;
-  timerLabel: string;
+  timerLabel?: string;
   table: ReactNode;
   children: ReactNode;
   onExit: () => void;
@@ -65,19 +61,16 @@ export default function GameTableFrame({
 
           <div className="glitcher-game-header__meta">
             <span>
-              Scene {String(gameState.sceneNumber).padStart(2, "0")}/
-              {String(gameState.totalScenes).padStart(2, "0")}
+              Màn chơi #{String(gameState.sceneNumber).padStart(2, "0")}
             </span>
             <i aria-hidden="true" />
             <strong aria-live="polite">{PHASE_LABELS[gameState.state]}</strong>
           </div>
 
           <div className="glitcher-game-header__actions">
-            <GlitcherTimer
-              startedAt={gameState.phaseStartedAt}
-              deadlineAt={gameState.phaseDeadlineAt}
-              label={timerLabel}
-            />
+            {timerLabel ? (
+              <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>{timerLabel}</span>
+            ) : null}
             <button type="button" onClick={onExit} className="glitcher-icon-button" aria-label="Rời phòng">
               <ArrowLeft aria-hidden="true" />
             </button>
@@ -96,4 +89,3 @@ export default function GameTableFrame({
     </div>
   );
 }
-

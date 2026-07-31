@@ -13,12 +13,8 @@ import { usePlayerProfile } from "@/hooks/usePlayerProfile";
 import RoleReveal from "../RoleReveal";
 import type { EmitGlitcherAction, GlitcherActionEvent } from "../gameTypes";
 import DiscussionScreen from "../screens/DiscussionScreen";
-import PerformanceScreen from "../screens/PerformanceScreen";
-import PerformanceSetupScreen from "../screens/PerformanceSetupScreen";
 import QuestionRoundScreen from "../screens/QuestionRoundScreen";
 import RevealScreen from "../screens/RevealScreen";
-import TourSummaryScreen from "../screens/TourSummaryScreen";
-import VotingScreen from "../screens/VotingScreen";
 import GlitcherLobby from "./GlitcherLobby";
 
 function createActionId() {
@@ -259,33 +255,20 @@ export default function GlitcherBoard({ roomId }: { roomId: string }) {
         <RoleReveal gameState={gameState} me={me} emitAction={emitAction} onExit={leaveRoom} />
       );
       break;
-    case "QUESTION_ROUND":
+    case "PERFORMANCE_AND_QUESTIONS":
       content = (
         <QuestionRoundScreen gameState={gameState} me={me} emitAction={emitAction} onExit={leaveRoom} />
       );
       break;
-    case "PERFORMANCE_SETUP":
-      content = <PerformanceSetupScreen gameState={gameState} onExit={leaveRoom} />;
-      break;
-    case "PERFORMANCE":
-      content = <PerformanceScreen gameState={gameState} onExit={leaveRoom} />;
-      break;
     case "DISCUSSION":
-      content = <DiscussionScreen gameState={gameState} onExit={leaveRoom} />;
-      break;
     case "VOTING":
       content = (
-        <VotingScreen gameState={gameState} me={me} emitAction={emitAction} onExit={leaveRoom} />
+        <DiscussionScreen gameState={gameState} me={me} emitAction={emitAction} onExit={leaveRoom} />
       );
       break;
     case "REVEAL":
       content = (
         <RevealScreen gameState={gameState} me={me} emitAction={emitAction} onExit={leaveRoom} />
-      );
-      break;
-    case "TOUR_SUMMARY":
-      content = (
-        <TourSummaryScreen gameState={gameState} me={me} emitAction={emitAction} onExit={leaveRoom} />
       );
       break;
     default:

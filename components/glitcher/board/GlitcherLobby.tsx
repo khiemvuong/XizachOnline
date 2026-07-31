@@ -70,7 +70,7 @@ export default function GlitcherLobby({
       <main className="glitcher-lobby__main">
         <section className="glitcher-lobby__roster" aria-labelledby="glitcher-roster-heading">
           <div className="glitcher-panel-heading">
-            <span>Tour {String(gameState.tourNumber).padStart(2, "0")}</span>
+            <span>Màn chơi #{String(gameState.sceneNumber).padStart(2, "0")}</span>
             <h1 id="glitcher-roster-heading">Đội hình hiện tại</h1>
           </div>
 
@@ -117,6 +117,39 @@ export default function GlitcherLobby({
               : `Cần thêm ${gameState.settings.minPlayers - connectedPlayers.length} người để bắt đầu.`}
           </p>
 
+          <div className="glitcher-lobby__scene-select" style={{ width: "100%", marginTop: "1rem" }}>
+            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, color: "var(--glitcher-fg-muted, #94a3b8)", marginBottom: "0.5rem" }}>
+              Chọn màn chơi:
+            </label>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+              <select
+                value={gameState.selectedSceneIndex ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  emitAction("selectScene", { sceneIndex: val === "" ? null : Number(val) });
+                }}
+                disabled={!me?.isHost}
+                style={{
+                  background: "rgba(15, 23, 42, 0.8)",
+                  color: "#f8fafc",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  borderRadius: "0.5rem",
+                  padding: "0.4rem 0.8rem",
+                  fontSize: "0.85rem",
+                  cursor: me?.isHost ? "pointer" : "not-allowed"
+                }}
+              >
+                <option value="">-- Chọn màn cụ thể --</option>
+                {Array.from({ length: gameState.totalAvailableScenes || 16 }).map((_, idx) => (
+                  <option key={idx} value={idx}>
+                    Màn {idx + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+          </div>
+
           <div className="glitcher-lobby__actions">
             <button
               type="button"
@@ -134,7 +167,7 @@ export default function GlitcherLobby({
                 className="glitcher-secondary-button glitcher-start-button"
               >
                 <Play aria-hidden="true" />
-                <span>Bắt đầu tour</span>
+                <span>Bắt đầu trận</span>
               </button>
             ) : (
               <span className="glitcher-lobby__host-note">Chủ phòng sẽ bắt đầu khi cả nhóm đã sẵn sàng.</span>

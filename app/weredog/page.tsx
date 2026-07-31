@@ -152,7 +152,7 @@ export default function WeredogHome() {
             </div>
 
             {/* Custom Keypad */}
-            <div className="grid grid-cols-3 gap-2 w-full max-w-[240px] sm:max-w-xs font-gothic-ui">
+            <div className="grid grid-cols-3 gap-2 w-full max-w-60 sm:max-w-xs font-gothic-ui">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => (
                 <button
                   key={digit}

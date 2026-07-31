@@ -1,13 +1,12 @@
 export type GlitcherGameState =
   | "LOBBY"
   | "ROLE_REVEAL"
-  | "QUESTION_ROUND"
-  | "PERFORMANCE_SETUP"
-  | "PERFORMANCE"
+  | "PERFORMANCE_AND_QUESTIONS"
   | "DISCUSSION"
   | "VOTING"
-  | "REVEAL"
-  | "TOUR_SUMMARY";
+  | "REVEAL";
+
+export type GlitcherOutcome = "GLITCH_WIN" | "NORMAL_WIN" | "TIE";
 
 export type GlitcherPlayerStatus = "connected" | "disconnected";
 export type GlitcherQuestionStage = "SELECTING" | "ANSWERING";
@@ -19,14 +18,13 @@ export const GLITCHER_CLIENT_EVENTS = {
   checkRoom: "checkRoom",
   createRoom: "createRoom",
   joinRoom: "joinRoom",
+  selectScene: "selectScene",
   toggleReady: "toggleReady",
   startTour: "startTour",
   confirmRole: "confirmRole",
   selectQuestion: "selectQuestion",
-  completeQuestion: "completeQuestion",
+  answerQuestion: "answerQuestion",
   submitVote: "submitVote",
-  nextScene: "nextScene",
-  restartTour: "restartTour",
   returnToLobby: "returnToLobby",
   explicitLeave: "explicitLeave",
   transferHost: "transferHost",
@@ -57,7 +55,7 @@ export interface GlitcherRole {
   id: string;
   name: string;
   action: string;
-  answers: GlitcherAnswerMap;
+  answers?: GlitcherAnswerMap;
 }
 
 export interface GlitcherGlitchRole extends GlitcherRole {
@@ -90,12 +88,6 @@ export interface GlitcherSettings {
   minPlayers: 6;
   maxPlayers: 12;
   scenesPerTour: 4;
-  roleRevealSeconds: 75;
-  questionSelectionSeconds: 30;
-  questionAnswerSeconds: 12;
-  performanceSetupSeconds: 15;
-  performanceSeconds: 45;
-  votingSeconds: 60;
 }
 
 export interface GlitcherAssignment {
@@ -119,24 +111,29 @@ export interface GlitcherPlayer {
   isReady: boolean;
   hasConfirmedRole: boolean;
   hasVoted: boolean;
-  totalScore: number;
-  sceneScore: number;
   assignment?: GlitcherAssignment;
 }
 
+export interface GlitcherAnswerLogEntry {
+  id: string;
+  targetUserId: string;
+  targetName: string;
+  questionerUserId: string;
+  questionerName: string;
+  questionText: string;
+  answer: boolean; // true = CÓ, false = KHÔNG
+}
+
 export interface GlitcherQuestionRound {
+  targetUserId: string;
+  performerIndex: number;
+  totalPerformers: number;
   questionerUserIds: string[];
   currentQuestionerUserId: string | null;
-  turnIndex: number;
+  turnIndex: number; // 0, 1, 2 (up to 3 questions per target)
   stage: GlitcherQuestionStage;
   selectedQuestionId: string | null;
   usedQuestionIds: string[];
-  completedTurns: number;
-  /** Set only while the active questioner's timer is paused for reconnect. */
-  pausedForUserId: string | null;
-  reconnectGraceDeadlineAt: number | null;
-  /** Internal/public countdown snapshot; does not contain secret game data. */
-  pausedQuestionRemainingMs: number | null;
 }
 
 export interface GlitcherVoteRecord {
@@ -154,12 +151,6 @@ export interface GlitcherRevealedVote {
   timedOut: boolean;
 }
 
-export interface GlitcherScoreDelta {
-  userId: string;
-  playerName: string;
-  delta: number;
-}
-
 export interface GlitcherSceneReveal {
   sceneNumber: number;
   trueScene: GlitcherSceneSummary;
@@ -167,22 +158,8 @@ export interface GlitcherSceneReveal {
   glitchUserId: string;
   glitchPlayerName: string;
   votes: GlitcherRevealedVote[];
-  scores: GlitcherScoreDelta[];
+  outcome: GlitcherOutcome;
   revealedAt: number;
-}
-
-export interface GlitcherRankedPlayer {
-  rank: number;
-  userId: string;
-  name: string;
-  avatarUrl?: string;
-  totalScore: number;
-}
-
-export interface GlitcherTourSummary {
-  tourNumber: number;
-  rankedPlayers: GlitcherRankedPlayer[];
-  winnerUserIds: string[];
 }
 
 export interface GlitcherRoom {
@@ -191,25 +168,19 @@ export interface GlitcherRoom {
   state: GlitcherGameState;
   settings: GlitcherSettings;
 
-  tourNumber: number;
+  selectedSceneIndex: number | null; // null = random
+  totalAvailableScenes: number;
   sceneNumber: number;
   seatOrderUserIds: string[];
-  /** Index of the next questioner. It intentionally survives tour/lobby resets. */
-  questionCursor: number;
-  sceneDeckIds: string[];
   usedSceneIds: string[];
 
   phaseId: string;
-  phaseStartedAt: number | null;
-  phaseDeadlineAt: number | null;
-
   currentScene?: GlitcherScene;
   glitchUserId?: string;
   questionRound: GlitcherQuestionRound | null;
+  answerLog: GlitcherAnswerLogEntry[];
   votes: Record<string, GlitcherVoteRecord>;
-  sceneResults: GlitcherSceneReveal[];
   latestReveal: GlitcherSceneReveal | null;
-  tourSummary: GlitcherTourSummary | null;
 
   /** userId + actionId keys, insertion ordered and bounded by the engine. */
   processedActionIds: Map<
@@ -238,21 +209,12 @@ export interface GlitcherPublicPlayer {
   hasVoted: boolean;
 }
 
-/**
- * The same payload shape is used for a real-scene role and a glitch-scene role.
- * Deliberately absent: role id, scene id/slug, shadow_role_id and isGlitch.
- */
 export interface GlitcherPrivateCard {
   scene: GlitcherSceneSummary;
   role: {
     name: string;
     action: string;
   };
-  /**
-   * Five answers in the exact order of GlitcherClientState.questions.
-   * Question ids are intentionally absent from the private card.
-   */
-  answers: boolean[];
 }
 
 export interface GlitcherVoteProgress {
@@ -260,42 +222,42 @@ export interface GlitcherVoteProgress {
   required: number;
 }
 
-/**
- * Allowlisted, viewer-specific wire DTO. Never replace this with GlitcherRoom or
- * a JSON clone of GlitcherRoom: the internal room contains secret assignments.
- */
 export interface GlitcherClientState {
   roomId: string;
   state: GlitcherGameState;
   settings: GlitcherSettings;
   players: GlitcherPublicPlayer[];
   viewerUserId: string | null;
-  /** Viewer-only seat capability. Persist per room and send on reconnect. */
   reconnectToken: string | null;
 
-  tourNumber: number;
+  selectedSceneIndex: number | null;
+  totalAvailableScenes: number;
   sceneNumber: number;
-  totalScenes: number;
-  discussionSeconds: number;
 
   phaseId: string;
-  phaseStartedAt: number | null;
-  phaseDeadlineAt: number | null;
 
   questions: GlitcherPublicQuestion[];
   privateCard: GlitcherPrivateCard | null;
   questionRound: GlitcherQuestionRound | null;
+  answerLog: GlitcherAnswerLogEntry[];
   voteProgress: GlitcherVoteProgress | null;
   latestReveal: GlitcherSceneReveal | null;
-  tourSummary: GlitcherTourSummary | null;
 }
 
 export interface GlitcherActionPayload {
   actionId: string;
 }
 
+export interface GlitcherSelectScenePayload extends GlitcherActionPayload {
+  sceneIndex: number | null;
+}
+
 export interface GlitcherSelectQuestionPayload extends GlitcherActionPayload {
   questionId: string;
+}
+
+export interface GlitcherAnswerQuestionPayload extends GlitcherActionPayload {
+  answer: boolean;
 }
 
 export interface GlitcherSubmitVotePayload extends GlitcherActionPayload {
@@ -324,6 +286,10 @@ export interface GlitcherClientToServerEvents {
   checkRoom: (roomId: string, callback: (exists: boolean) => void) => void;
   createRoom: (roomId: string, callback: (created: boolean) => void) => void;
   joinRoom: (payload: GlitcherJoinRoomPayload) => void;
+  selectScene: (
+    payload: GlitcherSelectScenePayload,
+    callback?: (ack: GlitcherActionAck) => void,
+  ) => void;
   toggleReady: (
     payload: GlitcherActionPayload,
     callback?: (ack: GlitcherActionAck) => void,
@@ -340,20 +306,12 @@ export interface GlitcherClientToServerEvents {
     payload: GlitcherSelectQuestionPayload,
     callback?: (ack: GlitcherActionAck) => void,
   ) => void;
-  completeQuestion: (
-    payload: GlitcherActionPayload,
+  answerQuestion: (
+    payload: GlitcherAnswerQuestionPayload,
     callback?: (ack: GlitcherActionAck) => void,
   ) => void;
   submitVote: (
     payload: GlitcherSubmitVotePayload,
-    callback?: (ack: GlitcherActionAck) => void,
-  ) => void;
-  nextScene: (
-    payload: GlitcherActionPayload,
-    callback?: (ack: GlitcherActionAck) => void,
-  ) => void;
-  restartTour: (
-    payload: GlitcherActionPayload,
     callback?: (ack: GlitcherActionAck) => void,
   ) => void;
   returnToLobby: (

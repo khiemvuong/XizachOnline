@@ -1,40 +1,33 @@
 import { randomUUID } from "node:crypto";
 import type { Namespace, Server, Socket } from "socket.io";
 import {
-  createGlitcherSceneDeck,
-  getGlitcherDiscussionSeconds,
-  getGlitcherScene,
+  GLITCHER_SCENES,
   GLITCHER_SETTINGS,
-  scoreGlitcher,
   shuffleGlitcherItems,
 } from "./GlitcherData";
 import { GLITCHER_NAMESPACE } from "./GlitcherTypes";
 import type {
   GlitcherActionAck,
   GlitcherActionPayload,
+  GlitcherAnswerLogEntry,
+  GlitcherAnswerQuestionPayload,
   GlitcherAssignment,
   GlitcherClientState,
-  GlitcherGameState,
   GlitcherJoinRoomPayload,
+  GlitcherOutcome,
   GlitcherPlayer,
   GlitcherPrivateCard,
   GlitcherPublicPlayer,
-  GlitcherQuestionRound,
   GlitcherRoom,
   GlitcherSceneReveal,
-  GlitcherScoreDelta,
   GlitcherSelectQuestionPayload,
+  GlitcherSelectScenePayload,
   GlitcherSubmitVotePayload,
-  GlitcherTourSummary,
   GlitcherTransferHostPayload,
 } from "./GlitcherTypes";
 
 type ActionAckCallback = (ack: GlitcherActionAck) => void;
 type BooleanAckCallback = (result: boolean) => void;
-type RoomAction = (
-  room: GlitcherRoom,
-  player: GlitcherPlayer,
-) => GlitcherActionAck;
 
 const ROOM_CODE_PATTERN = /^\d{6}$/;
 const MAX_PLAYER_NAME_LENGTH = 24;
@@ -42,16 +35,6 @@ const MAX_USER_ID_LENGTH = 160;
 const MAX_ACTION_ID_LENGTH = 160;
 const MAX_PROCESSED_ACTIONS_PER_ROOM = 2_048;
 const EMPTY_ROOM_CLEANUP_MS = 5 * 60 * 1_000;
-const QUESTION_RECONNECT_GRACE_MS = 30 * 1_000;
-
-const ACTIVE_SCENE_STATES = new Set<GlitcherGameState>([
-  "ROLE_REVEAL",
-  "QUESTION_ROUND",
-  "PERFORMANCE_SETUP",
-  "PERFORMANCE",
-  "DISCUSSION",
-  "VOTING",
-]);
 
 function ok(code?: string): GlitcherActionAck {
   return code ? { ok: true, code } : { ok: true };
@@ -89,83 +72,62 @@ function getPublicQuestionId(index: number): string {
   return `q-${String(index + 1).padStart(2, "0")}`;
 }
 
-export interface GlitcherEngineOptions {
-  /** Test override; production defaults to the authored 30-second grace. */
-  questionReconnectGraceMs?: number;
-}
-
 export class GlitcherEngine {
   private readonly io: Namespace;
-  private readonly questionReconnectGraceMs: number;
   private readonly rooms = new Map<string, GlitcherRoom>();
-  private readonly phaseTimers = new Map<
-    string,
-    ReturnType<typeof setTimeout>
-  >();
   private readonly emptyRoomCleanupTimers = new Map<
     string,
     ReturnType<typeof setTimeout>
   >();
-  private readonly questionReconnectTimers = new Map<
-    string,
-    ReturnType<typeof setTimeout>
-  >();
 
-  constructor(server: Server, options: GlitcherEngineOptions = {}) {
+  constructor(server: Server) {
     this.io = server.of(GLITCHER_NAMESPACE);
-    this.questionReconnectGraceMs = Math.max(
-      1,
-      options.questionReconnectGraceMs ?? QUESTION_RECONNECT_GRACE_MS,
-    );
     this.setupListeners();
   }
 
-  /** Clears in-memory timers/rooms; primarily used by isolated integration tests. */
   public dispose() {
-    this.phaseTimers.forEach((timer) => clearTimeout(timer));
     this.emptyRoomCleanupTimers.forEach((timer) => clearTimeout(timer));
-    this.questionReconnectTimers.forEach((timer) => clearTimeout(timer));
-    this.phaseTimers.clear();
     this.emptyRoomCleanupTimers.clear();
-    this.questionReconnectTimers.clear();
     this.rooms.clear();
   }
 
   private setupListeners() {
     this.io.on("connection", (socket: Socket) => {
-      socket.on(
-        "checkRoom",
-        (roomId: string, callback: BooleanAckCallback) => {
-          if (typeof callback !== "function") return;
-          callback(
-            typeof roomId === "string" &&
-              ROOM_CODE_PATTERN.test(roomId) &&
-              this.rooms.has(roomId),
-          );
-        },
-      );
+      socket.on("checkRoom", (roomId: string, callback: BooleanAckCallback) => {
+        if (typeof callback !== "function") return;
+        callback(
+          typeof roomId === "string" &&
+            ROOM_CODE_PATTERN.test(roomId) &&
+            this.rooms.has(roomId),
+        );
+      });
 
-      socket.on(
-        "createRoom",
-        (roomId: string, callback: BooleanAckCallback) => {
-          if (typeof callback !== "function") return;
-          if (
-            typeof roomId !== "string" ||
-            !ROOM_CODE_PATTERN.test(roomId) ||
-            this.rooms.has(roomId)
-          ) {
-            callback(false);
-            return;
-          }
-
-          this.createRoom(roomId);
-          callback(true);
-        },
-      );
+      socket.on("createRoom", (roomId: string, callback: BooleanAckCallback) => {
+        if (typeof callback !== "function") return;
+        if (
+          typeof roomId !== "string" ||
+          !ROOM_CODE_PATTERN.test(roomId) ||
+          this.rooms.has(roomId)
+        ) {
+          callback(false);
+          return;
+        }
+        this.createRoom(roomId);
+        callback(true);
+      });
 
       socket.on("joinRoom", (payload: GlitcherJoinRoomPayload) => {
         void this.joinRoom(socket, payload);
       });
+
+      socket.on(
+        "selectScene",
+        (payload: GlitcherSelectScenePayload, callback?: ActionAckCallback) => {
+          this.runRoomAction(socket, payload, callback, (room, player) =>
+            this.selectScene(room, player, payload.sceneIndex),
+          );
+        },
+      );
 
       socket.on(
         "toggleReady",
@@ -207,10 +169,13 @@ export class GlitcherEngine {
       );
 
       socket.on(
-        "completeQuestion",
-        (payload: GlitcherActionPayload, callback?: ActionAckCallback) => {
+        "answerQuestion",
+        (
+          payload: GlitcherAnswerQuestionPayload,
+          callback?: ActionAckCallback,
+        ) => {
           this.runRoomAction(socket, payload, callback, (room, player) =>
-            this.completeQuestion(room, player),
+            this.answerQuestion(room, player, payload.answer),
           );
         },
       );
@@ -220,24 +185,6 @@ export class GlitcherEngine {
         (payload: GlitcherSubmitVotePayload, callback?: ActionAckCallback) => {
           this.runRoomAction(socket, payload, callback, (room, player) =>
             this.submitVote(room, player, payload.targetUserId),
-          );
-        },
-      );
-
-      socket.on(
-        "nextScene",
-        (payload: GlitcherActionPayload, callback?: ActionAckCallback) => {
-          this.runRoomAction(socket, payload, callback, (room, player) =>
-            this.nextScene(room, player),
-          );
-        },
-      );
-
-      socket.on(
-        "restartTour",
-        (payload: GlitcherActionPayload, callback?: ActionAckCallback) => {
-          this.runRoomAction(socket, payload, callback, (room, player) =>
-            this.restartTour(room, player),
           );
         },
       );
@@ -308,26 +255,21 @@ export class GlitcherEngine {
   }
 
   private createRoom(roomId: string): GlitcherRoom {
-    const now = Date.now();
     const room: GlitcherRoom = {
       id: roomId,
       players: [],
       state: "LOBBY",
       settings: { ...GLITCHER_SETTINGS },
-      tourNumber: 0,
+      selectedSceneIndex: null,
+      totalAvailableScenes: GLITCHER_SCENES.length,
       sceneNumber: 0,
       seatOrderUserIds: [],
-      questionCursor: 0,
-      sceneDeckIds: [],
       usedSceneIds: [],
       phaseId: randomUUID(),
-      phaseStartedAt: now,
-      phaseDeadlineAt: null,
       questionRound: null,
+      answerLog: [],
       votes: {},
-      sceneResults: [],
       latestReveal: null,
-      tourSummary: null,
       processedActionIds: new Map(),
     };
     this.rooms.set(roomId, room);
@@ -372,10 +314,7 @@ export class GlitcherEngine {
       return;
     }
     if (assignedUserId && assignedUserId !== userId) {
-      socket.emit(
-        "glitcherError",
-        "Socket này đã được gắn với một ghế khác.",
-      );
+      socket.emit("glitcherError", "Socket này đã được gắn với một ghế khác.");
       return;
     }
 
@@ -398,101 +337,93 @@ export class GlitcherEngine {
       }
 
       if (!isCurrentSocket) {
-        const previousSocket = this.io.sockets.get(existing.id);
-        existing.reconnectToken = randomUUID();
-        if (previousSocket && previousSocket.id !== socket.id) {
-          await previousSocket.leave(roomId);
-          if (previousSocket.data.roomId === roomId) {
-            delete previousSocket.data.roomId;
-            delete previousSocket.data.userId;
-          }
-          previousSocket.emit(
-            "glitcherError",
-            "Ghế này vừa được khôi phục trên một kết nối khác.",
-          );
-        }
+        existing.id = socket.id;
       }
-
-      existing.id = socket.id;
       existing.name = playerName;
-      if (payload.avatarUrl !== undefined) existing.avatarUrl = avatarUrl;
+      if (avatarUrl) existing.avatarUrl = avatarUrl;
       existing.status = "connected";
-    } else {
-      if (room.state !== "LOBBY") {
-        socket.emit(
-          "glitcherError",
-          "Tour đã bắt đầu. Chỉ người có ghế trong phòng mới có thể kết nối lại.",
-        );
-        return;
-      }
-      if (room.players.length >= room.settings.maxPlayers) {
-        socket.emit("glitcherError", "Phòng đã đủ 12 người.");
-        return;
-      }
 
-      room.players.push({
-        id: socket.id,
-        userId,
-        reconnectToken: randomUUID(),
-        name: playerName,
-        avatarUrl,
-        seatIndex: room.players.length,
-        isHost: room.players.length === 0,
-        status: "connected",
-        isReady: false,
-        hasConfirmedRole: false,
-        hasVoted: false,
-        totalScore: 0,
-        sceneScore: 0,
-      });
+      socket.data.roomId = room.id;
+      socket.data.userId = existing.userId;
+      await socket.join(room.id);
+      this.clearEmptyRoomCleanup(room.id);
+      this.broadcastState(room.id);
+      return;
     }
 
-    socket.data.roomId = roomId;
-    socket.data.userId = userId;
-    await socket.join(roomId);
-    this.clearEmptyRoomCleanup(roomId);
-    const joinedPlayer = room.players.find((player) => player.userId === userId);
-    if (joinedPlayer) this.resumeQuestionAfterReconnect(room, joinedPlayer);
-    this.reindexPlayers(room);
-    this.broadcastState(roomId);
+    if (room.state !== "LOBBY") {
+      socket.emit("glitcherError", "Trận đấu đang diễn ra, không thể vào lúc này.");
+      return;
+    }
+
+    if (room.players.length >= room.settings.maxPlayers) {
+      socket.emit("glitcherError", "Phòng đã đủ số lượng người chơi.");
+      return;
+    }
+
+    const isHost = room.players.length === 0;
+    const newPlayer: GlitcherPlayer = {
+      id: socket.id,
+      userId,
+      reconnectToken: reconnectToken || randomUUID(),
+      name: playerName,
+      avatarUrl,
+      seatIndex: room.players.length,
+      isHost,
+      status: "connected",
+      isReady: isHost,
+      hasConfirmedRole: false,
+      hasVoted: false,
+    };
+
+    room.players.push(newPlayer);
+    socket.data.roomId = room.id;
+    socket.data.userId = newPlayer.userId;
+    await socket.join(room.id);
+    this.clearEmptyRoomCleanup(room.id);
+    this.broadcastState(room.id);
   }
 
   private runRoomAction(
     socket: Socket,
-    payload: GlitcherActionPayload,
+    payload: unknown,
     callback: ActionAckCallback | undefined,
-    action: RoomAction,
+    action: (room: GlitcherRoom, player: GlitcherPlayer) => GlitcherActionAck,
   ) {
-    const actionId = isObject(payload)
-      ? normalizeActionId(payload.actionId)
-      : null;
+    if (!isObject(payload)) {
+      this.respondToAction(socket, callback, fail("BAD_PAYLOAD", "Payload không hợp lệ."));
+      return;
+    }
+
+    const actionId = normalizeActionId(payload.actionId);
+    if (!actionId) {
+      this.respondToAction(
+        socket,
+        callback,
+        fail("BAD_ACTION_ID", "actionId không hợp lệ."),
+      );
+      return;
+    }
+
     const room = this.getSocketRoom(socket);
     const userId = socket.data.userId as string | undefined;
     const player = userId
       ? room?.players.find((candidate) => candidate.userId === userId)
       : undefined;
 
-    if (!actionId) {
+    if (!room || !player) {
       this.respondToAction(
         socket,
         callback,
-        fail("INVALID_ACTION_ID", "actionId không hợp lệ."),
-      );
-      return;
-    }
-    if (!room || !player || player.id !== socket.id) {
-      this.respondToAction(
-        socket,
-        callback,
-        fail("NOT_IN_ROOM", "Bạn không còn ở trong phòng này."),
+        fail("UNAUTHORIZED", "Người chơi hoặc phòng không hợp lệ."),
       );
       return;
     }
 
     const actionKey = `${player.userId}:${actionId}`;
-    const cached = room.processedActionIds.get(actionKey);
-    if (cached) {
-      this.respondToAction(socket, callback, cached.ack);
+    const cachedAck = room.processedActionIds.get(actionKey);
+    if (cachedAck) {
+      this.respondToAction(socket, callback, cachedAck.ack);
       return;
     }
 
@@ -502,9 +433,7 @@ export class GlitcherEngine {
       ack: result,
     });
     while (room.processedActionIds.size > MAX_PROCESSED_ACTIONS_PER_ROOM) {
-      const oldestKey = room.processedActionIds.keys().next().value as
-        | string
-        | undefined;
+      const oldestKey = room.processedActionIds.keys().next().value as string | undefined;
       if (!oldestKey) break;
       room.processedActionIds.delete(oldestKey);
     }
@@ -528,6 +457,35 @@ export class GlitcherEngine {
     return roomId ? this.rooms.get(roomId) : undefined;
   }
 
+  private selectScene(
+    room: GlitcherRoom,
+    player: GlitcherPlayer,
+    sceneIndex: unknown,
+  ): GlitcherActionAck {
+    if (room.state !== "LOBBY") {
+      return fail("INVALID_PHASE", "Chỉ có thể chọn màn chơi ở Lobby.");
+    }
+    if (!player.isHost) {
+      return fail("HOST_ONLY", "Chỉ chủ phòng mới có quyền chọn màn chơi.");
+    }
+
+    if (sceneIndex === null || sceneIndex === undefined) {
+      room.selectedSceneIndex = null;
+    } else if (
+      typeof sceneIndex === "number" &&
+      Number.isInteger(sceneIndex) &&
+      sceneIndex >= 0 &&
+      sceneIndex < GLITCHER_SCENES.length
+    ) {
+      room.selectedSceneIndex = sceneIndex;
+    } else {
+      return fail("INVALID_SCENE_INDEX", "Màn chơi chọn không hợp lệ.");
+    }
+
+    this.broadcastState(room.id);
+    return ok();
+  }
+
   private toggleReady(
     room: GlitcherRoom,
     player: GlitcherPlayer,
@@ -544,34 +502,15 @@ export class GlitcherEngine {
     room: GlitcherRoom,
     player: GlitcherPlayer,
   ): GlitcherActionAck {
-    if (room.state !== "LOBBY") {
-      return fail("INVALID_PHASE", "Tour chỉ có thể bắt đầu từ lobby.");
+    if (room.state !== "LOBBY" && room.state !== "REVEAL") {
+      return fail("INVALID_PHASE", "Chỉ có thể bắt đầu trận từ lobby hoặc sau khi kết thúc.");
     }
     if (!player.isHost) {
-      return fail("HOST_ONLY", "Chỉ chủ phòng mới có thể bắt đầu tour.");
+      return fail("HOST_ONLY", "Chỉ chủ phòng mới có thể bắt đầu trận đấu.");
     }
-    return this.prepareTour(room, true);
-  }
 
-  private restartTour(
-    room: GlitcherRoom,
-    player: GlitcherPlayer,
-  ): GlitcherActionAck {
-    if (room.state !== "TOUR_SUMMARY") {
-      return fail("INVALID_PHASE", "Chỉ có thể chơi tour mới từ bảng tổng kết.");
-    }
-    if (!player.isHost) {
-      return fail("HOST_ONLY", "Chỉ chủ phòng mới có thể bắt đầu tour mới.");
-    }
-    return this.prepareTour(room, false);
-  }
-
-  private prepareTour(
-    room: GlitcherRoom,
-    requireReady: boolean,
-  ): GlitcherActionAck {
     const connectedPlayers = room.players.filter(
-      (player) => player.status === "connected",
+      (p) => p.status === "connected",
     );
     if (
       connectedPlayers.length < room.settings.minPlayers ||
@@ -583,118 +522,74 @@ export class GlitcherEngine {
       );
     }
     if (
-      requireReady &&
+      room.state === "LOBBY" &&
       connectedPlayers.some((candidate) => !candidate.isReady)
     ) {
       return fail(
         "PLAYERS_NOT_READY",
-        "Tất cả người chơi phải sẵn sàng trước khi bắt đầu tour.",
+        "Tất cả người chơi phải sẵn sàng trước khi bắt đầu.",
       );
     }
 
-    this.clearPhaseTimer(room.id);
     room.players = connectedPlayers;
     this.ensureHost(room);
     this.reindexPlayers(room);
-    room.tourNumber += 1;
-    room.sceneNumber = 0;
-    room.seatOrderUserIds = room.players.map((player) => player.userId);
-    room.questionCursor =
-      room.questionCursor % Math.max(1, room.seatOrderUserIds.length);
-    room.sceneDeckIds = createGlitcherSceneDeck();
-    room.usedSceneIds = [];
-    room.questionRound = null;
+    room.sceneNumber += 1;
+    room.seatOrderUserIds = room.players.map((p) => p.userId);
+    room.answerLog = [];
     room.votes = {};
-    room.sceneResults = [];
     room.latestReveal = null;
-    room.tourSummary = null;
-    room.currentScene = undefined;
-    room.glitchUserId = undefined;
 
-    room.players.forEach((tourPlayer) => {
-      tourPlayer.isReady = false;
-      tourPlayer.hasConfirmedRole = false;
-      tourPlayer.hasVoted = false;
-      tourPlayer.totalScore = 0;
-      tourPlayer.sceneScore = 0;
-      delete tourPlayer.assignment;
+    room.players.forEach((p) => {
+      p.isReady = false;
+      p.hasConfirmedRole = false;
+      p.hasVoted = false;
+      delete p.assignment;
     });
 
-    const result = this.beginScene(room, true);
-    if (!result.ok) return result;
-    return ok();
-  }
+    // Select scene
+    let sceneToPlay =
+      room.selectedSceneIndex !== null
+        ? GLITCHER_SCENES[room.selectedSceneIndex]
+        : undefined;
 
-  private beginScene(
-    room: GlitcherRoom,
-    incrementSceneNumber: boolean,
-  ): GlitcherActionAck {
-    if (
-      room.players.length < room.settings.minPlayers ||
-      room.players.length > room.settings.maxPlayers
-    ) {
-      this.resetToLobby(room);
-      return fail(
-        "INVALID_PLAYER_COUNT",
-        "Không còn đủ người. Phòng đã trở về lobby.",
-      );
+    if (!sceneToPlay) {
+      sceneToPlay = GLITCHER_SCENES[Math.floor(Math.random() * GLITCHER_SCENES.length)];
     }
 
-    const sceneId = room.sceneDeckIds.shift();
-    const scene = sceneId ? getGlitcherScene(sceneId) : undefined;
-    if (!scene) {
-      this.resetToLobby(room);
-      return fail(
-        "SCENE_DECK_EXHAUSTED",
-        "Không còn scene mới chưa sử dụng. Phòng đã trở về lobby.",
-      );
+    if (!sceneToPlay) {
+      return fail("NO_SCENE", "Không thể tải dữ liệu màn chơi.");
     }
 
-    if (incrementSceneNumber) room.sceneNumber += 1;
-    room.usedSceneIds.push(scene.id);
-    room.currentScene = scene;
-    room.latestReveal = null;
-    room.tourSummary = null;
-    room.questionRound = null;
-    room.votes = {};
+    room.currentScene = sceneToPlay;
 
     const playerCount = room.players.length;
-    const trueRoles = scene.roles.slice(0, playerCount - 1);
+    const trueRoles = sceneToPlay.roles.slice(0, playerCount - 1);
     const glitchRole =
-      scene.glitch_scene.roles[
-        Math.floor(Math.random() * scene.glitch_scene.roles.length)
+      sceneToPlay.glitch_scene.roles[
+        Math.floor(Math.random() * sceneToPlay.glitch_scene.roles.length)
       ];
-    if (!trueRoles.some((role) => role.id === glitchRole.shadow_role_id)) {
-      this.resetToLobby(room);
-      return fail(
-        "INVALID_SCENE_DATA",
-        "Scene có vai mồi không tương thích với số người chơi.",
-      );
-    }
 
     const glitchPlayer =
       room.players[Math.floor(Math.random() * room.players.length)];
     const shuffledTrueRoles = shuffleGlitcherItems(trueRoles);
     let roleIndex = 0;
+
     room.players.forEach((scenePlayer) => {
       const isGlitch = scenePlayer.userId === glitchPlayer.userId;
       const assignment: GlitcherAssignment = {
-        sceneId: scene.id,
+        sceneId: sceneToPlay.id,
         role: isGlitch ? glitchRole : shuffledTrueRoles[roleIndex++],
         isGlitch,
       };
       scenePlayer.assignment = assignment;
       scenePlayer.hasConfirmedRole = false;
       scenePlayer.hasVoted = false;
-      scenePlayer.sceneScore = 0;
     });
-    room.glitchUserId = glitchPlayer.userId;
 
-    this.setPhase(
-      room,
-      "ROLE_REVEAL",
-      room.settings.roleRevealSeconds * 1_000,
-    );
+    room.glitchUserId = glitchPlayer.userId;
+    room.phaseId = randomUUID();
+    room.state = "ROLE_REVEAL";
     this.broadcastState(room.id);
     return ok();
   }
@@ -704,7 +599,7 @@ export class GlitcherEngine {
     player: GlitcherPlayer,
   ): GlitcherActionAck {
     if (room.state !== "ROLE_REVEAL") {
-      return fail("INVALID_PHASE", "Hiện không ở bước xác nhận vai.");
+      return fail("INVALID_PHASE", "Hiện không ở bước xem vai.");
     }
     if (!player.assignment) {
       return fail("NO_ASSIGNMENT", "Bạn chưa được phát vai.");
@@ -714,238 +609,58 @@ export class GlitcherEngine {
     const allConfirmed = room.players.every(
       (candidate) => candidate.hasConfirmedRole,
     );
+
     if (allConfirmed) {
-      this.enterQuestionRound(room);
+      this.startPerformanceAndQuestions(room);
     } else {
       this.broadcastState(room.id);
     }
     return ok();
   }
 
-  private enterQuestionRound(room: GlitcherRoom) {
-    const seats = room.seatOrderUserIds;
-    if (!room.currentScene || seats.length === 0) {
+  private startPerformanceAndQuestions(room: GlitcherRoom) {
+    if (room.seatOrderUserIds.length === 0) {
       this.resetToLobby(room);
       this.broadcastState(room.id);
       return;
     }
+    this.setupPerformerTurn(room, 0);
+  }
 
-    const baseCursor = room.questionCursor % seats.length;
-    const questionerUserIds = [0, 1, 2].map(
-      (offset) => seats[(baseCursor + offset) % seats.length],
-    );
+  private setupPerformerTurn(room: GlitcherRoom, performerIndex: number) {
+    const seats = room.seatOrderUserIds;
+    if (performerIndex >= seats.length) {
+      // All performers have finished! Move to Discussion & Voting phase.
+      this.enterDiscussion(room);
+      return;
+    }
+
+    const targetUserId = seats[performerIndex];
+
+    // Pick 3 questioners in seat order right after targetUserId
+    const questionerUserIds: string[] = [];
+    for (let i = 1; i < seats.length && questionerUserIds.length < 3; i++) {
+      const candidateUserId = seats[(performerIndex + i) % seats.length];
+      if (candidateUserId !== targetUserId) {
+        questionerUserIds.push(candidateUserId);
+      }
+    }
+
     room.questionRound = {
+      targetUserId,
+      performerIndex,
+      totalPerformers: seats.length,
       questionerUserIds,
       currentQuestionerUserId: questionerUserIds[0] ?? null,
       turnIndex: 0,
       stage: "SELECTING",
       selectedQuestionId: null,
       usedQuestionIds: [],
-      completedTurns: 0,
-      pausedForUserId: null,
-      reconnectGraceDeadlineAt: null,
-      pausedQuestionRemainingMs: null,
     };
-    room.state = "QUESTION_ROUND";
-    this.startQuestionSelectionTimer(room);
-    this.broadcastState(room.id);
-  }
 
-  private startQuestionSelectionTimer(room: GlitcherRoom) {
-    this.setPhase(
-      room,
-      "QUESTION_ROUND",
-      room.settings.questionSelectionSeconds * 1_000,
-      (latestRoom) => this.autoSelectQuestion(latestRoom),
-    );
-  }
-
-  private pauseQuestionForReconnect(
-    room: GlitcherRoom,
-    player: GlitcherPlayer,
-  ) {
-    const round = room.questionRound;
-    if (
-      room.state !== "QUESTION_ROUND" ||
-      !round ||
-      round.currentQuestionerUserId !== player.userId ||
-      round.pausedForUserId
-    ) {
-      return;
-    }
-
-    const now = Date.now();
-    const remainingMs = Math.max(
-      1,
-      (room.phaseDeadlineAt ?? now) - now,
-    );
-    this.clearPhaseTimer(room.id);
-    this.clearQuestionReconnectTimer(room.id);
-
+    room.state = "PERFORMANCE_AND_QUESTIONS";
     room.phaseId = randomUUID();
-    room.phaseStartedAt = now;
-    room.phaseDeadlineAt = null;
-    round.pausedForUserId = player.userId;
-    round.reconnectGraceDeadlineAt =
-      now + this.questionReconnectGraceMs;
-    round.pausedQuestionRemainingMs = remainingMs;
-
-    const expectedPhaseId = room.phaseId;
-    const timer = setTimeout(() => {
-      this.questionReconnectTimers.delete(room.id);
-      const latestRoom = this.rooms.get(room.id);
-      if (
-        !latestRoom ||
-        latestRoom.phaseId !== expectedPhaseId ||
-        latestRoom.state !== "QUESTION_ROUND"
-      ) {
-        return;
-      }
-      this.substituteDisconnectedQuestioner(latestRoom);
-    }, this.questionReconnectGraceMs);
-    this.questionReconnectTimers.set(room.id, timer);
-  }
-
-  private resumeQuestionAfterReconnect(
-    room: GlitcherRoom,
-    player: GlitcherPlayer,
-  ) {
-    const round = room.questionRound;
-    if (
-      room.state !== "QUESTION_ROUND" ||
-      !round ||
-      round.pausedForUserId !== player.userId ||
-      round.currentQuestionerUserId !== player.userId
-    ) {
-      return;
-    }
-
-    const remainingMs = Math.max(
-      1,
-      round.pausedQuestionRemainingMs ?? 1,
-    );
-    this.clearQuestionReconnectTimer(room.id);
-    round.pausedForUserId = null;
-    round.reconnectGraceDeadlineAt = null;
-    round.pausedQuestionRemainingMs = null;
-    this.scheduleQuestionContinuation(room, remainingMs);
-  }
-
-  private substituteDisconnectedQuestioner(room: GlitcherRoom) {
-    const round = room.questionRound;
-    if (
-      room.state !== "QUESTION_ROUND" ||
-      !round ||
-      !round.pausedForUserId
-    ) {
-      return;
-    }
-
-    const disconnectedUserId = round.pausedForUserId;
-    const substitute = this.findQuestionSubstitute(
-      room,
-      disconnectedUserId,
-    );
-    const remainingMs = Math.max(
-      1,
-      round.pausedQuestionRemainingMs ?? 1,
-    );
-
-    if (substitute) {
-      round.currentQuestionerUserId = substitute.userId;
-      round.questionerUserIds[round.turnIndex] = substitute.userId;
-    } else {
-      // With no eligible connected seat, keep the automated timeout path alive.
-      round.currentQuestionerUserId = null;
-    }
-    round.pausedForUserId = null;
-    round.reconnectGraceDeadlineAt = null;
-    round.pausedQuestionRemainingMs = null;
-    this.scheduleQuestionContinuation(room, remainingMs);
     this.broadcastState(room.id);
-  }
-
-  private findQuestionSubstitute(
-    room: GlitcherRoom,
-    disconnectedUserId: string,
-  ): GlitcherPlayer | undefined {
-    const round = room.questionRound;
-    if (!round || room.seatOrderUserIds.length === 0) return undefined;
-
-    const reservedQuestioners = new Set(round.questionerUserIds);
-    const disconnectedSeat = room.seatOrderUserIds.indexOf(
-      disconnectedUserId,
-    );
-    const startSeat = disconnectedSeat >= 0 ? disconnectedSeat : 0;
-    const orderedCandidates = Array.from(
-      { length: room.seatOrderUserIds.length - 1 },
-      (_, offset) =>
-        room.seatOrderUserIds[
-          (startSeat + offset + 1) % room.seatOrderUserIds.length
-        ],
-    );
-
-    const findConnected = (
-      allowReservedQuestioner: boolean,
-    ): GlitcherPlayer | undefined => {
-      for (const userId of orderedCandidates) {
-        if (
-          userId === disconnectedUserId ||
-          (!allowReservedQuestioner && reservedQuestioners.has(userId))
-        ) {
-          continue;
-        }
-        const candidate = room.players.find(
-          (player) =>
-            player.userId === userId && player.status === "connected",
-        );
-        if (candidate) return candidate;
-      }
-      return undefined;
-    };
-
-    return findConnected(false) ?? findConnected(true);
-  }
-
-  private scheduleQuestionContinuation(
-    room: GlitcherRoom,
-    durationMs: number,
-  ) {
-    this.clearPhaseTimer(room.id);
-    this.clearQuestionReconnectTimer(room.id);
-    if (room.questionRound) {
-      room.questionRound.pausedForUserId = null;
-      room.questionRound.reconnectGraceDeadlineAt = null;
-      room.questionRound.pausedQuestionRemainingMs = null;
-    }
-    const now = Date.now();
-    const phaseId = randomUUID();
-    const stage = room.questionRound?.stage;
-    room.phaseId = phaseId;
-    room.phaseStartedAt = now;
-    room.phaseDeadlineAt = now + durationMs;
-
-    const timer = setTimeout(() => {
-      this.phaseTimers.delete(room.id);
-      const latestRoom = this.rooms.get(room.id);
-      if (
-        !latestRoom ||
-        latestRoom.phaseId !== phaseId ||
-        latestRoom.state !== "QUESTION_ROUND"
-      ) {
-        return;
-      }
-      if (stage === "SELECTING") this.autoSelectQuestion(latestRoom);
-      else this.completeQuestionInternal(latestRoom);
-    }, durationMs);
-    this.phaseTimers.set(room.id, timer);
-  }
-
-  private clearQuestionReconnectTimer(roomId: string) {
-    const timer = this.questionReconnectTimers.get(roomId);
-    if (!timer) return;
-    clearTimeout(timer);
-    this.questionReconnectTimers.delete(roomId);
   }
 
   private selectQuestion(
@@ -954,17 +669,11 @@ export class GlitcherEngine {
     questionId: unknown,
   ): GlitcherActionAck {
     if (
-      room.state !== "QUESTION_ROUND" ||
+      room.state !== "PERFORMANCE_AND_QUESTIONS" ||
       !room.questionRound ||
       room.questionRound.stage !== "SELECTING"
     ) {
       return fail("INVALID_PHASE", "Hiện không ở bước chọn câu hỏi.");
-    }
-    if (room.questionRound.pausedForUserId) {
-      return fail(
-        "QUESTION_PAUSED",
-        "Lượt hỏi đang tạm dừng để chờ người hỏi kết nối lại.",
-      );
     }
     if (room.questionRound.currentQuestionerUserId !== player.userId) {
       return fail("NOT_QUESTIONER", "Chưa đến lượt bạn chọn câu hỏi.");
@@ -973,160 +682,100 @@ export class GlitcherEngine {
       return fail("INVALID_QUESTION", "Câu hỏi không hợp lệ.");
     }
 
-    return this.selectQuestionInternal(room, questionId);
-  }
-
-  private selectQuestionInternal(
-    room: GlitcherRoom,
-    questionId: string,
-  ): GlitcherActionAck {
     const scene = room.currentScene;
     const round = room.questionRound;
     if (!scene || !round) {
-      return fail("NO_ACTIVE_SCENE", "Không có scene đang hoạt động.");
+      return fail("NO_ACTIVE_SCENE", "Không có màn chơi đang diễn ra.");
     }
+
     if (
       !scene.questions.some(
-        (_question, index) => getPublicQuestionId(index) === questionId,
+        (_q, index) => getPublicQuestionId(index) === questionId,
       )
     ) {
-      return fail("INVALID_QUESTION", "Câu hỏi không thuộc scene hiện tại.");
-    }
-    if (round.usedQuestionIds.includes(questionId)) {
-      return fail("QUESTION_ALREADY_USED", "Câu hỏi này đã được sử dụng.");
+      return fail("INVALID_QUESTION", "Câu hỏi không thuộc màn chơi hiện tại.");
     }
 
     round.selectedQuestionId = questionId;
     round.usedQuestionIds.push(questionId);
     round.stage = "ANSWERING";
-    this.setPhase(
-      room,
-      "QUESTION_ROUND",
-      room.settings.questionAnswerSeconds * 1_000,
-      (latestRoom) => this.completeQuestionInternal(latestRoom),
-    );
     this.broadcastState(room.id);
     return ok();
   }
 
-  private autoSelectQuestion(room: GlitcherRoom) {
-    if (
-      room.state !== "QUESTION_ROUND" ||
-      !room.currentScene ||
-      !room.questionRound ||
-      room.questionRound.stage !== "SELECTING"
-    ) {
-      return;
-    }
-    const unusedQuestions = room.currentScene.questions.filter(
-      (_question, index) =>
-        !room.questionRound!.usedQuestionIds.includes(
-          getPublicQuestionId(index),
-        ),
-    );
-    const selectedQuestion =
-      unusedQuestions[Math.floor(Math.random() * unusedQuestions.length)];
-    if (!selectedQuestion) {
-      this.completeQuestionInternal(room);
-      return;
-    }
-    const selectedIndex = room.currentScene.questions.indexOf(selectedQuestion);
-    this.selectQuestionInternal(room, getPublicQuestionId(selectedIndex));
-  }
-
-  private completeQuestion(
+  private answerQuestion(
     room: GlitcherRoom,
     player: GlitcherPlayer,
+    answer: unknown,
   ): GlitcherActionAck {
     if (
-      room.state !== "QUESTION_ROUND" ||
+      room.state !== "PERFORMANCE_AND_QUESTIONS" ||
       !room.questionRound ||
       room.questionRound.stage !== "ANSWERING"
     ) {
       return fail("INVALID_PHASE", "Hiện không ở bước trả lời câu hỏi.");
     }
-    if (room.questionRound.pausedForUserId) {
-      return fail(
-        "QUESTION_PAUSED",
-        "Lượt hỏi đang tạm dừng để chờ người hỏi kết nối lại.",
-      );
+
+    const round = room.questionRound;
+    if (round.targetUserId !== player.userId) {
+      return fail("NOT_TARGET", "Chỉ người đang diễn mới được trả lời câu hỏi.");
     }
-    if (room.questionRound.currentQuestionerUserId !== player.userId) {
-      return fail("NOT_QUESTIONER", "Chỉ người đang hỏi mới có thể kết thúc lượt.");
+
+    if (typeof answer !== "boolean") {
+      return fail("INVALID_ANSWER", "Câu trả lời phải là Có (true) hoặc Không (false).");
     }
-    this.completeQuestionInternal(room);
+
+    const questioner = room.players.find(
+      (p) => p.userId === round.currentQuestionerUserId,
+    );
+    const questionIndex = round.selectedQuestionId
+      ? parseInt(round.selectedQuestionId.replace("q-", ""), 10) - 1
+      : -1;
+    const question =
+      room.currentScene && questionIndex >= 0
+        ? room.currentScene.questions[questionIndex]
+        : undefined;
+
+    const logEntry: GlitcherAnswerLogEntry = {
+      id: randomUUID(),
+      targetUserId: player.userId,
+      targetName: player.name,
+      questionerUserId: questioner?.userId ?? "",
+      questionerName: questioner?.name ?? "Người hỏi",
+      questionText: question?.text ?? "Câu hỏi",
+      answer,
+    };
+
+    room.answerLog.push(logEntry);
+
+    // Advance question turn
+    round.turnIndex += 1;
+    if (
+      round.turnIndex < 3 &&
+      round.turnIndex < round.questionerUserIds.length
+    ) {
+      round.currentQuestionerUserId =
+        round.questionerUserIds[round.turnIndex] ?? null;
+      round.stage = "SELECTING";
+      round.selectedQuestionId = null;
+    } else {
+      // Finished 3 questions for current target, setup next performer
+      this.setupPerformerTurn(room, round.performerIndex + 1);
+      return ok();
+    }
+
+    this.broadcastState(room.id);
     return ok();
   }
 
-  private completeQuestionInternal(room: GlitcherRoom) {
-    const round = room.questionRound;
-    if (!round || room.state !== "QUESTION_ROUND") return;
-
-    this.clearPhaseTimer(room.id);
-    round.completedTurns += 1;
-    room.questionCursor =
-      (room.questionCursor + 1) % Math.max(1, room.seatOrderUserIds.length);
-
-    if (round.completedTurns >= 3) {
-      room.questionRound = {
-        ...round,
-        currentQuestionerUserId: null,
-      };
-      this.enterPerformanceSetup(room);
-      return;
-    }
-
-    round.turnIndex += 1;
-    round.currentQuestionerUserId =
-      round.questionerUserIds[round.turnIndex] ?? null;
-    round.stage = "SELECTING";
-    round.selectedQuestionId = null;
-    round.pausedForUserId = null;
-    round.reconnectGraceDeadlineAt = null;
-    round.pausedQuestionRemainingMs = null;
-    this.startQuestionSelectionTimer(room);
-    this.broadcastState(room.id);
-  }
-
-  private enterPerformanceSetup(room: GlitcherRoom) {
-    this.setPhase(
-      room,
-      "PERFORMANCE_SETUP",
-      room.settings.performanceSetupSeconds * 1_000,
-      (latestRoom) => this.enterPerformance(latestRoom),
-    );
-    this.broadcastState(room.id);
-  }
-
-  private enterPerformance(room: GlitcherRoom) {
-    this.setPhase(
-      room,
-      "PERFORMANCE",
-      room.settings.performanceSeconds * 1_000,
-      (latestRoom) => this.enterDiscussion(latestRoom),
-    );
-    this.broadcastState(room.id);
-  }
-
   private enterDiscussion(room: GlitcherRoom) {
-    const seconds = getGlitcherDiscussionSeconds(room.players.length);
-    this.setPhase(room, "DISCUSSION", seconds * 1_000, (latestRoom) =>
-      this.enterVoting(latestRoom),
-    );
-    this.broadcastState(room.id);
-  }
-
-  private enterVoting(room: GlitcherRoom) {
+    room.state = "DISCUSSION";
+    room.questionRound = null;
+    room.phaseId = randomUUID();
     room.votes = {};
-    room.players.forEach((player) => {
-      player.hasVoted = false;
+    room.players.forEach((p) => {
+      p.hasVoted = false;
     });
-    this.setPhase(
-      room,
-      "VOTING",
-      room.settings.votingSeconds * 1_000,
-      (latestRoom) => this.resolveVoting(latestRoom, true),
-    );
     this.broadcastState(room.id);
   }
 
@@ -1135,20 +784,20 @@ export class GlitcherEngine {
     player: GlitcherPlayer,
     targetUserId: unknown,
   ): GlitcherActionAck {
-    if (room.state !== "VOTING") {
-      return fail("INVALID_PHASE", "Hiện không ở bước bỏ phiếu.");
+    if (room.state !== "DISCUSSION") {
+      return fail("INVALID_PHASE", "Hiện không ở bước thảo luận & vote.");
     }
     if (player.hasVoted || room.votes[player.userId]) {
-      return fail("VOTE_LOCKED", "Phiếu của bạn đã được khóa.");
+      return fail("VOTE_LOCKED", "Phiếu của bạn đã được ghi nhận.");
     }
     if (typeof targetUserId !== "string" || targetUserId === player.userId) {
-      return fail("INVALID_VOTE", "Bạn không thể bỏ phiếu cho chính mình.");
+      return fail("INVALID_VOTE", "Bạn không thể vote cho chính mình.");
     }
     const target = room.players.find(
       (candidate) => candidate.userId === targetUserId,
     );
     if (!target) {
-      return fail("INVALID_VOTE", "Người được chọn không còn trong scene.");
+      return fail("INVALID_VOTE", "Người được chọn không còn trong trận.");
     }
 
     room.votes[player.userId] = {
@@ -1160,61 +809,65 @@ export class GlitcherEngine {
     player.hasVoted = true;
 
     if (room.players.every((candidate) => candidate.hasVoted)) {
-      this.resolveVoting(room, false);
+      this.resolveVoting(room);
     } else {
       this.broadcastState(room.id);
     }
     return ok();
   }
 
-  private resolveVoting(room: GlitcherRoom, timedOut: boolean) {
-    if (room.state !== "VOTING" || !room.currentScene || !room.glitchUserId) {
-      return;
-    }
-    this.clearPhaseTimer(room.id);
-
-    if (timedOut) {
-      room.players.forEach((player) => {
-        if (room.votes[player.userId]) return;
-        room.votes[player.userId] = {
-          voterUserId: player.userId,
-          targetUserId: null,
-          submittedAt: null,
-          timedOut: true,
-        };
-      });
-    }
+  private resolveVoting(room: GlitcherRoom) {
+    if (!room.currentScene || !room.glitchUserId) return;
 
     const glitchPlayer = room.players.find(
-      (player) => player.userId === room.glitchUserId,
+      (p) => p.userId === room.glitchUserId,
     );
+
     if (!glitchPlayer) {
       this.resetToLobby(room);
       this.broadcastState(room.id);
       return;
     }
 
-    const votesForGlitch = room.players.filter(
-      (player) =>
-        player.userId !== glitchPlayer.userId &&
-        room.votes[player.userId]?.targetUserId === glitchPlayer.userId,
-    ).length;
+    // Tally votes per player
+    const voteCounts = new Map<string, number>();
+    room.players.forEach((p) => voteCounts.set(p.userId, 0));
 
-    const scores: GlitcherScoreDelta[] = room.players.map((player) => {
-      const delta =
-        player.userId === glitchPlayer.userId
-          ? scoreGlitcher(room.players.length, votesForGlitch)
-          : room.votes[player.userId]?.targetUserId === glitchPlayer.userId
-            ? 1
-            : 0;
-      player.sceneScore = delta;
-      player.totalScore += delta;
-      return {
-        userId: player.userId,
-        playerName: player.name,
-        delta,
-      };
+    Object.values(room.votes).forEach((vote) => {
+      if (vote.targetUserId && voteCounts.has(vote.targetUserId)) {
+        voteCounts.set(vote.targetUserId, (voteCounts.get(vote.targetUserId) || 0) + 1);
+      }
     });
+
+    let maxVotes = -1;
+    voteCounts.forEach((count) => {
+      if (count > maxVotes) maxVotes = count;
+    });
+
+    const topVotedUserIds: string[] = [];
+    voteCounts.forEach((count, userId) => {
+      if (count === maxVotes && maxVotes > 0) {
+        topVotedUserIds.push(userId);
+      }
+    });
+
+    let outcome: GlitcherOutcome = "GLITCH_WIN";
+
+    if (topVotedUserIds.length === 1) {
+      // Single majority top vote
+      if (topVotedUserIds[0] === room.glitchUserId) {
+        outcome = "NORMAL_WIN"; // Dân Thắng
+      } else {
+        outcome = "GLITCH_WIN"; // Glitch Thắng
+      }
+    } else if (topVotedUserIds.length > 1) {
+      // Tie for top votes
+      if (topVotedUserIds.includes(room.glitchUserId)) {
+        outcome = "TIE"; // Hòa
+      } else {
+        outcome = "GLITCH_WIN"; // Glitch Thắng
+      }
+    }
 
     const reveal: GlitcherSceneReveal = {
       sceneNumber: room.sceneNumber,
@@ -1231,80 +884,24 @@ export class GlitcherEngine {
       votes: room.players.map((player) => {
         const vote = room.votes[player.userId];
         const target = vote?.targetUserId
-          ? room.players.find(
-              (candidate) => candidate.userId === vote.targetUserId,
-            )
+          ? room.players.find((c) => c.userId === vote.targetUserId)
           : undefined;
         return {
           voterUserId: player.userId,
           voterName: player.name,
           targetUserId: vote?.targetUserId ?? null,
           targetName: target?.name ?? null,
-          timedOut: vote?.timedOut ?? true,
+          timedOut: vote?.timedOut ?? false,
         };
       }),
-      scores,
+      outcome,
       revealedAt: Date.now(),
     };
+
     room.latestReveal = reveal;
-    room.sceneResults.push(reveal);
-    this.setPhase(room, "REVEAL", null);
+    room.state = "REVEAL";
+    room.phaseId = randomUUID();
     this.broadcastState(room.id);
-  }
-
-  private nextScene(
-    room: GlitcherRoom,
-    player: GlitcherPlayer,
-  ): GlitcherActionAck {
-    if (room.state !== "REVEAL") {
-      return fail("INVALID_PHASE", "Chỉ có thể tiếp tục sau khi reveal.");
-    }
-    if (!player.isHost) {
-      return fail("HOST_ONLY", "Chỉ chủ phòng mới có thể mở scene tiếp theo.");
-    }
-
-    if (room.sceneNumber >= room.settings.scenesPerTour) {
-      this.enterTourSummary(room);
-      this.broadcastState(room.id);
-      return ok();
-    }
-    return this.beginScene(room, true);
-  }
-
-  private enterTourSummary(room: GlitcherRoom) {
-    const sorted = [...room.players].sort(
-      (left, right) =>
-        right.totalScore - left.totalScore ||
-        left.seatIndex - right.seatIndex,
-    );
-    let previousScore: number | null = null;
-    let previousRank = 0;
-    const rankedPlayers = sorted.map((player, index) => {
-      const rank =
-        previousScore === player.totalScore ? previousRank : index + 1;
-      previousScore = player.totalScore;
-      previousRank = rank;
-      return {
-        rank,
-        userId: player.userId,
-        name: player.name,
-        avatarUrl: player.avatarUrl,
-        totalScore: player.totalScore,
-      };
-    });
-    const topScore = rankedPlayers[0]?.totalScore;
-    const summary: GlitcherTourSummary = {
-      tourNumber: room.tourNumber,
-      rankedPlayers,
-      winnerUserIds:
-        topScore === undefined
-          ? []
-          : rankedPlayers
-              .filter((player) => player.totalScore === topScore)
-              .map((player) => player.userId),
-    };
-    room.tourSummary = summary;
-    this.setPhase(room, "TOUR_SUMMARY", null);
   }
 
   private returnToLobby(
@@ -1353,15 +950,12 @@ export class GlitcherEngine {
     player: GlitcherPlayer,
     socket: Socket,
   ): GlitcherActionAck {
-    const wasActiveScene = ACTIVE_SCENE_STATES.has(room.state);
-    const removedSeatIndex = room.seatOrderUserIds.indexOf(player.userId);
     room.players = room.players.filter(
       (candidate) => candidate.userId !== player.userId,
     );
     room.seatOrderUserIds = room.seatOrderUserIds.filter(
       (userId) => userId !== player.userId,
     );
-    this.adjustQuestionCursorAfterSeatRemoval(room, removedSeatIndex);
     this.ensureHost(room);
     this.reindexPlayers(room);
 
@@ -1374,74 +968,31 @@ export class GlitcherEngine {
       return ok();
     }
 
-    if (wasActiveScene) {
-      this.clearPhaseTimer(room.id);
-      if (room.players.length < room.settings.minPlayers) {
-        this.resetToLobby(room);
-      } else {
-        const replacement = this.beginScene(room, false);
-        if (!replacement.ok) {
-          this.broadcastState(room.id);
-          return replacement;
-        }
-        return ok("SCENE_REDEALT");
-      }
-    } else if (
-      room.state === "REVEAL" &&
-      room.sceneNumber < room.settings.scenesPerTour &&
-      room.players.length < room.settings.minPlayers
-    ) {
+    if (room.state !== "LOBBY" && room.players.length < room.settings.minPlayers) {
       this.resetToLobby(room);
-    } else if (room.state === "TOUR_SUMMARY") {
-      this.enterTourSummary(room);
     }
 
     this.broadcastState(room.id);
     return ok();
   }
 
-  private adjustQuestionCursorAfterSeatRemoval(
-    room: GlitcherRoom,
-    removedSeatIndex: number,
-  ) {
-    if (removedSeatIndex >= 0 && removedSeatIndex < room.questionCursor) {
-      room.questionCursor -= 1;
-    }
-    room.questionCursor =
-      room.seatOrderUserIds.length === 0
-        ? 0
-        : room.questionCursor % room.seatOrderUserIds.length;
-  }
-
   private resetToLobby(room: GlitcherRoom) {
-    this.clearPhaseTimer(room.id);
-    this.clearQuestionReconnectTimer(room.id);
-    room.players = room.players.filter(
-      (player) => player.status === "connected",
-    );
+    room.players = room.players.filter((p) => p.status === "connected");
     this.ensureHost(room);
     this.reindexPlayers(room);
     room.state = "LOBBY";
-    room.sceneNumber = 0;
     room.seatOrderUserIds = [];
-    room.sceneDeckIds = [];
-    room.usedSceneIds = [];
     room.currentScene = undefined;
     room.glitchUserId = undefined;
     room.questionRound = null;
+    room.answerLog = [];
     room.votes = {};
-    room.sceneResults = [];
     room.latestReveal = null;
-    room.tourSummary = null;
     room.phaseId = randomUUID();
-    room.phaseStartedAt = Date.now();
-    room.phaseDeadlineAt = null;
     room.players.forEach((player) => {
       player.isReady = false;
       player.hasConfirmedRole = false;
       player.hasVoted = false;
-      player.totalScore = 0;
-      player.sceneScore = 0;
       delete player.assignment;
     });
   }
@@ -1449,15 +1000,11 @@ export class GlitcherEngine {
   private handleDisconnect(socket: Socket) {
     const room = this.getSocketRoom(socket);
     if (!room) return;
-    const player = room.players.find(
-      (candidate) => candidate.id === socket.id,
-    );
+    const player = room.players.find((c) => c.id === socket.id);
     if (!player) return;
 
     if (room.state === "LOBBY") {
-      room.players = room.players.filter(
-        (candidate) => candidate.userId !== player.userId,
-      );
+      room.players = room.players.filter((c) => c.userId !== player.userId);
       this.ensureHost(room);
       this.reindexPlayers(room);
       if (room.players.length === 0) {
@@ -1466,12 +1013,7 @@ export class GlitcherEngine {
       }
     } else {
       player.status = "disconnected";
-      this.pauseQuestionForReconnect(room, player);
-      if (
-        !room.players.some(
-          (candidate) => candidate.status === "connected",
-        )
-      ) {
+      if (!room.players.some((c) => c.status === "connected")) {
         this.scheduleEmptyRoomCleanup(room.id);
       }
     }
@@ -1494,52 +1036,13 @@ export class GlitcherEngine {
     });
   }
 
-  private setPhase(
-    room: GlitcherRoom,
-    state: GlitcherGameState,
-    durationMs: number | null,
-    onTimeout?: (room: GlitcherRoom) => void,
-  ) {
-    this.clearPhaseTimer(room.id);
-    this.clearQuestionReconnectTimer(room.id);
-    if (room.questionRound) {
-      room.questionRound.pausedForUserId = null;
-      room.questionRound.reconnectGraceDeadlineAt = null;
-      room.questionRound.pausedQuestionRemainingMs = null;
-    }
-    const now = Date.now();
-    const phaseId = randomUUID();
-    room.state = state;
-    room.phaseId = phaseId;
-    room.phaseStartedAt = now;
-    room.phaseDeadlineAt = durationMs === null ? null : now + durationMs;
-
-    if (durationMs === null || !onTimeout) return;
-    const timer = setTimeout(() => {
-      this.phaseTimers.delete(room.id);
-      const latestRoom = this.rooms.get(room.id);
-      if (!latestRoom || latestRoom.phaseId !== phaseId) return;
-      onTimeout(latestRoom);
-    }, durationMs);
-    this.phaseTimers.set(room.id, timer);
-  }
-
-  private clearPhaseTimer(roomId: string) {
-    const timer = this.phaseTimers.get(roomId);
-    if (!timer) return;
-    clearTimeout(timer);
-    this.phaseTimers.delete(roomId);
-  }
-
   private scheduleEmptyRoomCleanup(roomId: string) {
     this.clearEmptyRoomCleanup(roomId);
     const timer = setTimeout(() => {
       this.emptyRoomCleanupTimers.delete(roomId);
       const room = this.rooms.get(roomId);
       if (!room) return;
-      if (
-        room.players.some((player) => player.status === "connected")
-      ) {
+      if (room.players.some((player) => player.status === "connected")) {
         return;
       }
       this.deleteRoom(roomId);
@@ -1555,8 +1058,6 @@ export class GlitcherEngine {
   }
 
   private deleteRoom(roomId: string) {
-    this.clearPhaseTimer(roomId);
-    this.clearQuestionReconnectTimer(roomId);
     this.clearEmptyRoomCleanup(roomId);
     this.rooms.delete(roomId);
   }
@@ -1594,8 +1095,7 @@ export class GlitcherEngine {
     room: GlitcherRoom,
     viewer: GlitcherPlayer | undefined,
   ): GlitcherClientState {
-    const sceneIsVisible =
-      room.state !== "LOBBY" && room.state !== "TOUR_SUMMARY";
+    const sceneIsVisible = room.state !== "LOBBY";
     const questions =
       sceneIsVisible && room.currentScene
         ? room.currentScene.questions.map((question, index) => ({
@@ -1619,9 +1119,6 @@ export class GlitcherEngine {
           name: assignment.role.name,
           action: assignment.role.action,
         },
-        answers: room.currentScene.questions.map(
-          (question) => assignment.role.answers[question.id],
-        ),
       };
     }
 
@@ -1639,25 +1136,6 @@ export class GlitcherEngine {
       }),
     );
 
-    const questionRound: GlitcherQuestionRound | null =
-      room.state === "QUESTION_ROUND" && room.questionRound
-        ? {
-            questionerUserIds: [...room.questionRound.questionerUserIds],
-            currentQuestionerUserId:
-              room.questionRound.currentQuestionerUserId,
-            turnIndex: room.questionRound.turnIndex,
-            stage: room.questionRound.stage,
-            selectedQuestionId: room.questionRound.selectedQuestionId,
-            usedQuestionIds: [...room.questionRound.usedQuestionIds],
-            completedTurns: room.questionRound.completedTurns,
-            pausedForUserId: room.questionRound.pausedForUserId,
-            reconnectGraceDeadlineAt:
-              room.questionRound.reconnectGraceDeadlineAt,
-            pausedQuestionRemainingMs:
-              room.questionRound.pausedQuestionRemainingMs,
-          }
-        : null;
-
     return {
       roomId: room.id,
       state: room.state,
@@ -1665,30 +1143,22 @@ export class GlitcherEngine {
       players: publicPlayers,
       viewerUserId: viewer?.userId ?? null,
       reconnectToken: viewer?.reconnectToken ?? null,
-      tourNumber: room.tourNumber,
+      selectedSceneIndex: room.selectedSceneIndex,
+      totalAvailableScenes: room.totalAvailableScenes,
       sceneNumber: room.sceneNumber,
-      totalScenes: room.settings.scenesPerTour,
-      discussionSeconds: getGlitcherDiscussionSeconds(room.players.length),
       phaseId: room.phaseId,
-      phaseStartedAt: room.phaseStartedAt,
-      phaseDeadlineAt: room.phaseDeadlineAt,
       questions,
       privateCard,
-      questionRound,
+      questionRound: room.questionRound,
+      answerLog: room.answerLog,
       voteProgress:
-        room.state === "VOTING"
+        room.state === "DISCUSSION"
           ? {
-              submitted: room.players.filter((player) => player.hasVoted)
-                .length,
+              submitted: room.players.filter((player) => player.hasVoted).length,
               required: room.players.length,
             }
           : null,
-      latestReveal:
-        room.state === "REVEAL" || room.state === "TOUR_SUMMARY"
-          ? room.latestReveal
-          : null,
-      tourSummary:
-        room.state === "TOUR_SUMMARY" ? room.tourSummary : null,
+      latestReveal: room.state === "REVEAL" ? room.latestReveal : null,
     };
   }
 }

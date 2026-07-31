@@ -1,17 +1,15 @@
 export type GlitcherActionEvent =
+  | "selectScene"
   | "toggleReady"
   | "startTour"
   | "confirmRole"
   | "selectQuestion"
-  | "completeQuestion"
+  | "answerQuestion"
   | "submitVote"
-  | "nextScene"
-  | "restartTour"
   | "returnToLobby"
   | "explicitLeave";
 
 export type EmitGlitcherAction = (
   event: GlitcherActionEvent,
-  payload?: Record<string, string>,
+  payload?: Record<string, unknown>,
 ) => void;
-

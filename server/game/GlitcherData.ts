@@ -11,12 +11,6 @@ export const GLITCHER_SETTINGS: GlitcherSettings = {
   minPlayers: 6,
   maxPlayers: 12,
   scenesPerTour: 4,
-  roleRevealSeconds: 75,
-  questionSelectionSeconds: 30,
-  questionAnswerSeconds: 12,
-  performanceSetupSeconds: 15,
-  performanceSeconds: 45,
-  votingSeconds: 60,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -39,23 +33,15 @@ function validateAnswers(
   value: unknown,
   questionIds: string[],
   context: string,
-): asserts value is Record<string, boolean> {
+): asserts value is Record<string, boolean> | undefined {
+  if (value === undefined || value === null) return;
   if (!isRecord(value)) {
     throw new Error(`${context}.answers must be an object`);
   }
 
-  const answerKeys = Object.keys(value).sort();
-  const expectedKeys = [...questionIds].sort();
-  if (
-    answerKeys.length !== expectedKeys.length ||
-    answerKeys.some((key, index) => key !== expectedKeys[index])
-  ) {
-    throw new Error(`${context}.answers must contain exactly the scene question ids`);
-  }
-
-  for (const questionId of questionIds) {
-    if (typeof value[questionId] !== "boolean") {
-      throw new Error(`${context}.answers.${questionId} must be boolean`);
+  for (const key of Object.keys(value)) {
+    if (typeof value[key] !== "boolean") {
+      throw new Error(`${context}.answers.${key} must be boolean`);
     }
   }
 }
@@ -172,12 +158,6 @@ export function validateGlitcherData(
         throw new Error(
           `${roleContext}.shadow_role_id must reference a role selected at 6 players`,
         );
-      }
-
-      for (const questionId of questionIds) {
-        if (shadowRole.answers[questionId] !== glitchRole.answers[questionId]) {
-          throw new Error(`${roleContext} answers must match its shadow role`);
-        }
       }
     });
   });

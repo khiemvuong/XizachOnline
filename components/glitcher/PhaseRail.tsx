@@ -1,10 +1,10 @@
 import type { GlitcherGameState } from "@/server/game/GlitcherTypes";
 
 const PHASE_STEPS = [
-  { label: "Hỏi", states: ["QUESTION_ROUND"] },
-  { label: "Diễn", states: ["PERFORMANCE_SETUP", "PERFORMANCE"] },
-  { label: "Thảo luận", states: ["DISCUSSION"] },
-  { label: "Vote", states: ["VOTING"] },
+  { label: "Xem vai", states: ["ROLE_REVEAL"] },
+  { label: "Diễn & Hỏi", states: ["PERFORMANCE_AND_QUESTIONS"] },
+  { label: "Thảo luận & Vote", states: ["DISCUSSION", "VOTING"] },
+  { label: "Kết quả", states: ["REVEAL"] },
 ] as const;
 
 export default function PhaseRail({ state }: { state: GlitcherGameState }) {
