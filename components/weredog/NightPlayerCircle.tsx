@@ -155,7 +155,7 @@ function PlayerNode({
   isSaved = false,
 }: PlayerNodeProps) {
   const isDead = !player.isAlive;
-  const canClick = !isDead && !isDisabled && !player.isHost && onSelect;
+  const canClick = !isDead && !isDisabled && !player.isModerator && onSelect;
   const frameColors = player.visibleFrameType
     ? ROLE_FRAME_COLORS[player.visibleFrameType]
     : null;
@@ -235,7 +235,7 @@ function PlayerNode({
         {/* Selection pulse ring */}
         {isSelected && (
           <div
-            className="absolute inset-[-4px] rounded-full animate-pulse motion-reduce:animate-none pointer-events-none"
+            className="absolute -inset-1 rounded-full animate-pulse motion-reduce:animate-none pointer-events-none"
             style={{ border: `2px solid ${highlightColor}`, opacity: 0.5 }}
           />
         )}
@@ -271,7 +271,7 @@ function PlayerNode({
 
       {/* Player name */}
       <span
-        className={`font-gothic-body text-[11px] sm:text-[12px] font-semibold tracking-wide max-w-[85px] truncate transition-colors ${
+        className={`font-gothic-body text-[11px] sm:text-[12px] font-semibold tracking-wide max-w-21.25 truncate transition-colors ${
           isDead ? "text-[#445257] line-through" : isSelected ? "text-white" : "text-[#829ea2]"
         }`}
         style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
@@ -281,7 +281,7 @@ function PlayerNode({
       </span>
 
       {/* Host badge */}
-      {player.isHost && (
+      {player.isModerator && (
         <span className="text-[7px] text-amber-400 font-gothic-ui font-bold uppercase tracking-wider">
           Host
         </span>
@@ -355,7 +355,7 @@ export default function NightPlayerCircle({
   };
 
   // Filter out host from player slots (host is moderator, not in circle)
-  const gamePlayers = players.filter(p => !p.isHost);
+  const gamePlayers = players.filter(p => !p.isModerator);
   const avatarSize = gamePlayers.length > 8 ? 54 : 70;
   const total = gamePlayers.length;
 

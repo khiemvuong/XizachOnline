@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import NightActionPanel from "./NightActionPanel";
 import NightPlayerCircle from "./NightPlayerCircle";
 import WolfVoteUI from "./WolfVoteUI";
@@ -85,15 +84,12 @@ export default function WeredogNight({
   const isMyTurn = myRole === currentActiveRole && !isHost;
   const display = ROLE_DISPLAY[currentActiveRole];
 
-  const [timeLeft, setTimeLeft] = useState(20);
-  const [hasConfirmedThisPhase, setHasConfirmedThisPhase] = useState(false);
-
   const isActiveRoleDead = (() => {
     if (currentActiveRole === "Wolf") {
-      const wolves = players.filter((p) => p.role === "Wolf" && !p.isHost);
+      const wolves = players.filter((p) => p.role === "Wolf" && !p.isModerator);
       return wolves.length === 0 || wolves.every((w) => !w.isAlive);
     }
-    const rolePlayer = players.find((p) => p.role === currentActiveRole && !p.isHost);
+    const rolePlayer = players.find((p) => p.role === currentActiveRole && !p.isModerator);
     return rolePlayer ? !rolePlayer.isAlive : true;
   })();
 
@@ -180,42 +176,6 @@ export default function WeredogNight({
     return "";
   })();
 
-  // Track prev values to reset timer and confirmation flag during render phase
-  const [prevActiveRole, setPrevActiveRole] = useState(currentActiveRole);
-  const [prevHasRoleActed, setPrevHasRoleActed] = useState(hasRoleActed);
-
-  if (currentActiveRole !== prevActiveRole || hasRoleActed !== prevHasRoleActed) {
-    setPrevActiveRole(currentActiveRole);
-    setPrevHasRoleActed(hasRoleActed);
-    setTimeLeft(20);
-    setHasConfirmedThisPhase(false);
-  }
-
-  // Countdown timer
-  useEffect(() => {
-    if (!isHost || !onHostConfirm || hasConfirmedThisPhase) return;
-    if (!hasRoleActed) return; // Do not count down until player has acted!
-    if (currentActiveRole === "Wolf" && wolfVictimUserId === null) return; // No countdown on tie
-
-    if (timeLeft <= 0) {
-      // Defer state update to next tick to avoid synchronous setState inside effect body
-      const timer = setTimeout(() => {
-        setHasConfirmedThisPhase(true);
-        onHostConfirm();
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-    const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [timeLeft, isHost, onHostConfirm, hasRoleActed, hasConfirmedThisPhase, currentActiveRole, wolfVictimUserId]);
-
-  const handleHostConfirm = useCallback(() => {
-    if (hasConfirmedThisPhase) return;
-    setHasConfirmedThisPhase(true);
-    setTimeLeft(0);
-    onHostConfirm?.();
-  }, [onHostConfirm, hasConfirmedThisPhase]);
-
   // ── Render the role-specific action UI ──
   const renderRoleUI = () => {
     if (isHost) {
@@ -249,8 +209,7 @@ export default function WeredogNight({
                 isMyTurn={false}
                 hasActed={false}
                 isHost={true}
-                onHostConfirm={handleHostConfirm}
-                hostTimerSeconds={timeLeft}
+                onHostConfirm={onHostConfirm}
                 hasRoleActed={hasRoleActed}
                 hostActionSummary={hostActionSummary}
                 onWolfRevote={onWolfRevote}

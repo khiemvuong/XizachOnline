@@ -38,7 +38,7 @@ export default function WitchPotionUI({
   const display = ROLE_DISPLAY.Witch;
 
   const disabledIds = players
-    .filter(p => !p.isAlive || p.isHost || p.userId === myUserId)
+    .filter(p => !p.isAlive || p.isModerator || p.userId === myUserId)
     .map(p => p.userId);
 
   const handleChooseAction = (act: WitchAction) => {

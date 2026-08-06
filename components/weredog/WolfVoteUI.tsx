@@ -60,7 +60,7 @@ export default function WolfVoteUI({
           glowColor={display.glowColor}
           myUserId={myUserId}
           centerContent={
-            <div className="w-full flex flex-col items-center justify-center gap-2 animate-fade-in text-center max-w-[280px]">
+            <div className="w-full flex flex-col items-center justify-center gap-2 animate-fade-in text-center max-w-70">
               <h1 
                 className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon text-red-500"
                 style={{ 
@@ -80,7 +80,7 @@ export default function WolfVoteUI({
     );
   }
   const disabledIds = players
-    .filter(p => !p.isAlive || p.isHost)
+    .filter(p => !p.isAlive || p.isModerator)
     .map(p => p.userId);
 
   const handleSelect = (userId: string) => {

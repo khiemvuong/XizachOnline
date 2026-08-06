@@ -49,7 +49,7 @@ export default function WeredogDayStart({
     : null;
   const isHunterShooter = !!pendingHunterShotUserId && myUserId === pendingHunterShotUserId;
   const hunterDisabledIds = players
-    .filter((p) => !p.isAlive || p.isHost || p.userId === pendingHunterShotUserId)
+    .filter((p) => !p.isAlive || p.isModerator || p.userId === pendingHunterShotUserId)
     .map((p) => p.userId);
   const hunterSelectedPlayer = hunterSelectedId
     ? players.find((p) => p.userId === hunterSelectedId)
@@ -78,7 +78,7 @@ export default function WeredogDayStart({
               myUserId={myUserId}
               aimedUserIds={hunterSelectedId ? [hunterSelectedId] : []}
               centerContent={
-                <div className="w-full max-w-[300px] animate-fade-in text-center">
+                <div className="w-full max-w-75 animate-fade-in text-center">
                   <span className="font-gothic-label text-[10px] uppercase tracking-[0.35em] text-amber-300/80">
                     Thợ săn ngã xuống
                   </span>
@@ -165,7 +165,7 @@ export default function WeredogDayStart({
             </div>
 
             {/* Victim Display Board */}
-            <div className="w-[380px] min-h-[100px] flex flex-col justify-center items-center gap-2 mb-6">
+            <div className="w-95 min-h-25 flex flex-col justify-center items-center gap-2 mb-6">
               {deathsThisNight.length > 0 ? (
                 deathsThisNight.map(userId => {
                   const victim = players.find(p => p.userId === userId);
@@ -201,7 +201,7 @@ export default function WeredogDayStart({
               {isHost && onStartVoting ? (
                 <button
                   onClick={onStartVoting}
-                  className="relative w-[220px] h-[52px] hover:scale-[1.04] active:scale-95 transition-all duration-200 cursor-pointer group"
+                  className="relative w-55 h-13 hover:scale-[1.04] active:scale-95 transition-all duration-200 cursor-pointer group"
                 >
                   {/* Double-bordered Gothic Plaque Banner */}
                   <svg 
@@ -210,7 +210,7 @@ export default function WeredogDayStart({
                     viewBox="0 0 220 32" 
                     fill="none" 
                     xmlns="http://www.w3.org/2000/svg"
-                    className="absolute top-[10px] left-0 drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]"
+                    className="absolute top-2.5 left-0 drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]"
                   >
                     <defs>
                       <linearGradient id="plaqueGradDay" x1="0" y1="0" x2="0" y2="1">
@@ -235,7 +235,7 @@ export default function WeredogDayStart({
 
                   {/* Combined Text Left */}
                   <span 
-                    className="absolute left-5 top-[26px] -translate-y-1/2 font-gothic-body text-[#e1c7a5] text-xs font-black uppercase tracking-wider select-none"
+                    className="absolute left-5 top-6.5 -translate-y-1/2 font-gothic-body text-[#e1c7a5] text-xs font-black uppercase tracking-wider select-none"
                     style={{ textShadow: "0 1.5px 3px rgba(0,0,0,0.8)" }}
                   >
                     {continueLabel}

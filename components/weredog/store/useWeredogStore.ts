@@ -1,16 +1,21 @@
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
 import { type WeredogRoom } from "@/server/game/WeredogTypes";
+import { getOrCreateBrowserIdentity } from "@/lib/client/playerIdentity";
+import { readRoomCapability, writeRoomCapability } from "@/lib/client/roomCapabilityStorage";
+import { normalizeSocketError } from "@/lib/client/socketError";
 
 interface WeredogState {
   // State
   socket: Socket | null;
   gameState: WeredogRoom | null;
   userId: string;
+  errorMessage: string;
 
   // Actions
   connect: (roomId: string, profile: { name: string; avatarUrl: string | null }) => void;
   disconnect: () => void;
+  leaveRoom: (onComplete?: () => void) => void;
   updateProfile: (name: string, avatarUrl: string | null) => void;
   sendMessage: (text: string) => void;
   startGame: () => void;
@@ -42,16 +47,13 @@ export const useWeredogStore = create<WeredogState>((set, get) => ({
   socket: null,
   gameState: null,
   userId: "",
+  errorMessage: "",
 
   // Socket Lifecycle Connection
   connect: (roomId, profile) => {
     if (typeof window === "undefined") return;
 
-    let storedUserId = localStorage.getItem("xz_userId");
-    if (!storedUserId) {
-      storedUserId = Math.random().toString(36).substring(2, 10);
-      localStorage.setItem("xz_userId", storedUserId);
-    }
+    const storedUserId = getOrCreateBrowserIdentity();
     set({ userId: storedUserId });
 
     // Close any previous connection
@@ -73,15 +75,20 @@ export const useWeredogStore = create<WeredogState>((set, get) => ({
         playerName: nameToUse,
         userId: storedUserId,
         avatarUrl: profile.avatarUrl,
+        reconnectToken: readRoomCapability("weredog", roomId, storedUserId),
       });
     });
 
-    socketio.on("stateUpdate", (state: WeredogRoom) => {
-      set({ gameState: state });
+    socketio.on("sessionEstablished", ({ reconnectToken }: { reconnectToken: string }) => {
+      writeRoomCapability("weredog", roomId, storedUserId, reconnectToken);
     });
 
-    socketio.on("weredogError", (err: string) => {
-      console.error("Weredog room error:", err);
+    socketio.on("stateUpdate", (state: WeredogRoom) => {
+      set({ gameState: state, errorMessage: "" });
+    });
+
+    socketio.on("weredogError", (error: unknown) => {
+      set({ errorMessage: normalizeSocketError(error, "Không thể tham gia phòng Weredog.") });
     });
 
     set({ socket: socketio });
@@ -92,7 +99,28 @@ export const useWeredogStore = create<WeredogState>((set, get) => ({
     if (currentSocket) {
       currentSocket.disconnect();
     }
-    set({ socket: null, gameState: null });
+    set({ socket: null, gameState: null, errorMessage: "" });
+  },
+
+  leaveRoom: (onComplete) => {
+    const currentSocket = get().socket;
+    if (!currentSocket?.connected) {
+      currentSocket?.disconnect();
+      set({ socket: null, gameState: null, errorMessage: "" });
+      onComplete?.();
+      return;
+    }
+    let completed = false;
+    const finish = () => {
+      if (completed) return;
+      completed = true;
+      window.clearTimeout(fallbackTimer);
+      currentSocket?.disconnect();
+      set({ socket: null, gameState: null, errorMessage: "" });
+      onComplete?.();
+    };
+    const fallbackTimer = window.setTimeout(finish, 700);
+    currentSocket.emit("explicitLeave", finish);
   },
 
   // Profile Updating

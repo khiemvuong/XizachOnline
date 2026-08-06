@@ -143,6 +143,7 @@ export interface NightPlayer {
   avatar: string;
   isAlive: boolean;
   isHost: boolean;
+  isModerator: boolean;
   role?: WeredogRoleName;
   /** Visible role frame — only visible to self, seer (if inspected), and host */
   visibleFrameType?: RoleDisplayConfig["frameType"];

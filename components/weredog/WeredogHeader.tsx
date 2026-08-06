@@ -128,7 +128,7 @@ export default function WeredogHeader({
                 </span>
               )}
             </div>
-            <span className="text-[10px] sm:text-xs font-serif italic text-[#e1c7a5] font-bold max-w-[80px] sm:max-w-[120px] truncate leading-none">
+            <span className="text-[10px] sm:text-xs font-serif italic text-[#e1c7a5] font-bold max-w-20 sm:max-w-30 truncate leading-none">
               {profileName || "Vô danh"}
             </span>
           </button>

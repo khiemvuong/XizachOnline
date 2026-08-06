@@ -14,7 +14,6 @@ interface NightActionPanelProps {
   children?: ReactNode;
   isHost?: boolean;
   onHostConfirm?: () => void;
-  hostTimerSeconds?: number;
   hasRoleActed?: boolean;
   hostActionSummary?: string;
   onWolfRevote?: () => void;
@@ -32,7 +31,6 @@ export default function NightActionPanel({
   children,
   isHost = false,
   onHostConfirm,
-  hostTimerSeconds,
   hasRoleActed = false,
   hostActionSummary,
   onWolfRevote,
@@ -48,7 +46,7 @@ export default function NightActionPanel({
     const headingText = isSleepRole ? display.actionHeading : `CHỜ ${display.nameVi.toUpperCase()}...`;
 
     return (
-      <div className="w-full flex flex-col items-center justify-center py-2 animate-fade-in text-center max-w-[280px]">
+      <div className="w-full flex flex-col items-center justify-center py-2 animate-fade-in text-center max-w-70">
         {/* Large Gothic Heading */}
         <h1 
           className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
@@ -64,14 +62,14 @@ export default function NightActionPanel({
           <div className="flex flex-col items-center gap-2">
             {/* Host Action Summary Log */}
             {hostActionSummary && (
-              <div className="bg-[#1b1c22]/90 border border-[#cda372]/30 rounded-lg px-3 py-1.5 max-w-[260px] text-center shadow-[0_4px_12px_rgba(0,0,0,0.6)] animate-fade-in mb-1">
+              <div className="bg-[#1b1c22]/90 border border-[#cda372]/30 rounded-lg px-3 py-1.5 max-w-65 text-center shadow-[0_4px_12px_rgba(0,0,0,0.6)] animate-fade-in mb-1">
                 <span className="font-serif italic text-xs text-[#e1c7a5] font-bold block leading-relaxed">
                   {hostActionSummary}
                 </span>
               </div>
             )}
 
-            {/* Timer status */}
+            {/* Untimed phases wait for an explicit moderator action. */}
             <div className="flex items-center gap-1.5 text-[10px] font-serif uppercase tracking-widest text-[#829ea2]/60 select-none">
               {hasRoleActed ? (
                 isActiveRoleDead ? (
@@ -81,10 +79,7 @@ export default function NightActionPanel({
                 ) : roleKey === "Wolf" && hostActionSummary?.includes("Bất đồng") ? (
                   <span className="text-amber-400 font-bold">⚠️ Hòa phiếu! Quản trò hãy quyết định</span>
                 ) : (
-                  <>
-                    <span>Tự động chuyển tiếp sau:</span>
-                    <span className="font-mono font-bold text-rose-400">{hostTimerSeconds ?? 20}s</span>
-                  </>
+                  <span>Đã sẵn sàng — chờ quản trò xác nhận</span>
                 )
               ) : (
                 <span className="text-amber-500 font-bold">⏳ Đang chờ người chơi chọn...</span>
@@ -106,7 +101,7 @@ export default function NightActionPanel({
               type="button"
               onClick={onHostConfirm}
               disabled={!hasRoleActed}
-              className={`relative w-[200px] h-[52px] transition-[opacity,transform] duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11] ${
+              className={`relative w-50 h-13 transition-[opacity,transform] duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11] ${
                 hasRoleActed ? "hover:scale-[1.03] active:scale-95 cursor-pointer" : "opacity-40 cursor-not-allowed"
               }`}
             >
@@ -117,7 +112,7 @@ export default function NightActionPanel({
                 viewBox="0 0 200 32"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className="absolute top-[10px] left-0 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]"
+                className="absolute top-2.5 left-0 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]"
               >
                 <defs>
                   <linearGradient id={`plaqueNight-Host-${roleKey}`} x1="0" y1="0" x2="0" y2="1">
@@ -143,7 +138,7 @@ export default function NightActionPanel({
 
               {/* Button label */}
               <span
-                className="absolute left-0 w-[140px] text-center top-[26px] -translate-y-1/2 font-gothic-body text-xs sm:text-sm font-black uppercase tracking-wider select-none"
+                className="absolute left-0 w-35 text-center top-6.5 -translate-y-1/2 font-gothic-body text-xs sm:text-sm font-black uppercase tracking-wider select-none"
                 style={{ color: display.highlightColor, textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
               >
                 XÁC NHẬN
@@ -179,7 +174,7 @@ export default function NightActionPanel({
   // ── Already Acted View ──
   if (hasActed) {
     return (
-      <div className="w-full flex flex-col items-center justify-center gap-1.5 animate-fade-in text-center max-w-[280px]">
+      <div className="w-full flex flex-col items-center justify-center gap-1.5 animate-fade-in text-center max-w-70">
         {/* Large Gothic Heading */}
         <h1 
           className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
@@ -202,7 +197,7 @@ export default function NightActionPanel({
   // ── Active Turn View ──
   if (isElderDead && roleKey !== "Wolf") {
     return (
-      <div className="w-full flex flex-col items-center justify-center gap-2 animate-fade-in text-center max-w-[280px]">
+      <div className="w-full flex flex-col items-center justify-center gap-2 animate-fade-in text-center max-w-70">
         <h1 
           className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon text-red-500"
           style={{ 
@@ -220,7 +215,7 @@ export default function NightActionPanel({
   }
 
   return (
-    <div className="w-full flex flex-col items-center animate-fade-in text-center max-w-[280px]">
+    <div className="w-full flex flex-col items-center animate-fade-in text-center max-w-70">
       {/* Large Gothic Heading */}
       <h1 
         className="font-gothic-label text-base sm:text-xl md:text-2xl tracking-widest uppercase font-black select-none leading-tight text-shadow-maroon"
@@ -241,7 +236,7 @@ export default function NightActionPanel({
           type="button"
           onClick={onConfirm}
           disabled={confirmDisabled}
-          className={`relative w-[200px] h-[52px] transition-[opacity,transform] duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11] ${
+          className={`relative w-50 h-13 transition-[opacity,transform] duration-200 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0d11] ${
             confirmDisabled
               ? "opacity-40 cursor-not-allowed"
               : "hover:scale-[1.03] active:scale-95 cursor-pointer"
@@ -254,7 +249,7 @@ export default function NightActionPanel({
             viewBox="0 0 200 32"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className="absolute top-[10px] left-0 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]"
+            className="absolute top-2.5 left-0 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]"
           >
             <defs>
               <linearGradient id={`plaqueNight-${roleKey}`} x1="0" y1="0" x2="0" y2="1">
@@ -280,7 +275,7 @@ export default function NightActionPanel({
 
           {/* Button label */}
           <span
-            className="absolute left-0 w-[140px] text-center top-[26px] -translate-y-1/2 font-gothic-body text-xs sm:text-sm font-bold italic tracking-wider select-none"
+            className="absolute left-0 w-35 text-center top-6.5 -translate-y-1/2 font-gothic-body text-xs sm:text-sm font-bold italic tracking-wider select-none"
             style={{ color: display.highlightColor, textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
           >
             {label}

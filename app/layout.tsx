@@ -1,9 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Cormorant_Garamond, Noto_Serif, Manrope, Lora, Cinzel_Decorative } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Cormorant_Garamond,
+  Noto_Serif,
+  Manrope,
+  Lora,
+  Cinzel_Decorative,
+  Space_Grotesk,
+  Inter,
+  IBM_Plex_Mono,
+} from "next/font/google";
 import "./globals.css";
 import "./avalon.css";
 import "./deception.css";
 import "./weredog.css";
+import "./glitcher.css";
 
 const cormorant = Cormorant_Garamond({
   weight: ['400', '500', '600', '700'],
@@ -37,6 +49,24 @@ const cinzelDecorative = Cinzel_Decorative({
   variable: '--font-cinzel-decorative',
 });
 
+const glitcherDisplay = Space_Grotesk({
+  weight: "variable",
+  subsets: ["vietnamese", "latin"],
+  variable: "--font-glitcher-display",
+});
+
+const glitcherBody = Inter({
+  weight: "variable",
+  subsets: ["vietnamese", "latin"],
+  variable: "--font-glitcher-body",
+});
+
+const glitcherMono = IBM_Plex_Mono({
+  weight: ["500", "600"],
+  subsets: ["vietnamese", "latin"],
+  variable: "--font-glitcher-mono",
+});
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -48,13 +78,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PanGames",
+  title: "Pangames",
   description: "Trò chơi nhập vai chiến lược nhiều người chơi",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "PanGames",
+    title: "Pangames",
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -70,7 +100,7 @@ export default function RootLayout({
     <html
       lang="vi"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} ${notoSerif.variable} ${manrope.variable} ${lora.variable} ${cinzelDecorative.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} ${notoSerif.variable} ${manrope.variable} ${lora.variable} ${cinzelDecorative.variable} ${glitcherDisplay.variable} ${glitcherBody.variable} ${glitcherMono.variable} h-full antialiased`}
     >
       <head>
         {/* iOS PWA: hides Safari UI completely when launched from home screen */}

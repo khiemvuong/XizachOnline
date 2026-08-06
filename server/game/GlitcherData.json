@@ -1,0 +1,3114 @@
+{
+  "game": {
+    "id": "the-glitcher",
+    "title": "The Glitcher",
+    "version": "1.0.0",
+    "language": "vi-VN"
+  },
+  "scenes": [
+    {
+      "id": "TG-S01",
+      "slug": "dam-cuoi-ga-ran",
+      "title": "Đám cưới nhận nhầm 200 phần gà rán",
+      "description": "Một đám cưới vừa nhận nhầm 200 phần gà rán ngay trước lúc làm lễ.",
+      "questions": [
+        {
+          "id": "TG-S01-Q01",
+          "text": "Bạn có đang chủ động cố đưa tình hình trở lại đúng kế hoạch không?"
+        },
+        {
+          "id": "TG-S01-Q02",
+          "text": "Bạn có đang giữ hoặc bảo vệ một thứ gì đó không?"
+        },
+        {
+          "id": "TG-S01-Q03",
+          "text": "Bạn có cần người khác hợp tác để hoàn thành việc của mình không?"
+        },
+        {
+          "id": "TG-S01-Q04",
+          "text": "Bạn có đang cố che giấu điều mình làm không?"
+        },
+        {
+          "id": "TG-S01-Q05",
+          "text": "Bạn có đang chịu áp lực phải hành động nhanh không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S01-R01",
+          "name": "Điều phối viên đám cưới",
+          "action": "Ôm sổ tưởng tượng, bảo vệ khu vực làm lễ và liên tục ra hiệu mọi người dọn hộp khỏi lối đi.",
+          "answers": {
+            "TG-S01-Q01": true,
+            "TG-S01-Q02": true,
+            "TG-S01-Q03": true,
+            "TG-S01-Q04": false,
+            "TG-S01-Q05": false
+          }
+        },
+        {
+          "id": "TG-S01-R02",
+          "name": "Cô dâu",
+          "action": "Gom các hộp gà, giấu chúng dưới tà váy và tỏ ra như không có chuyện gì.",
+          "answers": {
+            "TG-S01-Q01": true,
+            "TG-S01-Q02": true,
+            "TG-S01-Q03": false,
+            "TG-S01-Q04": true,
+            "TG-S01-Q05": false
+          }
+        },
+        {
+          "id": "TG-S01-R03",
+          "name": "Chú rể",
+          "action": "Chỉ vào hóa đơn, gọi người giao hàng và thúc giục xử lý đơn nhầm trước giờ làm lễ.",
+          "answers": {
+            "TG-S01-Q01": true,
+            "TG-S01-Q02": false,
+            "TG-S01-Q03": true,
+            "TG-S01-Q04": false,
+            "TG-S01-Q05": true
+          }
+        },
+        {
+          "id": "TG-S01-R04",
+          "name": "Người giao hàng",
+          "action": "Ôm chặt kiện hàng, đưa điện thoại xin mã OTP và ra hiệu cần người nhận xác nhận ngay.",
+          "answers": {
+            "TG-S01-Q01": false,
+            "TG-S01-Q02": true,
+            "TG-S01-Q03": true,
+            "TG-S01-Q04": false,
+            "TG-S01-Q05": true
+          }
+        },
+        {
+          "id": "TG-S01-R05",
+          "name": "Đứa trẻ ăn vụng",
+          "action": "Lén lấy một miếng gà, giấu sau lưng và ăn thật nhanh trước khi bị phát hiện.",
+          "answers": {
+            "TG-S01-Q01": false,
+            "TG-S01-Q02": false,
+            "TG-S01-Q03": false,
+            "TG-S01-Q04": true,
+            "TG-S01-Q05": true
+          }
+        },
+        {
+          "id": "TG-S01-R06",
+          "name": "Người thân chia quà",
+          "action": "Giữ riêng vài hộp gà rồi lén biến chúng thành quà mang về cho khách.",
+          "answers": {
+            "TG-S01-Q01": false,
+            "TG-S01-Q02": true,
+            "TG-S01-Q03": false,
+            "TG-S01-Q04": true,
+            "TG-S01-Q05": false
+          }
+        },
+        {
+          "id": "TG-S01-R07",
+          "name": "MC chữa cháy",
+          "action": "Tiếp tục dẫn chương trình, giả vờ mọi thứ nằm trong kịch bản và thúc mọi người về đúng vị trí.",
+          "answers": {
+            "TG-S01-Q01": true,
+            "TG-S01-Q02": false,
+            "TG-S01-Q03": false,
+            "TG-S01-Q04": true,
+            "TG-S01-Q05": true
+          }
+        },
+        {
+          "id": "TG-S01-R08",
+          "name": "Nhiếp ảnh gia",
+          "action": "Che các hộp thừa bằng phông tưởng tượng, bảo vệ góc chụp và âm thầm kéo người khác vào tạo dáng.",
+          "answers": {
+            "TG-S01-Q01": false,
+            "TG-S01-Q02": true,
+            "TG-S01-Q03": true,
+            "TG-S01-Q04": true,
+            "TG-S01-Q05": false
+          }
+        },
+        {
+          "id": "TG-S01-R09",
+          "name": "Phụ huynh hai họ",
+          "action": "Phân công khách bê hộp sang hai bên và cố biến việc chia gà thành một phần nghi lễ.",
+          "answers": {
+            "TG-S01-Q01": true,
+            "TG-S01-Q02": false,
+            "TG-S01-Q03": true,
+            "TG-S01-Q04": false,
+            "TG-S01-Q05": false
+          }
+        },
+        {
+          "id": "TG-S01-R10",
+          "name": "Nhân viên phục vụ",
+          "action": "Lén gọi người hỗ trợ, chuyền hộp ra sau và tranh thủ dọn sạch trước khi nghi thức bắt đầu.",
+          "answers": {
+            "TG-S01-Q01": false,
+            "TG-S01-Q02": false,
+            "TG-S01-Q03": true,
+            "TG-S01-Q04": true,
+            "TG-S01-Q05": true
+          }
+        },
+        {
+          "id": "TG-S01-R11",
+          "name": "Đại diện nhà hàng",
+          "action": "Giữ lại các món ăn đúng kế hoạch, chặn khách lấy nhầm và gấp rút sắp xếp lại bàn tiệc.",
+          "answers": {
+            "TG-S01-Q01": true,
+            "TG-S01-Q02": true,
+            "TG-S01-Q03": false,
+            "TG-S01-Q04": false,
+            "TG-S01-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Khai trương phòng gym với lô protein mới",
+        "description": "Một phòng gym đang khai trương và nhận rất nhiều hộp protein dùng để giới thiệu cho khách.",
+        "roles": [
+          {
+            "id": "TG-S01-G01",
+            "name": "Huấn luyện viên quản lý protein",
+            "action": "Ôm và sắp xếp các hộp protein, giấu một hộp bị móp rồi tiếp tục tỏ ra mọi thứ hoàn hảo.",
+            "shadow_role_id": "TG-S01-R02",
+            "answers": {
+              "TG-S01-Q01": true,
+              "TG-S01-Q02": true,
+              "TG-S01-Q03": false,
+              "TG-S01-Q04": true,
+              "TG-S01-Q05": false
+            }
+          },
+          {
+            "id": "TG-S01-G02",
+            "name": "Trợ lý khai trương gym",
+            "action": "Giữ lô hàng mẫu, gọi người khác đến nhận và thúc giục hoàn tất khu trưng bày trước giờ mở cửa.",
+            "shadow_role_id": "TG-S01-R04",
+            "answers": {
+              "TG-S01-Q01": false,
+              "TG-S01-Q02": true,
+              "TG-S01-Q03": true,
+              "TG-S01-Q04": false,
+              "TG-S01-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S02",
+      "slug": "anh-tot-nghiep-gap-gio",
+      "title": "Chụp ảnh tốt nghiệp giữa cơn gió lớn",
+      "description": "Cả lớp đang chụp ảnh tốt nghiệp thì gió mạnh làm mũ, bằng và quần áo bay khắp nơi.",
+      "questions": [
+        {
+          "id": "TG-S02-Q01",
+          "text": "Nếu mọi người nghe theo bạn, tình hình có dễ kiểm soát hơn không?"
+        },
+        {
+          "id": "TG-S02-Q02",
+          "text": "Phần lớn hành động của bạn có nhằm giữ một người hoặc vật an toàn không?"
+        },
+        {
+          "id": "TG-S02-Q03",
+          "text": "Vai của bạn có phụ thuộc vào phản ứng của ít nhất một người khác không?"
+        },
+        {
+          "id": "TG-S02-Q04",
+          "text": "Bạn có không muốn người khác phát hiện mục đích thật của mình không?"
+        },
+        {
+          "id": "TG-S02-Q05",
+          "text": "Nếu chậm thêm một lúc, nhân vật của bạn có gặp rắc rối hơn không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S02-R01",
+          "name": "Lớp trưởng",
+          "action": "Giữ danh sách và một chồng bằng tưởng tượng, liên tục xếp hàng và kéo mọi người về đúng vị trí.",
+          "answers": {
+            "TG-S02-Q01": true,
+            "TG-S02-Q02": true,
+            "TG-S02-Q03": true,
+            "TG-S02-Q04": false,
+            "TG-S02-Q05": false
+          }
+        },
+        {
+          "id": "TG-S02-R02",
+          "name": "Sinh viên có mũ hỏng",
+          "action": "Giữ chặt chiếc mũ, lén che phần tua bị đứt và cố tự chỉnh nó trước máy ảnh.",
+          "answers": {
+            "TG-S02-Q01": true,
+            "TG-S02-Q02": true,
+            "TG-S02-Q03": false,
+            "TG-S02-Q04": true,
+            "TG-S02-Q05": false
+          }
+        },
+        {
+          "id": "TG-S02-R03",
+          "name": "Nhiếp ảnh gia",
+          "action": "Chống máy ảnh trước gió, ra hiệu cả lớp nhìn vào ống kính và thúc giục chụp ngay khi gió dịu.",
+          "answers": {
+            "TG-S02-Q01": true,
+            "TG-S02-Q02": false,
+            "TG-S02-Q03": true,
+            "TG-S02-Q04": false,
+            "TG-S02-Q05": true
+          }
+        },
+        {
+          "id": "TG-S02-R04",
+          "name": "Phụ huynh giữ hoa",
+          "action": "Ôm bó hoa và tấm bằng, gọi con đứng sát lại và cố hoàn tất bức ảnh trước khi đồ vật bay mất.",
+          "answers": {
+            "TG-S02-Q01": false,
+            "TG-S02-Q02": true,
+            "TG-S02-Q03": true,
+            "TG-S02-Q04": false,
+            "TG-S02-Q05": true
+          }
+        },
+        {
+          "id": "TG-S02-R05",
+          "name": "Sinh viên dùng băng dính",
+          "action": "Lén dán tà áo và chiếc mũ vào người rồi vội trở lại hàng trước khi bị nhìn thấy.",
+          "answers": {
+            "TG-S02-Q01": false,
+            "TG-S02-Q02": false,
+            "TG-S02-Q03": false,
+            "TG-S02-Q04": true,
+            "TG-S02-Q05": true
+          }
+        },
+        {
+          "id": "TG-S02-R06",
+          "name": "Chuyên viên trang điểm",
+          "action": "Che khuôn mặt cho một sinh viên, lén sửa phần trang điểm bị lem và giữ nó khỏi gió.",
+          "answers": {
+            "TG-S02-Q01": false,
+            "TG-S02-Q02": true,
+            "TG-S02-Q03": false,
+            "TG-S02-Q04": true,
+            "TG-S02-Q05": false
+          }
+        },
+        {
+          "id": "TG-S02-R07",
+          "name": "Trợ lý phông nền",
+          "action": "Giả vờ phông vẫn ổn, cố điều khiển nó trong gió và vội che phần vừa bị bung.",
+          "answers": {
+            "TG-S02-Q01": true,
+            "TG-S02-Q02": false,
+            "TG-S02-Q03": false,
+            "TG-S02-Q04": true,
+            "TG-S02-Q05": true
+          }
+        },
+        {
+          "id": "TG-S02-R08",
+          "name": "Người bạn giữ áo",
+          "action": "Giữ tà áo cho bạn, ra hiệu cùng đổi tư thế và che một lỗi trang phục khỏi ống kính.",
+          "answers": {
+            "TG-S02-Q01": false,
+            "TG-S02-Q02": true,
+            "TG-S02-Q03": true,
+            "TG-S02-Q04": true,
+            "TG-S02-Q05": false
+          }
+        },
+        {
+          "id": "TG-S02-R09",
+          "name": "Giảng viên",
+          "action": "Yêu cầu cả lớp đứng nghiêm, nhìn thẳng và phối hợp tạo một bức ảnh trang trọng.",
+          "answers": {
+            "TG-S02-Q01": true,
+            "TG-S02-Q02": false,
+            "TG-S02-Q03": true,
+            "TG-S02-Q04": false,
+            "TG-S02-Q05": false
+          }
+        },
+        {
+          "id": "TG-S02-R10",
+          "name": "Sinh viên bắt mũ",
+          "action": "Lén ra hiệu bạn bè chặn các hướng, chạy hứng mũ và cố quay lại hàng trước lúc chụp.",
+          "answers": {
+            "TG-S02-Q01": false,
+            "TG-S02-Q02": false,
+            "TG-S02-Q03": true,
+            "TG-S02-Q04": true,
+            "TG-S02-Q05": true
+          }
+        },
+        {
+          "id": "TG-S02-R11",
+          "name": "Trợ lý thiết bị",
+          "action": "Giữ máy ảnh và chân máy an toàn, điều chỉnh góc rồi gấp rút báo hiệu đã sẵn sàng.",
+          "answers": {
+            "TG-S02-Q01": true,
+            "TG-S02-Q02": true,
+            "TG-S02-Q03": false,
+            "TG-S02-Q04": false,
+            "TG-S02-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Đoàn phim quay cảnh bão nhân tạo",
+        "description": "Một đoàn phim đang chủ động tạo gió mạnh để quay cảnh các nhân vật vật lộn trong bão.",
+        "roles": [
+          {
+            "id": "TG-S02-G01",
+            "name": "Nhân viên hiệu ứng gió",
+            "action": "Điều khiển chiếc quạt tưởng tượng, giữ thiết bị và che giấu việc nó đang rung bất thường.",
+            "shadow_role_id": "TG-S02-R02",
+            "answers": {
+              "TG-S02-Q01": true,
+              "TG-S02-Q02": true,
+              "TG-S02-Q03": false,
+              "TG-S02-Q04": true,
+              "TG-S02-Q05": false
+            }
+          },
+          {
+            "id": "TG-S02-G02",
+            "name": "Diễn viên giữ đạo cụ",
+            "action": "Ôm đạo cụ và trang phục, phối hợp với đạo diễn rồi vội vào đúng dấu trước lúc quay.",
+            "shadow_role_id": "TG-S02-R04",
+            "answers": {
+              "TG-S02-Q01": false,
+              "TG-S02-Q02": true,
+              "TG-S02-Q03": true,
+              "TG-S02-Q04": false,
+              "TG-S02-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S03",
+      "slug": "dien-tap-thoat-hiem-van-phong",
+      "title": "Diễn tập thoát hiểm bị hiểu nhầm thành team-building",
+      "description": "Văn phòng đang diễn tập thoát hiểm, nhưng vài nhân viên tưởng đây là một trò team-building.",
+      "questions": [
+        {
+          "id": "TG-S03-Q01",
+          "text": "Bạn có đang trực tiếp xử lý rắc rối chính không?"
+        },
+        {
+          "id": "TG-S03-Q02",
+          "text": "Bạn có đang cố ngăn người khác lấy, chạm hoặc làm hỏng thứ mình quản lý không?"
+        },
+        {
+          "id": "TG-S03-Q03",
+          "text": "Bạn có đang ra hiệu, hướng dẫn hoặc yêu cầu người khác hành động không?"
+        },
+        {
+          "id": "TG-S03-Q04",
+          "text": "Bạn có đang lén làm điều trái với kế hoạch chung không?"
+        },
+        {
+          "id": "TG-S03-Q05",
+          "text": "Bạn có cần hoàn thành việc trước khi một chuyện khác xảy ra không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S03-R01",
+          "name": "Người phụ trách an toàn",
+          "action": "Giữ lối đi thông thoáng, chỉ hướng thoát và ra hiệu mọi người cúi thấp đi theo mình.",
+          "answers": {
+            "TG-S03-Q01": true,
+            "TG-S03-Q02": true,
+            "TG-S03-Q03": true,
+            "TG-S03-Q04": false,
+            "TG-S03-Q05": false
+          }
+        },
+        {
+          "id": "TG-S03-R02",
+          "name": "Nhân viên giấu laptop",
+          "action": "Ôm laptop trong áo, cố kiểm soát nó và giả vờ mình không mang theo đồ bị cấm.",
+          "answers": {
+            "TG-S03-Q01": true,
+            "TG-S03-Q02": true,
+            "TG-S03-Q03": false,
+            "TG-S03-Q04": true,
+            "TG-S03-Q05": false
+          }
+        },
+        {
+          "id": "TG-S03-R03",
+          "name": "Lễ tân",
+          "action": "Chỉ lối ra, gọi từng nhóm di chuyển và thúc giục người còn đứng lại.",
+          "answers": {
+            "TG-S03-Q01": true,
+            "TG-S03-Q02": false,
+            "TG-S03-Q03": true,
+            "TG-S03-Q04": false,
+            "TG-S03-Q05": true
+          }
+        },
+        {
+          "id": "TG-S03-R04",
+          "name": "Người hỗ trợ đồng nghiệp",
+          "action": "Đỡ một người và giữ túi của họ, phối hợp từng bước để ra ngoài thật nhanh.",
+          "answers": {
+            "TG-S03-Q01": false,
+            "TG-S03-Q02": true,
+            "TG-S03-Q03": true,
+            "TG-S03-Q04": false,
+            "TG-S03-Q05": true
+          }
+        },
+        {
+          "id": "TG-S03-R05",
+          "name": "Người quay lại lấy cà phê",
+          "action": "Lén đổi hướng, chộp cốc cà phê rồi vội nhập lại đoàn trước khi bị phát hiện.",
+          "answers": {
+            "TG-S03-Q01": false,
+            "TG-S03-Q02": false,
+            "TG-S03-Q03": false,
+            "TG-S03-Q04": true,
+            "TG-S03-Q05": true
+          }
+        },
+        {
+          "id": "TG-S03-R06",
+          "name": "Người cứu chậu cây",
+          "action": "Ôm chặt chậu cây tưởng tượng, giấu nó sau người và cố mang ra ngoài.",
+          "answers": {
+            "TG-S03-Q01": false,
+            "TG-S03-Q02": true,
+            "TG-S03-Q03": false,
+            "TG-S03-Q04": true,
+            "TG-S03-Q05": false
+          }
+        },
+        {
+          "id": "TG-S03-R07",
+          "name": "Quản lý giữ hình ảnh",
+          "action": "Điều khiển hàng người, vội che các sai sót và giả vờ cuộc diễn tập đang hoàn hảo.",
+          "answers": {
+            "TG-S03-Q01": true,
+            "TG-S03-Q02": false,
+            "TG-S03-Q03": false,
+            "TG-S03-Q04": true,
+            "TG-S03-Q05": true
+          }
+        },
+        {
+          "id": "TG-S03-R08",
+          "name": "Đồng nghiệp che chắn",
+          "action": "Giữ đồ giúp một người, phối hợp che khuất nó và lén đưa qua lối ra.",
+          "answers": {
+            "TG-S03-Q01": false,
+            "TG-S03-Q02": true,
+            "TG-S03-Q03": true,
+            "TG-S03-Q04": true,
+            "TG-S03-Q05": false
+          }
+        },
+        {
+          "id": "TG-S03-R09",
+          "name": "Sếp kiểm quân số",
+          "action": "Ra hiệu mọi người đứng theo phòng ban, điểm danh và điều phối người đi tìm thành viên thiếu.",
+          "answers": {
+            "TG-S03-Q01": true,
+            "TG-S03-Q02": false,
+            "TG-S03-Q03": true,
+            "TG-S03-Q04": false,
+            "TG-S03-Q05": false
+          }
+        },
+        {
+          "id": "TG-S03-R10",
+          "name": "Thực tập sinh thi đua",
+          "action": "Lén biến việc sơ tán thành cuộc đua, ra hiệu đồng đội vượt lên trước khi hết giờ.",
+          "answers": {
+            "TG-S03-Q01": false,
+            "TG-S03-Q02": false,
+            "TG-S03-Q03": true,
+            "TG-S03-Q04": true,
+            "TG-S03-Q05": true
+          }
+        },
+        {
+          "id": "TG-S03-R11",
+          "name": "Nhân viên kỹ thuật",
+          "action": "Kiểm soát cửa và nút báo động, bảo vệ lối thoát rồi gấp rút xử lý chỗ bị kẹt.",
+          "answers": {
+            "TG-S03-Q01": true,
+            "TG-S03-Q02": true,
+            "TG-S03-Q03": false,
+            "TG-S03-Q04": false,
+            "TG-S03-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Thử thách tập thể dục buổi sáng tại văn phòng",
+        "description": "Công ty đang tổ chức buổi tập thể dục, gồm cúi thấp, chạy tại chỗ và di chuyển theo hiệu lệnh.",
+        "roles": [
+          {
+            "id": "TG-S03-G01",
+            "name": "Người giữ nhạc tập",
+            "action": "Điều khiển nhịp tập, giữ điện thoại phát nhạc và lén bỏ qua những động tác mình không làm được.",
+            "shadow_role_id": "TG-S03-R02",
+            "answers": {
+              "TG-S03-Q01": true,
+              "TG-S03-Q02": true,
+              "TG-S03-Q03": false,
+              "TG-S03-Q04": true,
+              "TG-S03-Q05": false
+            }
+          },
+          {
+            "id": "TG-S03-G02",
+            "name": "Trợ lý huấn luyện",
+            "action": "Giữ dụng cụ tập, phối hợp chia hàng và thúc mọi người đổi động tác đúng giờ.",
+            "shadow_role_id": "TG-S03-R04",
+            "answers": {
+              "TG-S03-Q01": false,
+              "TG-S03-Q02": true,
+              "TG-S03-Q03": true,
+              "TG-S03-Q04": false,
+              "TG-S03-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S04",
+      "slug": "tuong-bao-tang-di-chuyen",
+      "title": "Những bức tượng trong bảo tàng biết di chuyển",
+      "description": "Bảo vệ bảo tàng phát hiện các bức tượng lén đổi tư thế mỗi khi mình quay lưng.",
+      "questions": [
+        {
+          "id": "TG-S04-Q01",
+          "text": "Bạn có đang chủ động điều khiển diễn biến xung quanh mình không?"
+        },
+        {
+          "id": "TG-S04-Q02",
+          "text": "Có thứ gì đó bạn nhất định không muốn đánh mất hoặc làm hỏng không?"
+        },
+        {
+          "id": "TG-S04-Q03",
+          "text": "Bạn có cần ít nhất một người khác phối hợp với mình không?"
+        },
+        {
+          "id": "TG-S04-Q04",
+          "text": "Bạn có đang giả vờ rằng mọi thứ vẫn bình thường không?"
+        },
+        {
+          "id": "TG-S04-Q05",
+          "text": "Bạn có đang thúc giục bản thân hoặc người khác vì thời gian không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S04-R01",
+          "name": "Quản lý bảo tàng",
+          "action": "Bảo vệ khoảng cách quanh tượng, điều phối nhân viên và cố đưa mọi hiện vật về đúng tư thế.",
+          "answers": {
+            "TG-S04-Q01": true,
+            "TG-S04-Q02": true,
+            "TG-S04-Q03": true,
+            "TG-S04-Q04": false,
+            "TG-S04-Q05": false
+          }
+        },
+        {
+          "id": "TG-S04-R02",
+          "name": "Tượng chiến binh",
+          "action": "Giữ vũ khí tưởng tượng, lén đổi góc tay rồi tự chỉnh lại trước khi bị nhìn thấy.",
+          "answers": {
+            "TG-S04-Q01": true,
+            "TG-S04-Q02": true,
+            "TG-S04-Q03": false,
+            "TG-S04-Q04": true,
+            "TG-S04-Q05": false
+          }
+        },
+        {
+          "id": "TG-S04-R03",
+          "name": "Bảo vệ tuần tra",
+          "action": "Quay lưng rồi nhìn lại đột ngột, ra hiệu người khác quan sát và gấp rút bắt quả tang chuyển động.",
+          "answers": {
+            "TG-S04-Q01": true,
+            "TG-S04-Q02": false,
+            "TG-S04-Q03": true,
+            "TG-S04-Q04": false,
+            "TG-S04-Q05": true
+          }
+        },
+        {
+          "id": "TG-S04-R04",
+          "name": "Du khách giữ bằng chứng",
+          "action": "Giữ máy ảnh, gọi bạn so sánh hai tấm hình và vội chỉ ra tư thế vừa thay đổi.",
+          "answers": {
+            "TG-S04-Q01": false,
+            "TG-S04-Q02": true,
+            "TG-S04-Q03": true,
+            "TG-S04-Q04": false,
+            "TG-S04-Q05": true
+          }
+        },
+        {
+          "id": "TG-S04-R05",
+          "name": "Đứa trẻ bắt chước tượng",
+          "action": "Lén đổi dáng theo tượng rồi nhanh chóng đứng im khi người lớn quay lại.",
+          "answers": {
+            "TG-S04-Q01": false,
+            "TG-S04-Q02": false,
+            "TG-S04-Q03": false,
+            "TG-S04-Q04": true,
+            "TG-S04-Q05": true
+          }
+        },
+        {
+          "id": "TG-S04-R06",
+          "name": "Tượng vũ công",
+          "action": "Giữ tư thế duyên dáng, lén xoay người và che giấu chuyển động bằng một dáng đứng mới.",
+          "answers": {
+            "TG-S04-Q01": false,
+            "TG-S04-Q02": true,
+            "TG-S04-Q03": false,
+            "TG-S04-Q04": true,
+            "TG-S04-Q05": false
+          }
+        },
+        {
+          "id": "TG-S04-R07",
+          "name": "Nhân viên camera",
+          "action": "Điều khiển màn hình giám sát, vội tua lại nhưng che giấu đoạn mình đã bỏ lỡ.",
+          "answers": {
+            "TG-S04-Q01": true,
+            "TG-S04-Q02": false,
+            "TG-S04-Q03": false,
+            "TG-S04-Q04": true,
+            "TG-S04-Q05": true
+          }
+        },
+        {
+          "id": "TG-S04-R08",
+          "name": "Nhân viên vệ sinh",
+          "action": "Giữ và che một phần tượng, phối hợp dịch nó nhẹ đi rồi giả vờ chỉ đang lau bụi.",
+          "answers": {
+            "TG-S04-Q01": false,
+            "TG-S04-Q02": true,
+            "TG-S04-Q03": true,
+            "TG-S04-Q04": true,
+            "TG-S04-Q05": false
+          }
+        },
+        {
+          "id": "TG-S04-R09",
+          "name": "Hướng dẫn viên",
+          "action": "Điều khiển đoàn khách, ra hiệu cùng nhìn một hướng và tổ chức so sánh các bức tượng.",
+          "answers": {
+            "TG-S04-Q01": true,
+            "TG-S04-Q02": false,
+            "TG-S04-Q03": true,
+            "TG-S04-Q04": false,
+            "TG-S04-Q05": false
+          }
+        },
+        {
+          "id": "TG-S04-R10",
+          "name": "Du khách đánh lạc hướng",
+          "action": "Lén ra hiệu bạn quay lưng bảo vệ, phối hợp quan sát tượng trước khi cơ hội biến mất.",
+          "answers": {
+            "TG-S04-Q01": false,
+            "TG-S04-Q02": false,
+            "TG-S04-Q03": true,
+            "TG-S04-Q04": true,
+            "TG-S04-Q05": true
+          }
+        },
+        {
+          "id": "TG-S04-R11",
+          "name": "Chuyên viên bảo tồn",
+          "action": "Giữ tượng khỏi nghiêng, kiểm soát bệ đỡ và gấp rút ổn định hiện vật.",
+          "answers": {
+            "TG-S04-Q01": true,
+            "TG-S04-Q02": true,
+            "TG-S04-Q03": false,
+            "TG-S04-Q04": false,
+            "TG-S04-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Lớp học vẽ người mẫu sống",
+        "description": "Một lớp mỹ thuật đang quan sát người mẫu đổi tư thế theo hướng dẫn của giáo viên.",
+        "roles": [
+          {
+            "id": "TG-S04-G01",
+            "name": "Người mẫu bị chuột rút",
+            "action": "Tự điều chỉnh tư thế, giữ tấm vải phủ và lén che việc chân mình đang mỏi.",
+            "shadow_role_id": "TG-S04-R02",
+            "answers": {
+              "TG-S04-Q01": true,
+              "TG-S04-Q02": true,
+              "TG-S04-Q03": false,
+              "TG-S04-Q04": true,
+              "TG-S04-Q05": false
+            }
+          },
+          {
+            "id": "TG-S04-G02",
+            "name": "Học viên giữ bảng vẽ",
+            "action": "Giữ bảng vẽ an toàn, phối hợp với giáo viên và vội hoàn thành nét cuối trước khi đổi dáng.",
+            "shadow_role_id": "TG-S04-R04",
+            "answers": {
+              "TG-S04-Q01": false,
+              "TG-S04-Q02": true,
+              "TG-S04-Q03": true,
+              "TG-S04-Q04": false,
+              "TG-S04-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S05",
+      "slug": "buffet-luot-cuoi",
+      "title": "Cuộc chiến lượt cuối ở quầy buffet",
+      "description": "Nhà hàng chuẩn bị đóng quầy buffet trong khi nhóm khách cố lấy lượt thức ăn cuối cùng.",
+      "questions": [
+        {
+          "id": "TG-S05-Q01",
+          "text": "Bạn có đang chủ động cố đưa tình hình trở lại đúng kế hoạch không?"
+        },
+        {
+          "id": "TG-S05-Q02",
+          "text": "Bạn có đang giữ hoặc bảo vệ một thứ gì đó không?"
+        },
+        {
+          "id": "TG-S05-Q03",
+          "text": "Bạn có cần người khác hợp tác để hoàn thành việc của mình không?"
+        },
+        {
+          "id": "TG-S05-Q04",
+          "text": "Bạn có đang cố che giấu điều mình làm không?"
+        },
+        {
+          "id": "TG-S05-Q05",
+          "text": "Bạn có đang chịu áp lực phải hành động nhanh không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S05-R01",
+          "name": "Quản lý quầy",
+          "action": "Bảo vệ lối lấy thức ăn, điều phối hàng khách và cố đưa quầy về trạng thái đóng cửa.",
+          "answers": {
+            "TG-S05-Q01": true,
+            "TG-S05-Q02": true,
+            "TG-S05-Q03": true,
+            "TG-S05-Q04": false,
+            "TG-S05-Q05": false
+          }
+        },
+        {
+          "id": "TG-S05-R02",
+          "name": "Khách có đĩa quá đầy",
+          "action": "Giữ và kiểm soát đĩa thức ăn cao ngất, lén che phần mình vừa lấy quá nhiều.",
+          "answers": {
+            "TG-S05-Q01": true,
+            "TG-S05-Q02": true,
+            "TG-S05-Q03": false,
+            "TG-S05-Q04": true,
+            "TG-S05-Q05": false
+          }
+        },
+        {
+          "id": "TG-S05-R03",
+          "name": "Đầu bếp",
+          "action": "Đóng từng khu phục vụ, ra hiệu nhân viên dọn khay và thúc mọi người rời quầy.",
+          "answers": {
+            "TG-S05-Q01": true,
+            "TG-S05-Q02": false,
+            "TG-S05-Q03": true,
+            "TG-S05-Q04": false,
+            "TG-S05-Q05": true
+          }
+        },
+        {
+          "id": "TG-S05-R04",
+          "name": "Nhân viên bê khay",
+          "action": "Giữ khay thức ăn an toàn, gọi người mở đường và vội mang nó khỏi quầy.",
+          "answers": {
+            "TG-S05-Q01": false,
+            "TG-S05-Q02": true,
+            "TG-S05-Q03": true,
+            "TG-S05-Q04": false,
+            "TG-S05-Q05": true
+          }
+        },
+        {
+          "id": "TG-S05-R05",
+          "name": "Khách giấu thức ăn",
+          "action": "Lén cất thức ăn mang về rồi thao tác thật nhanh trước khi nhân viên nhìn thấy.",
+          "answers": {
+            "TG-S05-Q01": false,
+            "TG-S05-Q02": false,
+            "TG-S05-Q03": false,
+            "TG-S05-Q04": true,
+            "TG-S05-Q05": true
+          }
+        },
+        {
+          "id": "TG-S05-R06",
+          "name": "Đứa trẻ giữ món tráng miệng",
+          "action": "Ôm phần tráng miệng cuối cùng, che nó khỏi người lớn và lén ăn tiếp.",
+          "answers": {
+            "TG-S05-Q01": false,
+            "TG-S05-Q02": true,
+            "TG-S05-Q03": false,
+            "TG-S05-Q04": true,
+            "TG-S05-Q05": false
+          }
+        },
+        {
+          "id": "TG-S05-R07",
+          "name": "Thu ngân chữa cháy",
+          "action": "Điều khiển dòng khách, giả vờ hệ thống đã đóng và vội che việc mình cho một người vào muộn.",
+          "answers": {
+            "TG-S05-Q01": true,
+            "TG-S05-Q02": false,
+            "TG-S05-Q03": false,
+            "TG-S05-Q04": true,
+            "TG-S05-Q05": true
+          }
+        },
+        {
+          "id": "TG-S05-R08",
+          "name": "Người bạn giữ chỗ",
+          "action": "Giữ nhiều đĩa, phối hợp chắn tầm nhìn và lén chuyền thức ăn cho bạn.",
+          "answers": {
+            "TG-S05-Q01": false,
+            "TG-S05-Q02": true,
+            "TG-S05-Q03": true,
+            "TG-S05-Q04": true,
+            "TG-S05-Q05": false
+          }
+        },
+        {
+          "id": "TG-S05-R09",
+          "name": "Trưởng nhóm đi ăn",
+          "action": "Chia nhiệm vụ cho mọi người, ra hiệu mỗi người lấy một món và gom cả nhóm về bàn.",
+          "answers": {
+            "TG-S05-Q01": true,
+            "TG-S05-Q02": false,
+            "TG-S05-Q03": true,
+            "TG-S05-Q04": false,
+            "TG-S05-Q05": false
+          }
+        },
+        {
+          "id": "TG-S05-R10",
+          "name": "Khách đánh lạc hướng",
+          "action": "Lén nhờ bạn giữ chân nhân viên, phối hợp lấy món cuối rồi vội rời quầy.",
+          "answers": {
+            "TG-S05-Q01": false,
+            "TG-S05-Q02": false,
+            "TG-S05-Q03": true,
+            "TG-S05-Q04": true,
+            "TG-S05-Q05": true
+          }
+        },
+        {
+          "id": "TG-S05-R11",
+          "name": "Phụ bếp",
+          "action": "Kiểm soát khay nóng, bảo vệ thức ăn khỏi đổ và gấp rút đưa nó vào bếp.",
+          "answers": {
+            "TG-S05-Q01": true,
+            "TG-S05-Q02": true,
+            "TG-S05-Q03": false,
+            "TG-S05-Q04": false,
+            "TG-S05-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Siêu thị kết thúc chương trình flash sale",
+        "description": "Một siêu thị sắp kết thúc đợt giảm giá, khiến khách và nhân viên cùng tranh thủ xử lý hàng hóa.",
+        "roles": [
+          {
+            "id": "TG-S05-G01",
+            "name": "Khách giữ món giảm giá",
+            "action": "Kiểm soát xe hàng tưởng tượng, giữ chặt món vừa lấy và lén che nó dưới các món khác.",
+            "shadow_role_id": "TG-S05-R02",
+            "answers": {
+              "TG-S05-Q01": true,
+              "TG-S05-Q02": true,
+              "TG-S05-Q03": false,
+              "TG-S05-Q04": true,
+              "TG-S05-Q05": false
+            }
+          },
+          {
+            "id": "TG-S05-G02",
+            "name": "Nhân viên bổ sung hàng",
+            "action": "Giữ thùng hàng, gọi đồng nghiệp mở lối và vội đặt đủ sản phẩm trước khi flash sale kết thúc.",
+            "shadow_role_id": "TG-S05-R04",
+            "answers": {
+              "TG-S05-Q01": false,
+              "TG-S05-Q02": true,
+              "TG-S05-Q03": true,
+              "TG-S05-Q04": false,
+              "TG-S05-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S06",
+      "slug": "anh-cuoi-kieu-can-cuoc",
+      "title": "Buổi chụp ảnh cưới kiểu căn cước",
+      "description": "Một cặp đôi đến chụp ảnh cưới nhưng nhiếp ảnh gia cứ bắt họ tạo dáng như đang chụp ảnh căn cước.",
+      "questions": [
+        {
+          "id": "TG-S06-Q01",
+          "text": "Nếu mọi người nghe theo bạn, tình hình có dễ kiểm soát hơn không?"
+        },
+        {
+          "id": "TG-S06-Q02",
+          "text": "Phần lớn hành động của bạn có nhằm giữ một người hoặc vật an toàn không?"
+        },
+        {
+          "id": "TG-S06-Q03",
+          "text": "Vai của bạn có phụ thuộc vào phản ứng của ít nhất một người khác không?"
+        },
+        {
+          "id": "TG-S06-Q04",
+          "text": "Bạn có không muốn người khác phát hiện mục đích thật của mình không?"
+        },
+        {
+          "id": "TG-S06-Q05",
+          "text": "Nếu chậm thêm một lúc, nhân vật của bạn có gặp rắc rối hơn không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S06-R01",
+          "name": "Điều phối viên đám cưới",
+          "action": "Bảo vệ lịch chụp và trang phục, điều phối cặp đôi cùng ê-kíp trở lại kế hoạch ảnh cưới.",
+          "answers": {
+            "TG-S06-Q01": true,
+            "TG-S06-Q02": true,
+            "TG-S06-Q03": true,
+            "TG-S06-Q04": false,
+            "TG-S06-Q05": false
+          }
+        },
+        {
+          "id": "TG-S06-R02",
+          "name": "Cô dâu",
+          "action": "Giữ váy và bó hoa, tự chỉnh tư thế rồi che sự khó chịu khi lại bị bắt ngồi thẳng.",
+          "answers": {
+            "TG-S06-Q01": true,
+            "TG-S06-Q02": true,
+            "TG-S06-Q03": false,
+            "TG-S06-Q04": true,
+            "TG-S06-Q05": false
+          }
+        },
+        {
+          "id": "TG-S06-R03",
+          "name": "Nhiếp ảnh gia",
+          "action": "Chỉnh cằm, ra hiệu nhìn thẳng và thúc giục chụp nhanh trước khi hết lịch studio.",
+          "answers": {
+            "TG-S06-Q01": true,
+            "TG-S06-Q02": false,
+            "TG-S06-Q03": true,
+            "TG-S06-Q04": false,
+            "TG-S06-Q05": true
+          }
+        },
+        {
+          "id": "TG-S06-R04",
+          "name": "Chú rể",
+          "action": "Giữ nhẫn và tay cô dâu, phối hợp tạo dáng rồi vội đổi lại theo hiệu lệnh.",
+          "answers": {
+            "TG-S06-Q01": false,
+            "TG-S06-Q02": true,
+            "TG-S06-Q03": true,
+            "TG-S06-Q04": false,
+            "TG-S06-Q05": true
+          }
+        },
+        {
+          "id": "TG-S06-R05",
+          "name": "Người thân chen hình",
+          "action": "Lén bước vào khung ảnh rồi nhanh chóng tạo dáng trước khi bị mời ra.",
+          "answers": {
+            "TG-S06-Q01": false,
+            "TG-S06-Q02": false,
+            "TG-S06-Q03": false,
+            "TG-S06-Q04": true,
+            "TG-S06-Q05": true
+          }
+        },
+        {
+          "id": "TG-S06-R06",
+          "name": "Chuyên viên trang điểm",
+          "action": "Che khuôn mặt cô dâu, giữ lớp trang điểm và lén sửa phần vừa bị lem.",
+          "answers": {
+            "TG-S06-Q01": false,
+            "TG-S06-Q02": true,
+            "TG-S06-Q03": false,
+            "TG-S06-Q04": true,
+            "TG-S06-Q05": false
+          }
+        },
+        {
+          "id": "TG-S06-R07",
+          "name": "Trợ lý studio",
+          "action": "Điều khiển vị trí ghế, giả vờ cách chụp cứng nhắc là bình thường và vội che phông bị lệch.",
+          "answers": {
+            "TG-S06-Q01": true,
+            "TG-S06-Q02": false,
+            "TG-S06-Q03": false,
+            "TG-S06-Q04": true,
+            "TG-S06-Q05": true
+          }
+        },
+        {
+          "id": "TG-S06-R08",
+          "name": "Thợ may",
+          "action": "Giữ tà váy, phối hợp cô dâu đổi tư thế và che một chỗ trang phục vừa bung.",
+          "answers": {
+            "TG-S06-Q01": false,
+            "TG-S06-Q02": true,
+            "TG-S06-Q03": true,
+            "TG-S06-Q04": true,
+            "TG-S06-Q05": false
+          }
+        },
+        {
+          "id": "TG-S06-R09",
+          "name": "Người hướng dẫn tạo dáng",
+          "action": "Ra hiệu cặp đôi nghiêng đầu, nắm tay và cùng chuyển qua các tư thế lãng mạn.",
+          "answers": {
+            "TG-S06-Q01": true,
+            "TG-S06-Q02": false,
+            "TG-S06-Q03": true,
+            "TG-S06-Q04": false,
+            "TG-S06-Q05": false
+          }
+        },
+        {
+          "id": "TG-S06-R10",
+          "name": "Bạn thân của cặp đôi",
+          "action": "Lén ra hiệu tạo hình trái tim, phối hợp đúng lúc rồi vội dừng khi nhiếp ảnh gia quay lại.",
+          "answers": {
+            "TG-S06-Q01": false,
+            "TG-S06-Q02": false,
+            "TG-S06-Q03": true,
+            "TG-S06-Q04": true,
+            "TG-S06-Q05": true
+          }
+        },
+        {
+          "id": "TG-S06-R11",
+          "name": "Trợ lý máy ảnh",
+          "action": "Kiểm soát và bảo vệ thiết bị, thay góc chụp rồi gấp rút báo hiệu máy đã sẵn sàng.",
+          "answers": {
+            "TG-S06-Q01": true,
+            "TG-S06-Q02": true,
+            "TG-S06-Q03": false,
+            "TG-S06-Q04": false,
+            "TG-S06-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Trung tâm làm thẻ căn cước",
+        "description": "Người dân đang được hướng dẫn chụp ảnh chính diện và hoàn tất các bước nhận dạng.",
+        "roles": [
+          {
+            "id": "TG-S06-G01",
+            "name": "Người làm lại ảnh hồ sơ",
+            "action": "Giữ giấy tờ, tự chỉnh tóc và lén che tấm ảnh cũ mà mình không muốn dùng.",
+            "shadow_role_id": "TG-S06-R02",
+            "answers": {
+              "TG-S06-Q01": true,
+              "TG-S06-Q02": true,
+              "TG-S06-Q03": false,
+              "TG-S06-Q04": true,
+              "TG-S06-Q05": false
+            }
+          },
+          {
+            "id": "TG-S06-G02",
+            "name": "Nhân viên tiếp nhận",
+            "action": "Giữ hồ sơ an toàn, phối hợp chỉnh tư thế người chụp và thúc giục hoàn tất lượt.",
+            "shadow_role_id": "TG-S06-R04",
+            "answers": {
+              "TG-S06-Q01": false,
+              "TG-S06-Q02": true,
+              "TG-S06-Q03": true,
+              "TG-S06-Q04": false,
+              "TG-S06-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S07",
+      "slug": "ket-thang-may-cung-banh",
+      "title": "Kẹt thang máy cùng bánh sinh nhật",
+      "description": "Thang máy bị kẹt giữa tầng khi cả nhóm đang mang bánh và quà đến một buổi sinh nhật.",
+      "questions": [
+        {
+          "id": "TG-S07-Q01",
+          "text": "Bạn có đang trực tiếp xử lý rắc rối chính không?"
+        },
+        {
+          "id": "TG-S07-Q02",
+          "text": "Bạn có đang cố ngăn người khác lấy, chạm hoặc làm hỏng thứ mình quản lý không?"
+        },
+        {
+          "id": "TG-S07-Q03",
+          "text": "Bạn có đang ra hiệu, hướng dẫn hoặc yêu cầu người khác hành động không?"
+        },
+        {
+          "id": "TG-S07-Q04",
+          "text": "Bạn có đang lén làm điều trái với kế hoạch chung không?"
+        },
+        {
+          "id": "TG-S07-Q05",
+          "text": "Bạn có cần hoàn thành việc trước khi một chuyện khác xảy ra không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S07-R01",
+          "name": "Người tổ chức sinh nhật",
+          "action": "Giữ chiếc bánh an toàn, điều phối mọi người và cố kiểm soát tình hình để buổi tiệc không hỏng.",
+          "answers": {
+            "TG-S07-Q01": true,
+            "TG-S07-Q02": true,
+            "TG-S07-Q03": true,
+            "TG-S07-Q04": false,
+            "TG-S07-Q05": false
+          }
+        },
+        {
+          "id": "TG-S07-R02",
+          "name": "Người mang bánh",
+          "action": "Ôm và giữ thăng bằng cho bánh, lén che phần kem vừa bị quệt.",
+          "answers": {
+            "TG-S07-Q01": true,
+            "TG-S07-Q02": true,
+            "TG-S07-Q03": false,
+            "TG-S07-Q04": true,
+            "TG-S07-Q05": false
+          }
+        },
+        {
+          "id": "TG-S07-R03",
+          "name": "Người gọi cứu hộ",
+          "action": "Ra hiệu mọi người im lặng, hướng dẫn thông tin qua điện thoại và thúc giục hỗ trợ đến nhanh.",
+          "answers": {
+            "TG-S07-Q01": true,
+            "TG-S07-Q02": false,
+            "TG-S07-Q03": true,
+            "TG-S07-Q04": false,
+            "TG-S07-Q05": true
+          }
+        },
+        {
+          "id": "TG-S07-R04",
+          "name": "Người giữ bóng bay",
+          "action": "Giữ đồ trang trí khỏi vướng, phối hợp đổi chỗ và vội bảo vệ chúng khi cửa rung.",
+          "answers": {
+            "TG-S07-Q01": false,
+            "TG-S07-Q02": true,
+            "TG-S07-Q03": true,
+            "TG-S07-Q04": false,
+            "TG-S07-Q05": true
+          }
+        },
+        {
+          "id": "TG-S07-R05",
+          "name": "Đứa trẻ nếm bánh",
+          "action": "Lén chạm vào kem rồi vội giấu tay trước khi người mang bánh nhìn thấy.",
+          "answers": {
+            "TG-S07-Q01": false,
+            "TG-S07-Q02": false,
+            "TG-S07-Q03": false,
+            "TG-S07-Q04": true,
+            "TG-S07-Q05": true
+          }
+        },
+        {
+          "id": "TG-S07-R06",
+          "name": "Người giữ món quà vỡ",
+          "action": "Ôm món quà, che tiếng động tưởng tượng và lén giữ chỗ bị nứt khỏi tầm nhìn.",
+          "answers": {
+            "TG-S07-Q01": false,
+            "TG-S07-Q02": true,
+            "TG-S07-Q03": false,
+            "TG-S07-Q04": true,
+            "TG-S07-Q05": false
+          }
+        },
+        {
+          "id": "TG-S07-R07",
+          "name": "Người sợ không gian kín",
+          "action": "Cố kiểm soát hơi thở, giả vờ bình tĩnh và vội che cơn hoảng loạn.",
+          "answers": {
+            "TG-S07-Q01": true,
+            "TG-S07-Q02": false,
+            "TG-S07-Q03": false,
+            "TG-S07-Q04": true,
+            "TG-S07-Q05": true
+          }
+        },
+        {
+          "id": "TG-S07-R08",
+          "name": "Người bạn trấn an",
+          "action": "Giữ vai người đang hoảng, phối hợp che cho họ và âm thầm ra hiệu cả nhóm bình tĩnh.",
+          "answers": {
+            "TG-S07-Q01": false,
+            "TG-S07-Q02": true,
+            "TG-S07-Q03": true,
+            "TG-S07-Q04": true,
+            "TG-S07-Q05": false
+          }
+        },
+        {
+          "id": "TG-S07-R09",
+          "name": "Người tìm cách mở cửa",
+          "action": "Phân công người bấm nút, người nghe bên ngoài và cùng thử tách cửa.",
+          "answers": {
+            "TG-S07-Q01": true,
+            "TG-S07-Q02": false,
+            "TG-S07-Q03": true,
+            "TG-S07-Q04": false,
+            "TG-S07-Q05": false
+          }
+        },
+        {
+          "id": "TG-S07-R10",
+          "name": "Người nhắn trì hoãn",
+          "action": "Lén nhờ bạn đánh lạc hướng chủ tiệc, phối hợp gửi tin và vội giấu nguyên nhân thật.",
+          "answers": {
+            "TG-S07-Q01": false,
+            "TG-S07-Q02": false,
+            "TG-S07-Q03": true,
+            "TG-S07-Q04": true,
+            "TG-S07-Q05": true
+          }
+        },
+        {
+          "id": "TG-S07-R11",
+          "name": "Người có kinh nghiệm an toàn",
+          "action": "Kiểm soát khu vực cửa, bảo vệ mọi người đứng lùi lại và gấp rút kiểm tra nút khẩn cấp.",
+          "answers": {
+            "TG-S07-Q01": true,
+            "TG-S07-Q02": true,
+            "TG-S07-Q03": false,
+            "TG-S07-Q04": false,
+            "TG-S07-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Nhóm bạn chen vào buồng chụp ảnh tự động",
+        "description": "Một nhóm đông người đang cố nằm gọn trong buồng chụp ảnh trước khi máy đếm ngược.",
+        "roles": [
+          {
+            "id": "TG-S07-G01",
+            "name": "Người xếp khung hình",
+            "action": "Điều khiển vị trí cả nhóm, giữ máy ảnh tưởng tượng và lén giấu việc còn thừa một người ngoài khung.",
+            "shadow_role_id": "TG-S07-R02",
+            "answers": {
+              "TG-S07-Q01": true,
+              "TG-S07-Q02": true,
+              "TG-S07-Q03": false,
+              "TG-S07-Q04": true,
+              "TG-S07-Q05": false
+            }
+          },
+          {
+            "id": "TG-S07-G02",
+            "name": "Người giữ đạo cụ ảnh",
+            "action": "Giữ các món trang trí, phối hợp kéo mọi người sát lại và thúc giục tạo dáng trước khi máy chụp.",
+            "shadow_role_id": "TG-S07-R04",
+            "answers": {
+              "TG-S07-Q01": false,
+              "TG-S07-Q02": true,
+              "TG-S07-Q03": true,
+              "TG-S07-Q04": false,
+              "TG-S07-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S08",
+      "slug": "thi-nau-an-mat-dien",
+      "title": "Cuộc thi nấu ăn nhưng toàn bộ bếp không hoạt động",
+      "description": "Cuộc thi nấu ăn đã bắt đầu nhưng toàn bộ bếp đều không thể tạo nhiệt.",
+      "questions": [
+        {
+          "id": "TG-S08-Q01",
+          "text": "Bạn có đang chủ động điều khiển diễn biến xung quanh mình không?"
+        },
+        {
+          "id": "TG-S08-Q02",
+          "text": "Có thứ gì đó bạn nhất định không muốn đánh mất hoặc làm hỏng không?"
+        },
+        {
+          "id": "TG-S08-Q03",
+          "text": "Bạn có cần ít nhất một người khác phối hợp với mình không?"
+        },
+        {
+          "id": "TG-S08-Q04",
+          "text": "Bạn có đang giả vờ rằng mọi thứ vẫn bình thường không?"
+        },
+        {
+          "id": "TG-S08-Q05",
+          "text": "Bạn có đang thúc giục bản thân hoặc người khác vì thời gian không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S08-R01",
+          "name": "Đội trưởng bếp",
+          "action": "Bảo vệ nguyên liệu, điều phối thành viên và cố kiểm soát bàn thi khi bếp không nóng.",
+          "answers": {
+            "TG-S08-Q01": true,
+            "TG-S08-Q02": true,
+            "TG-S08-Q03": true,
+            "TG-S08-Q04": false,
+            "TG-S08-Q05": false
+          }
+        },
+        {
+          "id": "TG-S08-R02",
+          "name": "Thí sinh giấu món sống",
+          "action": "Giữ đĩa thành phẩm, tự sắp xếp nó và lén che những phần chưa chín.",
+          "answers": {
+            "TG-S08-Q01": true,
+            "TG-S08-Q02": true,
+            "TG-S08-Q03": false,
+            "TG-S08-Q04": true,
+            "TG-S08-Q05": false
+          }
+        },
+        {
+          "id": "TG-S08-R03",
+          "name": "Kỹ thuật viên",
+          "action": "Kiểm tra nguồn điện, ra hiệu các đội chờ và thúc giục khởi động lại trước khi hết giờ.",
+          "answers": {
+            "TG-S08-Q01": true,
+            "TG-S08-Q02": false,
+            "TG-S08-Q03": true,
+            "TG-S08-Q04": false,
+            "TG-S08-Q05": true
+          }
+        },
+        {
+          "id": "TG-S08-R04",
+          "name": "Trợ lý nguyên liệu",
+          "action": "Giữ các nguyên liệu khỏi đổ, phối hợp chuyền chúng và vội thay đổi kế hoạch món ăn.",
+          "answers": {
+            "TG-S08-Q01": false,
+            "TG-S08-Q02": true,
+            "TG-S08-Q03": true,
+            "TG-S08-Q04": false,
+            "TG-S08-Q05": true
+          }
+        },
+        {
+          "id": "TG-S08-R05",
+          "name": "Thí sinh dùng đồ làm sẵn",
+          "action": "Lén lấy nguyên liệu đã chế biến rồi vội trộn vào trước khi giám khảo nhìn thấy.",
+          "answers": {
+            "TG-S08-Q01": false,
+            "TG-S08-Q02": false,
+            "TG-S08-Q03": false,
+            "TG-S08-Q04": true,
+            "TG-S08-Q05": true
+          }
+        },
+        {
+          "id": "TG-S08-R06",
+          "name": "Thí sinh giữ công thức bí mật",
+          "action": "Bảo vệ phần gia vị riêng, che nó khỏi đối thủ và lén tiếp tục trộn.",
+          "answers": {
+            "TG-S08-Q01": false,
+            "TG-S08-Q02": true,
+            "TG-S08-Q03": false,
+            "TG-S08-Q04": true,
+            "TG-S08-Q05": false
+          }
+        },
+        {
+          "id": "TG-S08-R07",
+          "name": "MC chương trình",
+          "action": "Điều khiển nhịp thi, giả vờ sự cố nằm trong kịch bản và vội che khoảng thời gian bị mất.",
+          "answers": {
+            "TG-S08-Q01": true,
+            "TG-S08-Q02": false,
+            "TG-S08-Q03": false,
+            "TG-S08-Q04": true,
+            "TG-S08-Q05": true
+          }
+        },
+        {
+          "id": "TG-S08-R08",
+          "name": "Phụ bếp che sai sót",
+          "action": "Giữ đĩa giúp đồng đội, phối hợp che phần hỏng và lén đổi cách trình bày.",
+          "answers": {
+            "TG-S08-Q01": false,
+            "TG-S08-Q02": true,
+            "TG-S08-Q03": true,
+            "TG-S08-Q04": true,
+            "TG-S08-Q05": false
+          }
+        },
+        {
+          "id": "TG-S08-R09",
+          "name": "Giám khảo trưởng",
+          "action": "Ra hiệu thứ tự nếm, điều phối các giám khảo và yêu cầu từng đội trình bày.",
+          "answers": {
+            "TG-S08-Q01": true,
+            "TG-S08-Q02": false,
+            "TG-S08-Q03": true,
+            "TG-S08-Q04": false,
+            "TG-S08-Q05": false
+          }
+        },
+        {
+          "id": "TG-S08-R10",
+          "name": "Thí sinh đánh lạc hướng",
+          "action": "Lén nhờ đồng đội giữ chân giám khảo, phối hợp sửa món và vội trở lại vị trí.",
+          "answers": {
+            "TG-S08-Q01": false,
+            "TG-S08-Q02": false,
+            "TG-S08-Q03": true,
+            "TG-S08-Q04": true,
+            "TG-S08-Q05": true
+          }
+        },
+        {
+          "id": "TG-S08-R11",
+          "name": "Nhân viên an toàn",
+          "action": "Kiểm soát khu vực bếp, bảo vệ người chơi khỏi thiết bị lỗi và gấp rút ngắt nguồn.",
+          "answers": {
+            "TG-S08-Q01": true,
+            "TG-S08-Q02": true,
+            "TG-S08-Q03": false,
+            "TG-S08-Q04": false,
+            "TG-S08-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Lớp làm gốm gặp sự cố với lò nung",
+        "description": "Một lớp làm gốm đang tạo hình sản phẩm nhưng chiếc lò nung không hoạt động.",
+        "roles": [
+          {
+            "id": "TG-S08-G01",
+            "name": "Học viên có sản phẩm nứt",
+            "action": "Tự chỉnh hình chiếc bình, giữ nó khỏi vỡ và lén che đường nứt trước khi giáo viên tới.",
+            "shadow_role_id": "TG-S08-R02",
+            "answers": {
+              "TG-S08-Q01": true,
+              "TG-S08-Q02": true,
+              "TG-S08-Q03": false,
+              "TG-S08-Q04": true,
+              "TG-S08-Q05": false
+            }
+          },
+          {
+            "id": "TG-S08-G02",
+            "name": "Trợ giảng làm gốm",
+            "action": "Giữ đất sét còn ướt, phối hợp chuyển sản phẩm và thúc giục xử lý trước khi chúng khô.",
+            "shadow_role_id": "TG-S08-R04",
+            "answers": {
+              "TG-S08-Q01": false,
+              "TG-S08-Q02": true,
+              "TG-S08-Q03": true,
+              "TG-S08-Q04": false,
+              "TG-S08-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S09",
+      "slug": "xe-du-lich-dung-nham-dam-cuoi",
+      "title": "Xe du lịch dừng nhầm tại một đám cưới",
+      "description": "Một xe du lịch đưa cả đoàn đến nhầm sảnh cưới, nhưng vài người đã xuống xe và hòa vào buổi lễ.",
+      "questions": [
+        {
+          "id": "TG-S09-Q01",
+          "text": "Bạn có đang chủ động cố đưa tình hình trở lại đúng kế hoạch không?"
+        },
+        {
+          "id": "TG-S09-Q02",
+          "text": "Bạn có đang giữ hoặc bảo vệ một thứ gì đó không?"
+        },
+        {
+          "id": "TG-S09-Q03",
+          "text": "Bạn có cần người khác hợp tác để hoàn thành việc của mình không?"
+        },
+        {
+          "id": "TG-S09-Q04",
+          "text": "Bạn có đang cố che giấu điều mình làm không?"
+        },
+        {
+          "id": "TG-S09-Q05",
+          "text": "Bạn có đang chịu áp lực phải hành động nhanh không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S09-R01",
+          "name": "Hướng dẫn viên",
+          "action": "Giữ danh sách và vé của đoàn, tập hợp mọi người rồi cố điều khiển họ quay lại xe.",
+          "answers": {
+            "TG-S09-Q01": true,
+            "TG-S09-Q02": true,
+            "TG-S09-Q03": true,
+            "TG-S09-Q04": false,
+            "TG-S09-Q05": false
+          }
+        },
+        {
+          "id": "TG-S09-R02",
+          "name": "Du khách lấy đồ ăn",
+          "action": "Giữ đĩa thức ăn tưởng tượng, tự chọn món và lén che việc mình không phải khách mời.",
+          "answers": {
+            "TG-S09-Q01": true,
+            "TG-S09-Q02": true,
+            "TG-S09-Q03": false,
+            "TG-S09-Q04": true,
+            "TG-S09-Q05": false
+          }
+        },
+        {
+          "id": "TG-S09-R03",
+          "name": "Wedding planner",
+          "action": "Chặn đoàn khách, ra hiệu tìm đúng danh sách và thúc giục đưa họ ra trước nghi thức.",
+          "answers": {
+            "TG-S09-Q01": true,
+            "TG-S09-Q02": false,
+            "TG-S09-Q03": true,
+            "TG-S09-Q04": false,
+            "TG-S09-Q05": true
+          }
+        },
+        {
+          "id": "TG-S09-R04",
+          "name": "Tài xế",
+          "action": "Giữ chìa khóa và hành lý, phối hợp gọi từng người rồi vội chuẩn bị rời đi.",
+          "answers": {
+            "TG-S09-Q01": false,
+            "TG-S09-Q02": true,
+            "TG-S09-Q03": true,
+            "TG-S09-Q04": false,
+            "TG-S09-Q05": true
+          }
+        },
+        {
+          "id": "TG-S09-R05",
+          "name": "Du khách chen ảnh cưới",
+          "action": "Lén bước vào hàng chụp ảnh rồi vội tạo dáng trước khi bị phát hiện.",
+          "answers": {
+            "TG-S09-Q01": false,
+            "TG-S09-Q02": false,
+            "TG-S09-Q03": false,
+            "TG-S09-Q04": true,
+            "TG-S09-Q05": true
+          }
+        },
+        {
+          "id": "TG-S09-R06",
+          "name": "Đứa trẻ giữ bánh",
+          "action": "Ôm phần bánh cưới, giấu nó sau lưng và lén ăn tiếp.",
+          "answers": {
+            "TG-S09-Q01": false,
+            "TG-S09-Q02": true,
+            "TG-S09-Q03": false,
+            "TG-S09-Q04": true,
+            "TG-S09-Q05": false
+          }
+        },
+        {
+          "id": "TG-S09-R07",
+          "name": "Trợ lý hướng dẫn",
+          "action": "Điều khiển đoàn, giả vờ đây là điểm dừng đúng và vội che lỗi xem bản đồ.",
+          "answers": {
+            "TG-S09-Q01": true,
+            "TG-S09-Q02": false,
+            "TG-S09-Q03": false,
+            "TG-S09-Q04": true,
+            "TG-S09-Q05": true
+          }
+        },
+        {
+          "id": "TG-S09-R08",
+          "name": "Bạn của chú rể",
+          "action": "Giữ quà cưới, phối hợp kéo một du khách khỏi khung hình và lén che sự nhầm lẫn.",
+          "answers": {
+            "TG-S09-Q01": false,
+            "TG-S09-Q02": true,
+            "TG-S09-Q03": true,
+            "TG-S09-Q04": true,
+            "TG-S09-Q05": false
+          }
+        },
+        {
+          "id": "TG-S09-R09",
+          "name": "Đại diện hai họ",
+          "action": "Ra hiệu chia khách thành hai phía, điều phối lối đi và yêu cầu người lạ đứng riêng.",
+          "answers": {
+            "TG-S09-Q01": true,
+            "TG-S09-Q02": false,
+            "TG-S09-Q03": true,
+            "TG-S09-Q04": false,
+            "TG-S09-Q05": false
+          }
+        },
+        {
+          "id": "TG-S09-R10",
+          "name": "Du khách giả làm khách mời",
+          "action": "Lén ra hiệu bạn bè chào hỏi, phối hợp hòa vào đám đông và vội tránh hướng dẫn viên.",
+          "answers": {
+            "TG-S09-Q01": false,
+            "TG-S09-Q02": false,
+            "TG-S09-Q03": true,
+            "TG-S09-Q04": true,
+            "TG-S09-Q05": true
+          }
+        },
+        {
+          "id": "TG-S09-R11",
+          "name": "Bảo vệ sảnh",
+          "action": "Kiểm soát cửa vào, bảo vệ buổi lễ và gấp rút hướng đoàn khách trở ra.",
+          "answers": {
+            "TG-S09-Q01": true,
+            "TG-S09-Q02": true,
+            "TG-S09-Q03": false,
+            "TG-S09-Q04": false,
+            "TG-S09-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Đoàn khách làm thủ tục nhận phòng khách sạn",
+        "description": "Một đoàn du lịch vừa đến khách sạn, đang kiểm tra danh sách, chuyển hành lý và nhận phòng.",
+        "roles": [
+          {
+            "id": "TG-S09-G01",
+            "name": "Khách giấu người ở ghép",
+            "action": "Kiểm soát hành lý, giữ chìa khóa phòng và lén che việc nhóm mình có thêm một người.",
+            "shadow_role_id": "TG-S09-R02",
+            "answers": {
+              "TG-S09-Q01": true,
+              "TG-S09-Q02": true,
+              "TG-S09-Q03": false,
+              "TG-S09-Q04": true,
+              "TG-S09-Q05": false
+            }
+          },
+          {
+            "id": "TG-S09-G02",
+            "name": "Nhân viên hành lý",
+            "action": "Giữ vali an toàn, phối hợp với lễ tân và thúc giục chuyển đủ đồ trước khi thang máy đóng.",
+            "shadow_role_id": "TG-S09-R04",
+            "answers": {
+              "TG-S09-Q01": false,
+              "TG-S09-Q02": true,
+              "TG-S09-Q03": true,
+              "TG-S09-Q04": false,
+              "TG-S09-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S10",
+      "slug": "khai-truong-cat-nham-day-dien",
+      "title": "Khai trương nhưng cắt nhầm dây điện",
+      "description": "Trong lễ khai trương cửa hàng, người cắt băng khánh thành lại cắt nhầm dây điện khiến cả nơi mất điện.",
+      "questions": [
+        {
+          "id": "TG-S10-Q01",
+          "text": "Nếu mọi người nghe theo bạn, tình hình có dễ kiểm soát hơn không?"
+        },
+        {
+          "id": "TG-S10-Q02",
+          "text": "Phần lớn hành động của bạn có nhằm giữ một người hoặc vật an toàn không?"
+        },
+        {
+          "id": "TG-S10-Q03",
+          "text": "Vai của bạn có phụ thuộc vào phản ứng của ít nhất một người khác không?"
+        },
+        {
+          "id": "TG-S10-Q04",
+          "text": "Bạn có không muốn người khác phát hiện mục đích thật của mình không?"
+        },
+        {
+          "id": "TG-S10-Q05",
+          "text": "Nếu chậm thêm một lúc, nhân vật của bạn có gặp rắc rối hơn không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S10-R01",
+          "name": "Chủ cửa hàng",
+          "action": "Bảo vệ khu vực khai trương, điều phối nhân viên và cố kiểm soát chương trình sau khi mất điện.",
+          "answers": {
+            "TG-S10-Q01": true,
+            "TG-S10-Q02": true,
+            "TG-S10-Q03": true,
+            "TG-S10-Q04": false,
+            "TG-S10-Q05": false
+          }
+        },
+        {
+          "id": "TG-S10-R02",
+          "name": "Người cắt băng",
+          "action": "Giữ chiếc kéo tưởng tượng, tự che đoạn dây vừa cắt và giả vờ mình không gây ra sự cố.",
+          "answers": {
+            "TG-S10-Q01": true,
+            "TG-S10-Q02": true,
+            "TG-S10-Q03": false,
+            "TG-S10-Q04": true,
+            "TG-S10-Q05": false
+          }
+        },
+        {
+          "id": "TG-S10-R03",
+          "name": "Thợ điện",
+          "action": "Chỉ mọi người lùi lại, hướng dẫn ngắt nguồn và thúc giục xử lý điểm bị cắt.",
+          "answers": {
+            "TG-S10-Q01": true,
+            "TG-S10-Q02": false,
+            "TG-S10-Q03": true,
+            "TG-S10-Q04": false,
+            "TG-S10-Q05": true
+          }
+        },
+        {
+          "id": "TG-S10-R04",
+          "name": "Nhiếp ảnh gia",
+          "action": "Giữ máy ảnh an toàn, gọi khách tạo lại khoảnh khắc và vội tìm góc còn ánh sáng.",
+          "answers": {
+            "TG-S10-Q01": false,
+            "TG-S10-Q02": true,
+            "TG-S10-Q03": true,
+            "TG-S10-Q04": false,
+            "TG-S10-Q05": true
+          }
+        },
+        {
+          "id": "TG-S10-R05",
+          "name": "Nhân viên dùng đèn điện thoại",
+          "action": "Lén chiếu sáng khu vực rồi vội che việc một phần trang trí đã đổ.",
+          "answers": {
+            "TG-S10-Q01": false,
+            "TG-S10-Q02": false,
+            "TG-S10-Q03": false,
+            "TG-S10-Q04": true,
+            "TG-S10-Q05": true
+          }
+        },
+        {
+          "id": "TG-S10-R06",
+          "name": "Thu ngân",
+          "action": "Giữ và che ngăn tiền, đứng chắn quầy rồi lén kiểm tra thiết bị đã tắt.",
+          "answers": {
+            "TG-S10-Q01": false,
+            "TG-S10-Q02": true,
+            "TG-S10-Q03": false,
+            "TG-S10-Q04": true,
+            "TG-S10-Q05": false
+          }
+        },
+        {
+          "id": "TG-S10-R07",
+          "name": "MC",
+          "action": "Điều khiển khách mời, giả vờ mất điện là tiết mục và vội kéo chương trình tiếp tục.",
+          "answers": {
+            "TG-S10-Q01": true,
+            "TG-S10-Q02": false,
+            "TG-S10-Q03": false,
+            "TG-S10-Q04": true,
+            "TG-S10-Q05": true
+          }
+        },
+        {
+          "id": "TG-S10-R08",
+          "name": "Trợ lý sự kiện",
+          "action": "Giữ tấm băng và che đoạn dây, phối hợp dời khách trong khi giấu nguyên nhân tai nạn.",
+          "answers": {
+            "TG-S10-Q01": false,
+            "TG-S10-Q02": true,
+            "TG-S10-Q03": true,
+            "TG-S10-Q04": true,
+            "TG-S10-Q05": false
+          }
+        },
+        {
+          "id": "TG-S10-R09",
+          "name": "Điều phối viên",
+          "action": "Ra hiệu nhân viên chia khu vực, hướng khách đứng yên và tổ chức lại nghi thức.",
+          "answers": {
+            "TG-S10-Q01": true,
+            "TG-S10-Q02": false,
+            "TG-S10-Q03": true,
+            "TG-S10-Q04": false,
+            "TG-S10-Q05": false
+          }
+        },
+        {
+          "id": "TG-S10-R10",
+          "name": "Nhân viên giữ cửa",
+          "action": "Lén nhờ người khác giữ cửa tự động, phối hợp đưa khách ra vào trước khi cửa đóng.",
+          "answers": {
+            "TG-S10-Q01": false,
+            "TG-S10-Q02": false,
+            "TG-S10-Q03": true,
+            "TG-S10-Q04": true,
+            "TG-S10-Q05": true
+          }
+        },
+        {
+          "id": "TG-S10-R11",
+          "name": "Kỹ thuật viên tòa nhà",
+          "action": "Kiểm soát cầu dao, bảo vệ vùng dây điện và gấp rút thử khôi phục nguồn.",
+          "answers": {
+            "TG-S10-Q01": true,
+            "TG-S10-Q02": true,
+            "TG-S10-Q03": false,
+            "TG-S10-Q04": false,
+            "TG-S10-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Buổi trình diễn sửa chữa điện",
+        "description": "Một kỹ thuật viên đang hướng dẫn cách ngắt nguồn, kiểm tra dây và khôi phục điện an toàn.",
+        "roles": [
+          {
+            "id": "TG-S10-G01",
+            "name": "Kỹ thuật viên đấu nhầm dây",
+            "action": "Tự kiểm soát bảng điện, giữ dụng cụ và lén che một mối nối vừa làm sai.",
+            "shadow_role_id": "TG-S10-R02",
+            "answers": {
+              "TG-S10-Q01": true,
+              "TG-S10-Q02": true,
+              "TG-S10-Q03": false,
+              "TG-S10-Q04": true,
+              "TG-S10-Q05": false
+            }
+          },
+          {
+            "id": "TG-S10-G02",
+            "name": "Trợ lý an toàn điện",
+            "action": "Giữ dụng cụ và rào chắn, phối hợp với kỹ thuật viên rồi thúc giục mọi người lùi lại.",
+            "shadow_role_id": "TG-S10-R04",
+            "answers": {
+              "TG-S10-Q01": false,
+              "TG-S10-Q02": true,
+              "TG-S10-Q03": true,
+              "TG-S10-Q04": false,
+              "TG-S10-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S11",
+      "slug": "cau-hon-thanh-trao-giai",
+      "title": "Màn cầu hôn bị điều hành như lễ trao giải",
+      "description": "Một người đang cầu hôn, nhưng đội tổ chức nhầm kịch bản và liên tục biến khoảnh khắc đó thành lễ trao giải.",
+      "questions": [
+        {
+          "id": "TG-S11-Q01",
+          "text": "Bạn có đang trực tiếp xử lý rắc rối chính không?"
+        },
+        {
+          "id": "TG-S11-Q02",
+          "text": "Bạn có đang cố ngăn người khác lấy, chạm hoặc làm hỏng thứ mình quản lý không?"
+        },
+        {
+          "id": "TG-S11-Q03",
+          "text": "Bạn có đang ra hiệu, hướng dẫn hoặc yêu cầu người khác hành động không?"
+        },
+        {
+          "id": "TG-S11-Q04",
+          "text": "Bạn có đang lén làm điều trái với kế hoạch chung không?"
+        },
+        {
+          "id": "TG-S11-Q05",
+          "text": "Bạn có cần hoàn thành việc trước khi một chuyện khác xảy ra không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S11-R01",
+          "name": "Điều phối màn cầu hôn",
+          "action": "Bảo vệ chiếc nhẫn và vị trí trung tâm, điều phối bạn bè để khoảnh khắc diễn ra đúng kế hoạch.",
+          "answers": {
+            "TG-S11-Q01": true,
+            "TG-S11-Q02": true,
+            "TG-S11-Q03": true,
+            "TG-S11-Q04": false,
+            "TG-S11-Q05": false
+          }
+        },
+        {
+          "id": "TG-S11-R02",
+          "name": "Người cầu hôn",
+          "action": "Giữ và kiểm soát chiếc nhẫn, quỳ xuống rồi lén che nó cho đến đúng thời điểm.",
+          "answers": {
+            "TG-S11-Q01": true,
+            "TG-S11-Q02": true,
+            "TG-S11-Q03": false,
+            "TG-S11-Q04": true,
+            "TG-S11-Q05": false
+          }
+        },
+        {
+          "id": "TG-S11-R03",
+          "name": "MC cầm nhầm kịch bản",
+          "action": "Mời người nhận bước lên, ra hiệu phát biểu và thúc giục chương trình theo lịch.",
+          "answers": {
+            "TG-S11-Q01": true,
+            "TG-S11-Q02": false,
+            "TG-S11-Q03": true,
+            "TG-S11-Q04": false,
+            "TG-S11-Q05": true
+          }
+        },
+        {
+          "id": "TG-S11-R04",
+          "name": "Bạn giữ hoa",
+          "action": "Giữ bó hoa và hộp nhẫn, phối hợp trao đúng người rồi vội lùi khỏi khung hình.",
+          "answers": {
+            "TG-S11-Q01": false,
+            "TG-S11-Q02": true,
+            "TG-S11-Q03": true,
+            "TG-S11-Q04": false,
+            "TG-S11-Q05": true
+          }
+        },
+        {
+          "id": "TG-S11-R05",
+          "name": "Người được cầu hôn",
+          "action": "Che sự bối rối, nhìn quanh tìm lời giải thích và vội phản ứng trước khi mọi người thúc giục.",
+          "answers": {
+            "TG-S11-Q01": false,
+            "TG-S11-Q02": false,
+            "TG-S11-Q03": false,
+            "TG-S11-Q04": true,
+            "TG-S11-Q05": true
+          }
+        },
+        {
+          "id": "TG-S11-R06",
+          "name": "Nhiếp ảnh gia lỡ khoảnh khắc",
+          "action": "Giữ máy ảnh, lén che việc mình chưa chụp được và cố yêu cầu mọi người làm lại.",
+          "answers": {
+            "TG-S11-Q01": false,
+            "TG-S11-Q02": true,
+            "TG-S11-Q03": false,
+            "TG-S11-Q04": true,
+            "TG-S11-Q05": false
+          }
+        },
+        {
+          "id": "TG-S11-R07",
+          "name": "Quản lý sân khấu",
+          "action": "Điều khiển vị trí, giả vờ kịch bản trao giải là đúng và vội che bảng tên bị nhầm.",
+          "answers": {
+            "TG-S11-Q01": true,
+            "TG-S11-Q02": false,
+            "TG-S11-Q03": false,
+            "TG-S11-Q04": true,
+            "TG-S11-Q05": true
+          }
+        },
+        {
+          "id": "TG-S11-R08",
+          "name": "Bạn thân giữ bí mật",
+          "action": "Giữ đạo cụ bất ngờ, phối hợp che tầm nhìn và lén ra hiệu người cầu hôn bắt đầu.",
+          "answers": {
+            "TG-S11-Q01": false,
+            "TG-S11-Q02": true,
+            "TG-S11-Q03": true,
+            "TG-S11-Q04": true,
+            "TG-S11-Q05": false
+          }
+        },
+        {
+          "id": "TG-S11-R09",
+          "name": "Người phụ trách âm nhạc",
+          "action": "Ra hiệu ban nhạc đổi bài, điều phối điểm vào và cố đưa bầu không khí về lãng mạn.",
+          "answers": {
+            "TG-S11-Q01": true,
+            "TG-S11-Q02": false,
+            "TG-S11-Q03": true,
+            "TG-S11-Q04": false,
+            "TG-S11-Q05": false
+          }
+        },
+        {
+          "id": "TG-S11-R10",
+          "name": "Khách mời dẫn vỗ tay",
+          "action": "Lén ra hiệu mọi người vỗ tay đúng lúc, phối hợp tạo phản ứng và vội dừng khi thấy nhầm.",
+          "answers": {
+            "TG-S11-Q01": false,
+            "TG-S11-Q02": false,
+            "TG-S11-Q03": true,
+            "TG-S11-Q04": true,
+            "TG-S11-Q05": true
+          }
+        },
+        {
+          "id": "TG-S11-R11",
+          "name": "Trợ lý sân khấu",
+          "action": "Kiểm soát bục và dây thiết bị, bảo vệ lối bước lên rồi gấp rút dọn vật cản.",
+          "answers": {
+            "TG-S11-Q01": true,
+            "TG-S11-Q02": true,
+            "TG-S11-Q03": false,
+            "TG-S11-Q04": false,
+            "TG-S11-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Lễ trao giải nhỏ bị thất lạc cúp",
+        "description": "Một lễ trao giải đang diễn ra, nhưng chiếc cúp chưa tới nên ban tổ chức phải ứng biến trên sân khấu.",
+        "roles": [
+          {
+            "id": "TG-S11-G01",
+            "name": "Người giữ phong bì kết quả",
+            "action": "Tự kiểm soát phong bì, giữ nó an toàn và lén che việc tên người thắng bị in sai.",
+            "shadow_role_id": "TG-S11-R02",
+            "answers": {
+              "TG-S11-Q01": true,
+              "TG-S11-Q02": true,
+              "TG-S11-Q03": false,
+              "TG-S11-Q04": true,
+              "TG-S11-Q05": false
+            }
+          },
+          {
+            "id": "TG-S11-G02",
+            "name": "Trợ lý trao cúp",
+            "action": "Giữ vật trao giải, phối hợp với MC và thúc giục người nhận đứng đúng vị trí.",
+            "shadow_role_id": "TG-S11-R04",
+            "answers": {
+              "TG-S11-Q01": false,
+              "TG-S11-Q02": true,
+              "TG-S11-Q03": true,
+              "TG-S11-Q04": false,
+              "TG-S11-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S12",
+      "slug": "cho-chay-khoi-anh-khai-truong",
+      "title": "Chó chạy khỏi buổi chụp ảnh khai trương",
+      "description": "Cửa hàng thú cưng đang chụp ảnh khai trương thì một chú chó chạy thoát khỏi vị trí.",
+      "questions": [
+        {
+          "id": "TG-S12-Q01",
+          "text": "Bạn có đang chủ động điều khiển diễn biến xung quanh mình không?"
+        },
+        {
+          "id": "TG-S12-Q02",
+          "text": "Có thứ gì đó bạn nhất định không muốn đánh mất hoặc làm hỏng không?"
+        },
+        {
+          "id": "TG-S12-Q03",
+          "text": "Bạn có cần ít nhất một người khác phối hợp với mình không?"
+        },
+        {
+          "id": "TG-S12-Q04",
+          "text": "Bạn có đang giả vờ rằng mọi thứ vẫn bình thường không?"
+        },
+        {
+          "id": "TG-S12-Q05",
+          "text": "Bạn có đang thúc giục bản thân hoặc người khác vì thời gian không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S12-R01",
+          "name": "Chủ cửa hàng",
+          "action": "Bảo vệ các thú cưng còn lại, điều phối người tìm kiếm và cố kiểm soát lối ra.",
+          "answers": {
+            "TG-S12-Q01": true,
+            "TG-S12-Q02": true,
+            "TG-S12-Q03": true,
+            "TG-S12-Q04": false,
+            "TG-S12-Q05": false
+          }
+        },
+        {
+          "id": "TG-S12-R02",
+          "name": "Nhân viên làm đẹp thú cưng",
+          "action": "Giữ dây dắt và dụng cụ, tự chặn lối rồi lén che việc mình vừa để tuột dây.",
+          "answers": {
+            "TG-S12-Q01": true,
+            "TG-S12-Q02": true,
+            "TG-S12-Q03": false,
+            "TG-S12-Q04": true,
+            "TG-S12-Q05": false
+          }
+        },
+        {
+          "id": "TG-S12-R03",
+          "name": "Nhiếp ảnh gia",
+          "action": "Ra hiệu mọi người tạo vòng vây, điều chỉnh khung hình và thúc giục đưa chó về trước lúc chụp.",
+          "answers": {
+            "TG-S12-Q01": true,
+            "TG-S12-Q02": false,
+            "TG-S12-Q03": true,
+            "TG-S12-Q04": false,
+            "TG-S12-Q05": true
+          }
+        },
+        {
+          "id": "TG-S12-R04",
+          "name": "Nhân viên cầm thức ăn thưởng",
+          "action": "Giữ túi đồ ăn, phối hợp gọi chó và vội dụ nó tránh xa cửa.",
+          "answers": {
+            "TG-S12-Q01": false,
+            "TG-S12-Q02": true,
+            "TG-S12-Q03": true,
+            "TG-S12-Q04": false,
+            "TG-S12-Q05": true
+          }
+        },
+        {
+          "id": "TG-S12-R05",
+          "name": "Đứa trẻ gây ra sự cố",
+          "action": "Lén giấu món đồ chơi vừa ném, chạy lấy lại rồi vội tỏ ra vô can.",
+          "answers": {
+            "TG-S12-Q01": false,
+            "TG-S12-Q02": false,
+            "TG-S12-Q03": false,
+            "TG-S12-Q04": true,
+            "TG-S12-Q05": true
+          }
+        },
+        {
+          "id": "TG-S12-R06",
+          "name": "Khách giữ thú cưng khác",
+          "action": "Ôm và che một con vật khác, lén lùi khỏi đám đông để nó không chạy theo.",
+          "answers": {
+            "TG-S12-Q01": false,
+            "TG-S12-Q02": true,
+            "TG-S12-Q03": false,
+            "TG-S12-Q04": true,
+            "TG-S12-Q05": false
+          }
+        },
+        {
+          "id": "TG-S12-R07",
+          "name": "Trợ lý chụp ảnh",
+          "action": "Điều khiển vị trí khách, giả vờ chú chó vẫn trong khung và vội che khoảng trống.",
+          "answers": {
+            "TG-S12-Q01": true,
+            "TG-S12-Q02": false,
+            "TG-S12-Q03": false,
+            "TG-S12-Q04": true,
+            "TG-S12-Q05": true
+          }
+        },
+        {
+          "id": "TG-S12-R08",
+          "name": "Người bạn che lỗi",
+          "action": "Giữ dây dắt, phối hợp với nhân viên và lén che việc móc khóa đang mở.",
+          "answers": {
+            "TG-S12-Q01": false,
+            "TG-S12-Q02": true,
+            "TG-S12-Q03": true,
+            "TG-S12-Q04": true,
+            "TG-S12-Q05": false
+          }
+        },
+        {
+          "id": "TG-S12-R09",
+          "name": "Huấn luyện viên chó",
+          "action": "Ra hiệu mọi người đứng yên, phân công hướng chặn và cùng gọi chú chó quay lại.",
+          "answers": {
+            "TG-S12-Q01": true,
+            "TG-S12-Q02": false,
+            "TG-S12-Q03": true,
+            "TG-S12-Q04": false,
+            "TG-S12-Q05": false
+          }
+        },
+        {
+          "id": "TG-S12-R10",
+          "name": "Khách lén dùng đồ ăn",
+          "action": "Lén nhờ người khác che mình, phối hợp dụ chó bằng thức ăn rồi vội giấu phần còn lại.",
+          "answers": {
+            "TG-S12-Q01": false,
+            "TG-S12-Q02": false,
+            "TG-S12-Q03": true,
+            "TG-S12-Q04": true,
+            "TG-S12-Q05": true
+          }
+        },
+        {
+          "id": "TG-S12-R11",
+          "name": "Nhân viên giữ cửa",
+          "action": "Kiểm soát cửa ra, bảo vệ các con vật và gấp rút chặn mọi khe hở.",
+          "answers": {
+            "TG-S12-Q01": true,
+            "TG-S12-Q02": true,
+            "TG-S12-Q03": false,
+            "TG-S12-Q04": false,
+            "TG-S12-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Lớp thể dục đuổi theo quả bóng tập bị lăn mất",
+        "description": "Một lớp thể dục đang cố chặn quả bóng lớn bị lăn khỏi khu tập trước giờ chụp ảnh đội.",
+        "roles": [
+          {
+            "id": "TG-S12-G01",
+            "name": "Học viên giấu quả bóng xẹp",
+            "action": "Tự kiểm soát quả bóng, giữ nó khỏi lăn và lén che phần vừa bị xì.",
+            "shadow_role_id": "TG-S12-R02",
+            "answers": {
+              "TG-S12-Q01": true,
+              "TG-S12-Q02": true,
+              "TG-S12-Q03": false,
+              "TG-S12-Q04": true,
+              "TG-S12-Q05": false
+            }
+          },
+          {
+            "id": "TG-S12-G02",
+            "name": "Trợ lý lớp thể dục",
+            "action": "Giữ dụng cụ tập, phối hợp chặn các hướng và thúc giục đưa bóng về trước giờ chụp.",
+            "shadow_role_id": "TG-S12-R04",
+            "answers": {
+              "TG-S12-Q01": false,
+              "TG-S12-Q02": true,
+              "TG-S12-Q03": true,
+              "TG-S12-Q04": false,
+              "TG-S12-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S13",
+      "slug": "karaoke-micro-tre",
+      "title": "Karaoke nhưng micro phát chậm năm giây",
+      "description": "Trong một buổi karaoke, âm thanh từ micro luôn phát ra chậm hơn người hát khoảng năm giây.",
+      "questions": [
+        {
+          "id": "TG-S13-Q01",
+          "text": "Bạn có đang chủ động cố đưa tình hình trở lại đúng kế hoạch không?"
+        },
+        {
+          "id": "TG-S13-Q02",
+          "text": "Bạn có đang giữ hoặc bảo vệ một thứ gì đó không?"
+        },
+        {
+          "id": "TG-S13-Q03",
+          "text": "Bạn có cần người khác hợp tác để hoàn thành việc của mình không?"
+        },
+        {
+          "id": "TG-S13-Q04",
+          "text": "Bạn có đang cố che giấu điều mình làm không?"
+        },
+        {
+          "id": "TG-S13-Q05",
+          "text": "Bạn có đang chịu áp lực phải hành động nhanh không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S13-R01",
+          "name": "Chủ phòng karaoke",
+          "action": "Giữ micro và khu vực biểu diễn, điều phối mọi người rồi cố kiểm soát buổi hát.",
+          "answers": {
+            "TG-S13-Q01": true,
+            "TG-S13-Q02": true,
+            "TG-S13-Q03": true,
+            "TG-S13-Q04": false,
+            "TG-S13-Q05": false
+          }
+        },
+        {
+          "id": "TG-S13-R02",
+          "name": "Ca sĩ chính",
+          "action": "Giữ micro, tự điều chỉnh nhịp và lén che sự hoảng hốt khi âm thanh tiếp tục sau mình.",
+          "answers": {
+            "TG-S13-Q01": true,
+            "TG-S13-Q02": true,
+            "TG-S13-Q03": false,
+            "TG-S13-Q04": true,
+            "TG-S13-Q05": false
+          }
+        },
+        {
+          "id": "TG-S13-R03",
+          "name": "Kỹ thuật viên âm thanh",
+          "action": "Ra hiệu thử lại, hướng dẫn người hát dừng đúng lúc và thúc giục khởi động lại hệ thống.",
+          "answers": {
+            "TG-S13-Q01": true,
+            "TG-S13-Q02": false,
+            "TG-S13-Q03": true,
+            "TG-S13-Q04": false,
+            "TG-S13-Q05": true
+          }
+        },
+        {
+          "id": "TG-S13-R04",
+          "name": "Bạn hát song ca",
+          "action": "Giữ micro thứ hai, phối hợp khẩu hình và vội đổi nhịp để bám theo âm thanh trễ.",
+          "answers": {
+            "TG-S13-Q01": false,
+            "TG-S13-Q02": true,
+            "TG-S13-Q03": true,
+            "TG-S13-Q04": false,
+            "TG-S13-Q05": true
+          }
+        },
+        {
+          "id": "TG-S13-R05",
+          "name": "Người hát hộ",
+          "action": "Lén nhép thay bạn rồi nhanh chóng dừng khẩu hình trước khi người khác phát hiện.",
+          "answers": {
+            "TG-S13-Q01": false,
+            "TG-S13-Q02": false,
+            "TG-S13-Q03": false,
+            "TG-S13-Q04": true,
+            "TG-S13-Q05": true
+          }
+        },
+        {
+          "id": "TG-S13-R06",
+          "name": "Người giữ lời bài hát",
+          "action": "Che màn hình lời tưởng tượng, giữ đúng đoạn và lén ra hiệu câu tiếp theo.",
+          "answers": {
+            "TG-S13-Q01": false,
+            "TG-S13-Q02": true,
+            "TG-S13-Q03": false,
+            "TG-S13-Q04": true,
+            "TG-S13-Q05": false
+          }
+        },
+        {
+          "id": "TG-S13-R07",
+          "name": "MC của nhóm",
+          "action": "Điều khiển lượt hát, giả vờ độ trễ là hiệu ứng và vội chuyển mọi người sang đoạn mới.",
+          "answers": {
+            "TG-S13-Q01": true,
+            "TG-S13-Q02": false,
+            "TG-S13-Q03": false,
+            "TG-S13-Q04": true,
+            "TG-S13-Q05": true
+          }
+        },
+        {
+          "id": "TG-S13-R08",
+          "name": "Bạn che cho ca sĩ",
+          "action": "Giữ vai bạn, phối hợp làm động tác minh họa và lén che lúc người đó hát sai.",
+          "answers": {
+            "TG-S13-Q01": false,
+            "TG-S13-Q02": true,
+            "TG-S13-Q03": true,
+            "TG-S13-Q04": true,
+            "TG-S13-Q05": false
+          }
+        },
+        {
+          "id": "TG-S13-R09",
+          "name": "Người dẫn nhịp",
+          "action": "Ra hiệu đếm phách, điều phối cả nhóm và cố đưa khẩu hình về cùng một thời điểm.",
+          "answers": {
+            "TG-S13-Q01": true,
+            "TG-S13-Q02": false,
+            "TG-S13-Q03": true,
+            "TG-S13-Q04": false,
+            "TG-S13-Q05": false
+          }
+        },
+        {
+          "id": "TG-S13-R10",
+          "name": "Khán giả nhắc bài",
+          "action": "Lén ra hiệu câu sắp tới, phối hợp với người hát rồi vội dừng trước phần âm thanh muộn.",
+          "answers": {
+            "TG-S13-Q01": false,
+            "TG-S13-Q02": false,
+            "TG-S13-Q03": true,
+            "TG-S13-Q04": true,
+            "TG-S13-Q05": true
+          }
+        },
+        {
+          "id": "TG-S13-R11",
+          "name": "Nhân viên thiết bị",
+          "action": "Kiểm soát dây và loa, bảo vệ thiết bị rồi gấp rút thử nhiều nút chỉnh.",
+          "answers": {
+            "TG-S13-Q01": true,
+            "TG-S13-Q02": true,
+            "TG-S13-Q03": false,
+            "TG-S13-Q04": false,
+            "TG-S13-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Buổi tập biểu diễn lip-sync",
+        "description": "Một nhóm biểu diễn đang luyện khớp khẩu hình và động tác với bản nhạc phát sẵn.",
+        "roles": [
+          {
+            "id": "TG-S13-G01",
+            "name": "Người diễn lỡ nhịp",
+            "action": "Tự điều chỉnh khẩu hình, giữ micro và lén che việc mình vừa vào sai câu.",
+            "shadow_role_id": "TG-S13-R02",
+            "answers": {
+              "TG-S13-Q01": true,
+              "TG-S13-Q02": true,
+              "TG-S13-Q03": false,
+              "TG-S13-Q04": true,
+              "TG-S13-Q05": false
+            }
+          },
+          {
+            "id": "TG-S13-G02",
+            "name": "Trợ lý biểu diễn",
+            "action": "Giữ bảng nhắc, phối hợp với nhóm và thúc giục mọi người vào đúng nhịp.",
+            "shadow_role_id": "TG-S13-R04",
+            "answers": {
+              "TG-S13-Q01": false,
+              "TG-S13-Q02": true,
+              "TG-S13-Q03": true,
+              "TG-S13-Q04": false,
+              "TG-S13-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S14",
+      "slug": "cam-trai-trong-phong-khach",
+      "title": "Cắm trại trong phòng khách vì mưa bão",
+      "description": "Chuyến cắm trại bị hủy vì mưa bão, nên cả nhóm quyết định dựng lều ngay trong phòng khách.",
+      "questions": [
+        {
+          "id": "TG-S14-Q01",
+          "text": "Nếu mọi người nghe theo bạn, tình hình có dễ kiểm soát hơn không?"
+        },
+        {
+          "id": "TG-S14-Q02",
+          "text": "Phần lớn hành động của bạn có nhằm giữ một người hoặc vật an toàn không?"
+        },
+        {
+          "id": "TG-S14-Q03",
+          "text": "Vai của bạn có phụ thuộc vào phản ứng của ít nhất một người khác không?"
+        },
+        {
+          "id": "TG-S14-Q04",
+          "text": "Bạn có không muốn người khác phát hiện mục đích thật của mình không?"
+        },
+        {
+          "id": "TG-S14-Q05",
+          "text": "Nếu chậm thêm một lúc, nhân vật của bạn có gặp rắc rối hơn không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S14-R01",
+          "name": "Chủ nhà",
+          "action": "Bảo vệ nội thất, phân khu dựng lều và điều phối mọi người để phòng khách vẫn dùng được.",
+          "answers": {
+            "TG-S14-Q01": true,
+            "TG-S14-Q02": true,
+            "TG-S14-Q03": true,
+            "TG-S14-Q04": false,
+            "TG-S14-Q05": false
+          }
+        },
+        {
+          "id": "TG-S14-R02",
+          "name": "Người có cọc lều gãy",
+          "action": "Giữ và tự chỉnh khung lều, lén che đoạn vừa bị gãy bằng một chiếc gối.",
+          "answers": {
+            "TG-S14-Q01": true,
+            "TG-S14-Q02": true,
+            "TG-S14-Q03": false,
+            "TG-S14-Q04": true,
+            "TG-S14-Q05": false
+          }
+        },
+        {
+          "id": "TG-S14-R03",
+          "name": "Trưởng nhóm cắm trại",
+          "action": "Hướng dẫn dựng lều, phân công trải chỗ ngủ và thúc giục hoàn tất trước khi bão mạnh hơn.",
+          "answers": {
+            "TG-S14-Q01": true,
+            "TG-S14-Q02": false,
+            "TG-S14-Q03": true,
+            "TG-S14-Q04": false,
+            "TG-S14-Q05": true
+          }
+        },
+        {
+          "id": "TG-S14-R04",
+          "name": "Người giữ mái lều",
+          "action": "Giữ chăn và khung, phối hợp căng hai phía rồi vội chặn phần đang sập.",
+          "answers": {
+            "TG-S14-Q01": false,
+            "TG-S14-Q02": true,
+            "TG-S14-Q03": true,
+            "TG-S14-Q04": false,
+            "TG-S14-Q05": true
+          }
+        },
+        {
+          "id": "TG-S14-R05",
+          "name": "Đứa trẻ mang bùn vào",
+          "action": "Lén lau dấu chân tưởng tượng rồi vội giấu đôi giày trước khi chủ nhà thấy.",
+          "answers": {
+            "TG-S14-Q01": false,
+            "TG-S14-Q02": false,
+            "TG-S14-Q03": false,
+            "TG-S14-Q04": true,
+            "TG-S14-Q05": true
+          }
+        },
+        {
+          "id": "TG-S14-R06",
+          "name": "Người giữ đồ ăn vặt",
+          "action": "Ôm túi thức ăn, che nó khỏi mọi người và lén chọn phần ngon nhất.",
+          "answers": {
+            "TG-S14-Q01": false,
+            "TG-S14-Q02": true,
+            "TG-S14-Q03": false,
+            "TG-S14-Q04": true,
+            "TG-S14-Q05": false
+          }
+        },
+        {
+          "id": "TG-S14-R07",
+          "name": "Chủ nhà chữa ngượng",
+          "action": "Điều khiển cách sắp đồ, giả vờ cắm trại trong nhà là kế hoạch ban đầu và vội che chỗ dột.",
+          "answers": {
+            "TG-S14-Q01": true,
+            "TG-S14-Q02": false,
+            "TG-S14-Q03": false,
+            "TG-S14-Q04": true,
+            "TG-S14-Q05": true
+          }
+        },
+        {
+          "id": "TG-S14-R08",
+          "name": "Người bạn giấu túi ướt",
+          "action": "Giữ túi đồ, phối hợp che nó sau sofa và lén tránh để nước chảy ra sàn.",
+          "answers": {
+            "TG-S14-Q01": false,
+            "TG-S14-Q02": true,
+            "TG-S14-Q03": true,
+            "TG-S14-Q04": true,
+            "TG-S14-Q05": false
+          }
+        },
+        {
+          "id": "TG-S14-R09",
+          "name": "Người tổ chức hoạt động",
+          "action": "Chia chỗ ngủ, hướng dẫn nhóm nhóm lửa tưởng tượng và điều phối trò chơi.",
+          "answers": {
+            "TG-S14-Q01": true,
+            "TG-S14-Q02": false,
+            "TG-S14-Q03": true,
+            "TG-S14-Q04": false,
+            "TG-S14-Q05": false
+          }
+        },
+        {
+          "id": "TG-S14-R10",
+          "name": "Người mượn gối",
+          "action": "Lén nhờ bạn che tầm nhìn, phối hợp lấy gối sofa rồi vội nhét vào lều.",
+          "answers": {
+            "TG-S14-Q01": false,
+            "TG-S14-Q02": false,
+            "TG-S14-Q03": true,
+            "TG-S14-Q04": true,
+            "TG-S14-Q05": true
+          }
+        },
+        {
+          "id": "TG-S14-R11",
+          "name": "Người canh chỗ dột",
+          "action": "Kiểm soát vùng sàn ướt, giữ xô tưởng tượng và gấp rút bảo vệ đồ khỏi nước.",
+          "answers": {
+            "TG-S14-Q01": true,
+            "TG-S14-Q02": true,
+            "TG-S14-Q03": false,
+            "TG-S14-Q04": false,
+            "TG-S14-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Nhóm chuyển nhà che đồ vì trần bị dột",
+        "description": "Một nhóm chuyển nhà đang vội bọc và di chuyển đồ đạc để tránh nước từ trần nhà.",
+        "roles": [
+          {
+            "id": "TG-S14-G01",
+            "name": "Người chuyển đồ gây xước",
+            "action": "Tự điều khiển món nội thất, giữ nó an toàn và lén che vết xước vừa gây ra.",
+            "shadow_role_id": "TG-S14-R02",
+            "answers": {
+              "TG-S14-Q01": true,
+              "TG-S14-Q02": true,
+              "TG-S14-Q03": false,
+              "TG-S14-Q04": true,
+              "TG-S14-Q05": false
+            }
+          },
+          {
+            "id": "TG-S14-G02",
+            "name": "Trợ lý bọc đồ",
+            "action": "Giữ tấm phủ, phối hợp với người khác và thúc giục che kín đồ trước khi nước lan tới.",
+            "shadow_role_id": "TG-S14-R04",
+            "answers": {
+              "TG-S14-Q01": false,
+              "TG-S14-Q02": true,
+              "TG-S14-Q03": true,
+              "TG-S14-Q04": false,
+              "TG-S14-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S15",
+      "slug": "show-thoi-trang-nhan-nham-dong-phuc",
+      "title": "Show thời trang nhận nhầm đồng phục học sinh",
+      "description": "Ngay trước giờ diễn, show thời trang nhận nhầm toàn bộ trang phục thành đồng phục học sinh.",
+      "questions": [
+        {
+          "id": "TG-S15-Q01",
+          "text": "Bạn có đang trực tiếp xử lý rắc rối chính không?"
+        },
+        {
+          "id": "TG-S15-Q02",
+          "text": "Bạn có đang cố ngăn người khác lấy, chạm hoặc làm hỏng thứ mình quản lý không?"
+        },
+        {
+          "id": "TG-S15-Q03",
+          "text": "Bạn có đang ra hiệu, hướng dẫn hoặc yêu cầu người khác hành động không?"
+        },
+        {
+          "id": "TG-S15-Q04",
+          "text": "Bạn có đang lén làm điều trái với kế hoạch chung không?"
+        },
+        {
+          "id": "TG-S15-Q05",
+          "text": "Bạn có cần hoàn thành việc trước khi một chuyện khác xảy ra không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S15-R01",
+          "name": "Nhà thiết kế",
+          "action": "Bảo vệ hình ảnh bộ sưu tập, điều phối hậu trường và cố kiểm soát cách biến đồng phục thành thời trang.",
+          "answers": {
+            "TG-S15-Q01": true,
+            "TG-S15-Q02": true,
+            "TG-S15-Q03": true,
+            "TG-S15-Q04": false,
+            "TG-S15-Q05": false
+          }
+        },
+        {
+          "id": "TG-S15-R02",
+          "name": "Người mẫu mặc sai đồ",
+          "action": "Giữ và tự chỉnh bộ đồng phục, lén che phù hiệu trường khi bước ra sân khấu.",
+          "answers": {
+            "TG-S15-Q01": true,
+            "TG-S15-Q02": true,
+            "TG-S15-Q03": false,
+            "TG-S15-Q04": true,
+            "TG-S15-Q05": false
+          }
+        },
+        {
+          "id": "TG-S15-R03",
+          "name": "Quản lý sân khấu",
+          "action": "Xếp thứ tự người mẫu, ra hiệu bước ra và thúc giục chương trình chạy đúng giờ.",
+          "answers": {
+            "TG-S15-Q01": true,
+            "TG-S15-Q02": false,
+            "TG-S15-Q03": true,
+            "TG-S15-Q04": false,
+            "TG-S15-Q05": true
+          }
+        },
+        {
+          "id": "TG-S15-R04",
+          "name": "Thợ may",
+          "action": "Giữ trang phục, phối hợp chỉnh nhanh trên người mẫu và vội hoàn tất trước lượt diễn.",
+          "answers": {
+            "TG-S15-Q01": false,
+            "TG-S15-Q02": true,
+            "TG-S15-Q03": true,
+            "TG-S15-Q04": false,
+            "TG-S15-Q05": true
+          }
+        },
+        {
+          "id": "TG-S15-R05",
+          "name": "Người mẫu giấu nhãn",
+          "action": "Lén che nhãn đồng phục rồi nhanh chóng tạo dáng trước khi máy ảnh hướng tới.",
+          "answers": {
+            "TG-S15-Q01": false,
+            "TG-S15-Q02": false,
+            "TG-S15-Q03": false,
+            "TG-S15-Q04": true,
+            "TG-S15-Q05": true
+          }
+        },
+        {
+          "id": "TG-S15-R06",
+          "name": "Chuyên viên trang điểm",
+          "action": "Giữ phần tạo hình, lén che một phụ kiện không phù hợp và cố bảo vệ diện mạo người mẫu.",
+          "answers": {
+            "TG-S15-Q01": false,
+            "TG-S15-Q02": true,
+            "TG-S15-Q03": false,
+            "TG-S15-Q04": true,
+            "TG-S15-Q05": false
+          }
+        },
+        {
+          "id": "TG-S15-R07",
+          "name": "Nhà sản xuất",
+          "action": "Điều khiển chương trình, giả vờ đồng phục là chủ đề mới và vội che thông tin giao nhầm.",
+          "answers": {
+            "TG-S15-Q01": true,
+            "TG-S15-Q02": false,
+            "TG-S15-Q03": false,
+            "TG-S15-Q04": true,
+            "TG-S15-Q05": true
+          }
+        },
+        {
+          "id": "TG-S15-R08",
+          "name": "Trợ lý trang phục",
+          "action": "Giữ áo khoác che bộ đồ, phối hợp thay nhanh và lén giấu phần trang phục lỗi.",
+          "answers": {
+            "TG-S15-Q01": false,
+            "TG-S15-Q02": true,
+            "TG-S15-Q03": true,
+            "TG-S15-Q04": true,
+            "TG-S15-Q05": false
+          }
+        },
+        {
+          "id": "TG-S15-R09",
+          "name": "Đạo diễn catwalk",
+          "action": "Ra hiệu nhịp bước, chỉnh đội hình và phối hợp người mẫu biến động tác học sinh thành dáng diễn.",
+          "answers": {
+            "TG-S15-Q01": true,
+            "TG-S15-Q02": false,
+            "TG-S15-Q03": true,
+            "TG-S15-Q04": false,
+            "TG-S15-Q05": false
+          }
+        },
+        {
+          "id": "TG-S15-R10",
+          "name": "Nhân viên chạy đồ",
+          "action": "Lén đổi quần áo giữa hai người, phối hợp che tầm nhìn và vội hoàn thành trước lượt tiếp theo.",
+          "answers": {
+            "TG-S15-Q01": false,
+            "TG-S15-Q02": false,
+            "TG-S15-Q03": true,
+            "TG-S15-Q04": true,
+            "TG-S15-Q05": true
+          }
+        },
+        {
+          "id": "TG-S15-R11",
+          "name": "Quản lý kho đồ",
+          "action": "Kiểm soát giá treo, bảo vệ trang phục và gấp rút tìm bất kỳ món nào đúng chủ đề.",
+          "answers": {
+            "TG-S15-Q01": true,
+            "TG-S15-Q02": true,
+            "TG-S15-Q03": false,
+            "TG-S15-Q04": false,
+            "TG-S15-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Ngày chụp ảnh tập thể tại trường học",
+        "description": "Học sinh đang chỉnh đồng phục, xếp hàng và chuẩn bị chụp ảnh tập thể trước giờ vào lớp.",
+        "roles": [
+          {
+            "id": "TG-S15-G01",
+            "name": "Học sinh mặc sai phù hiệu",
+            "action": "Tự chỉnh đồng phục, giữ nó ngay ngắn và lén che phù hiệu không đúng lớp.",
+            "shadow_role_id": "TG-S15-R02",
+            "answers": {
+              "TG-S15-Q01": true,
+              "TG-S15-Q02": true,
+              "TG-S15-Q03": false,
+              "TG-S15-Q04": true,
+              "TG-S15-Q05": false
+            }
+          },
+          {
+            "id": "TG-S15-G02",
+            "name": "Giáo viên chủ nhiệm",
+            "action": "Giữ danh sách lớp, phối hợp xếp hàng và thúc giục học sinh chỉnh trang phục trước khi chụp.",
+            "shadow_role_id": "TG-S15-R04",
+            "answers": {
+              "TG-S15-Q01": false,
+              "TG-S15-Q02": true,
+              "TG-S15-Q03": true,
+              "TG-S15-Q04": false,
+              "TG-S15-Q05": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TG-S16",
+      "slug": "thu-vien-tai-nghe-silent-disco",
+      "title": "Thư viện phát nhầm tai nghe của silent disco",
+      "description": "Một nhóm học trong thư viện nhận nhầm tai nghe của silent disco và bắt đầu phản ứng với những bài nhạc khác nhau.",
+      "questions": [
+        {
+          "id": "TG-S16-Q01",
+          "text": "Bạn có đang chủ động điều khiển diễn biến xung quanh mình không?"
+        },
+        {
+          "id": "TG-S16-Q02",
+          "text": "Có thứ gì đó bạn nhất định không muốn đánh mất hoặc làm hỏng không?"
+        },
+        {
+          "id": "TG-S16-Q03",
+          "text": "Bạn có cần ít nhất một người khác phối hợp với mình không?"
+        },
+        {
+          "id": "TG-S16-Q04",
+          "text": "Bạn có đang giả vờ rằng mọi thứ vẫn bình thường không?"
+        },
+        {
+          "id": "TG-S16-Q05",
+          "text": "Bạn có đang thúc giục bản thân hoặc người khác vì thời gian không?"
+        }
+      ],
+      "roles": [
+        {
+          "id": "TG-S16-R01",
+          "name": "Thủ thư",
+          "action": "Bảo vệ không gian yên tĩnh, điều phối người học và cố kiểm soát việc thu lại tai nghe.",
+          "answers": {
+            "TG-S16-Q01": true,
+            "TG-S16-Q02": true,
+            "TG-S16-Q03": true,
+            "TG-S16-Q04": false,
+            "TG-S16-Q05": false
+          }
+        },
+        {
+          "id": "TG-S16-R02",
+          "name": "Sinh viên lén nhảy",
+          "action": "Giữ tai nghe, tự kiểm soát động tác và lén che việc chân mình đang nhún theo nhạc.",
+          "answers": {
+            "TG-S16-Q01": true,
+            "TG-S16-Q02": true,
+            "TG-S16-Q03": false,
+            "TG-S16-Q04": true,
+            "TG-S16-Q05": false
+          }
+        },
+        {
+          "id": "TG-S16-R03",
+          "name": "Nhân viên sự kiện",
+          "action": "Ra hiệu tháo tai nghe, hướng dẫn đổi thiết bị và thúc giục thu hồi trước khi sự kiện bắt đầu.",
+          "answers": {
+            "TG-S16-Q01": true,
+            "TG-S16-Q02": false,
+            "TG-S16-Q03": true,
+            "TG-S16-Q04": false,
+            "TG-S16-Q05": true
+          }
+        },
+        {
+          "id": "TG-S16-R04",
+          "name": "Bạn học giữ sách",
+          "action": "Giữ sách và tai nghe, phối hợp nhắc bạn ngồi xuống rồi vội chuyển đúng thiết bị.",
+          "answers": {
+            "TG-S16-Q01": false,
+            "TG-S16-Q02": true,
+            "TG-S16-Q03": true,
+            "TG-S16-Q04": false,
+            "TG-S16-Q05": true
+          }
+        },
+        {
+          "id": "TG-S16-R05",
+          "name": "Sinh viên đổi kênh",
+          "action": "Lén bấm đổi nhạc, nhảy thật nhanh rồi vội ngồi im khi thủ thư nhìn tới.",
+          "answers": {
+            "TG-S16-Q01": false,
+            "TG-S16-Q02": false,
+            "TG-S16-Q03": false,
+            "TG-S16-Q04": true,
+            "TG-S16-Q05": true
+          }
+        },
+        {
+          "id": "TG-S16-R06",
+          "name": "Nghiên cứu sinh",
+          "action": "Giữ tài liệu, che tai nghe và lén tiếp tục đọc trong khi cơ thể vẫn theo nhịp.",
+          "answers": {
+            "TG-S16-Q01": false,
+            "TG-S16-Q02": true,
+            "TG-S16-Q03": false,
+            "TG-S16-Q04": true,
+            "TG-S16-Q05": false
+          }
+        },
+        {
+          "id": "TG-S16-R07",
+          "name": "Trợ lý thư viện",
+          "action": "Điều khiển chỗ ngồi, giả vờ nhún nhảy là bài tập học và vội che việc phát nhầm đồ.",
+          "answers": {
+            "TG-S16-Q01": true,
+            "TG-S16-Q02": false,
+            "TG-S16-Q03": false,
+            "TG-S16-Q04": true,
+            "TG-S16-Q05": true
+          }
+        },
+        {
+          "id": "TG-S16-R08",
+          "name": "Người bạn che chắn",
+          "action": "Giữ sách che cho bạn, phối hợp đổi tai nghe và lén giấu động tác nhảy.",
+          "answers": {
+            "TG-S16-Q01": false,
+            "TG-S16-Q02": true,
+            "TG-S16-Q03": true,
+            "TG-S16-Q04": true,
+            "TG-S16-Q05": false
+          }
+        },
+        {
+          "id": "TG-S16-R09",
+          "name": "Trưởng nhóm học",
+          "action": "Ra hiệu mọi người tập trung, điều phối đổi chỗ và cố đưa cả nhóm về cùng nhịp học.",
+          "answers": {
+            "TG-S16-Q01": true,
+            "TG-S16-Q02": false,
+            "TG-S16-Q03": true,
+            "TG-S16-Q04": false,
+            "TG-S16-Q05": false
+          }
+        },
+        {
+          "id": "TG-S16-R10",
+          "name": "Sinh viên truyền nhịp",
+          "action": "Lén ra hiệu nhịp cho bạn, phối hợp một đoạn ngắn rồi vội dừng trước khi bị nhắc.",
+          "answers": {
+            "TG-S16-Q01": false,
+            "TG-S16-Q02": false,
+            "TG-S16-Q03": true,
+            "TG-S16-Q04": true,
+            "TG-S16-Q05": true
+          }
+        },
+        {
+          "id": "TG-S16-R11",
+          "name": "Nhân viên kỹ thuật",
+          "action": "Kiểm soát bộ phát, bảo vệ tai nghe và gấp rút tìm đúng kênh tín hiệu.",
+          "answers": {
+            "TG-S16-Q01": true,
+            "TG-S16-Q02": true,
+            "TG-S16-Q03": false,
+            "TG-S16-Q04": false,
+            "TG-S16-Q05": true
+          }
+        }
+      ],
+      "glitch_scene": {
+        "title": "Silent disco gặp lỗi mất tín hiệu",
+        "description": "Một buổi silent disco bị lỗi tín hiệu, khiến người tham gia nghe các kênh khác nhau và cố tìm lại nhịp chung.",
+        "roles": [
+          {
+            "id": "TG-S16-G01",
+            "name": "DJ giấu bộ phát lỗi",
+            "action": "Tự kiểm soát thiết bị, giữ bộ phát và lén che việc một kênh đang hỏng.",
+            "shadow_role_id": "TG-S16-R02",
+            "answers": {
+              "TG-S16-Q01": true,
+              "TG-S16-Q02": true,
+              "TG-S16-Q03": false,
+              "TG-S16-Q04": true,
+              "TG-S16-Q05": false
+            }
+          },
+          {
+            "id": "TG-S16-G02",
+            "name": "Nhân viên phát tai nghe",
+            "action": "Giữ tai nghe dự phòng, phối hợp đổi thiết bị và thúc giục người chơi bắt lại nhịp.",
+            "shadow_role_id": "TG-S16-R04",
+            "answers": {
+              "TG-S16-Q01": false,
+              "TG-S16-Q02": true,
+              "TG-S16-Q03": true,
+              "TG-S16-Q04": false,
+              "TG-S16-Q05": true
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

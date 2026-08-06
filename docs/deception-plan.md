@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Xây dựng game **Deception: Murder in Hong Kong** online, chạy song song với Avalon trên cùng codebase XizachOnline. Game sử dụng Socket.io namespace `/deception`, kiến trúc Engine tương tự `AvalonEngine.ts`, và UI mobile-first landscape.
+Xây dựng game **Deception: Murder in Hong Kong** online, chạy song song với Avalon trên nền tảng Pangames. Game sử dụng Socket.io namespace `/deception`, kiến trúc Engine tương tự `AvalonEngine.ts`, và UI mobile-first landscape.
 
 ---
 

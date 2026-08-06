@@ -28,21 +28,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import AvalonTopBar from "./AvalonTopBar";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
 import PlayerProfileModal from "@/components/shared/PlayerProfileModal";
-
-function generateAvalonUserId() {
-  return Math.random().toString(36).slice(2, 11);
-}
-
-function getOrCreateAvalonUserId() {
-  if (typeof window === "undefined") return "";
-
-  const storedUserId = localStorage.getItem("avalon_userId");
-  if (storedUserId) return storedUserId;
-
-  const nextUserId = generateAvalonUserId();
-  localStorage.setItem("avalon_userId", nextUserId);
-  return nextUserId;
-}
+import { getOrCreateBrowserIdentity } from "@/lib/client/playerIdentity";
+import { readRoomCapability, writeRoomCapability } from "@/lib/client/roomCapabilityStorage";
+import { normalizeSocketError } from "@/lib/client/socketError";
+import { emitExplicitLeave } from "@/lib/client/explicitLeave";
+import { getAppStorage } from "@/lib/client/appStorage";
 
 export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -57,6 +47,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const [isRoleHidden, setIsRoleHidden] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Chat state
   const [showChat, setShowChat] = useState(false);
@@ -64,12 +55,12 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const router = useRouter();
-  const userId = useMemo(() => getOrCreateAvalonUserId(), []);
+  const userId = useMemo(() => getOrCreateBrowserIdentity(), []);
 
   // Audio state & refs
   const [isLobbyMusicEnabled, setIsLobbyMusicEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
-    return localStorage.getItem("avalon_lobby_music_enabled") !== "0";
+    return getAppStorage()?.getItem("avalon_lobby_music_enabled") !== "0";
   });
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   const loseAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -88,7 +79,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
   // Save Audio Setting
   useEffect(() => {
-    localStorage.setItem("avalon_lobby_music_enabled", isLobbyMusicEnabled ? "1" : "0");
+    getAppStorage()?.setItem("avalon_lobby_music_enabled", isLobbyMusicEnabled ? "1" : "0");
   }, [isLobbyMusicEnabled]);
 
   // Handle Joining
@@ -110,11 +101,26 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
     socketio.on("connect", () => {
       setSocket(socketio);
-      socketio.emit("joinRoom", { roomId, playerName: nameToUse, userId, avatarUrl: profile.avatarUrl });
+      socketio.emit("joinRoom", {
+        roomId,
+        playerName: nameToUse,
+        userId,
+        avatarUrl: profile.avatarUrl,
+        reconnectToken: readRoomCapability("avalon", roomId, userId),
+      });
+    });
+
+    socketio.on("sessionEstablished", ({ reconnectToken }: { reconnectToken: string }) => {
+      writeRoomCapability("avalon", roomId, userId, reconnectToken);
     });
 
     socketio.on("avalonGameState", (state: AvalonRoom) => {
       setGameState(state);
+      setErrorMessage("");
+    });
+
+    socketio.on("avalonError", (error: unknown) => {
+      setErrorMessage(normalizeSocketError(error, "Không thể tham gia phòng Avalon."));
     });
 
     socketio.on("playerPing", (userId: string, ping: number) => {
@@ -244,6 +250,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
         <div className="text-primary-avalon animate-pulse font-serif uppercase text-xl text-center px-4">
           Đang thiết lập bàn tròn...
         </div>
+        {errorMessage && <p className="max-w-md px-4 text-center text-sm text-red-300" role="alert">{errorMessage}</p>}
         <a
           href="/avalon"
           className="px-6 py-2 rounded-lg border border-primary-avalon/30 bg-primary-avalon/10 text-primary-avalon hover:bg-primary-avalon hover:text-[#0b1320] transition-colors font-headline uppercase tracking-widest text-sm shadow-[0_0_15px_rgba(186,200,220,0.15)] hover:shadow-[0_0_25px_rgba(186,200,220,0.4)]"
@@ -264,7 +271,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
 
   const handleBackButton = () => {
     if (isLobby || isGameOver) {
-      router.push("/avalon");
+      emitExplicitLeave(socket, () => router.push("/avalon"));
       return;
     }
     // Mid-game: confirm before doing anything
@@ -503,11 +510,7 @@ export default function AvalonBoard({ roomId }: { roomId: string }) {
               </button>
               <button
                 onClick={() => {
-                  if (isHost) {
-                    socket?.emit("returnToLobby");
-                  } else {
-                    router.push("/avalon");
-                  }
+                  emitExplicitLeave(socket, () => router.push("/avalon"));
                   setShowResetConfirm(false);
                 }}
                 className="flex-1 py-3 rounded-xl font-headline font-extrabold text-sm uppercase tracking-wider bg-amber-500 text-black hover:bg-amber-400 transition-colors shadow-lg cursor-pointer"

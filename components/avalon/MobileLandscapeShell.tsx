@@ -1,40 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import AvalonBoard from "./board/AvalonBoard";
 import useScreenWakeLock from "@/hooks/useScreenWakeLock";
+import { useViewportMode } from "@/hooks/useViewportMode";
 
 export default function MobileLandscapeShell({ roomId }: { roomId: string }) {
-  const [isLandscape, setIsLandscape] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const { isLandscape, isMobile } = useViewportMode();
 
   useScreenWakeLock({
     enabled: isMobile,
     mobileOnly: false,
   });
 
-  useEffect(() => {
-    const update = () => {
-      const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-      const noHover = window.matchMedia("(hover: none)").matches;
-      const smallViewport = Math.min(window.innerWidth, window.innerHeight) <= 900;
-      const touchCapable = navigator.maxTouchPoints > 0 || "ontouchstart" in window;
-      const isiPhone = /iPhone/i.test(navigator.userAgent);
-      setIsMobile((smallViewport && (coarsePointer || noHover || touchCapable)) || isiPhone);
-      setIsLandscape(window.matchMedia("(orientation: landscape)").matches);
-    };
-
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("orientationchange", update);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("orientationchange", update);
-    };
-  }, []);
-
   return (
-    <main className="flex flex-col w-full h-dvh overflow-hidden">
+    <main
+      className={`avalon-orientation-lock flex flex-col w-full h-dvh overflow-hidden ${
+        isMobile && isLandscape ? "avalon-mobile-landscape" : ""
+      }`}
+    >
       <div className="relative flex-1 min-h-0">
         {/* Portrait blocker — only shown on mobile portrait */}
         {isMobile && !isLandscape && (

@@ -6,14 +6,24 @@ import type {
   WeredogHistoryRecord,
 } from "./WeredogTypes";
 import { ROLE_CONFIGS } from "./WeredogTypes";
+import {
+  MAX_SPECTATORS_PER_ROOM,
+  issueReconnectCapability,
+  markConnectionAbandoned,
+  markConnectionInterrupted,
+  markConnectionRestored,
+  stripConnectionMetadata,
+  verifyReconnectCapability,
+} from "./shared/connection";
+import { disabledGameplayTimer } from "./shared/timing";
 
 export class WeredogEngine {
   private rooms: Map<string, WeredogRoom> = new Map();
   private io: Namespace;
   private chatRateLimits: Map<string, { count: number; resetAt: number }> = new Map();
-  private autoConfirmTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private emptyRoomCleanupTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private broadcastDebounced: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private reconnectGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(server: Server) {
     this.io = server.of("/weredog");
@@ -78,7 +88,7 @@ export class WeredogEngine {
 
 
   private getActivePlayers(room: WeredogRoom): WeredogPlayer[] {
-    return room.players.filter((p) => !p.isSpectator && !p.isHost);
+    return room.players.filter((p) => !p.isSpectator && !p.isModerator);
   }
 
   /**
@@ -101,7 +111,7 @@ export class WeredogEngine {
   }
 
   private isLivingGamePlayer(player: WeredogPlayer | undefined): player is WeredogPlayer {
-    return !!player && player.isAlive && !player.isHost && !player.isSpectator;
+    return !!player && player.isAlive && !player.isModerator && !player.isSpectator;
   }
 
   private findPlayer(room: WeredogRoom, userId: string): WeredogPlayer | undefined {
@@ -113,21 +123,8 @@ export class WeredogEngine {
     return room.players.find((p) => p.isHost);
   }
 
-  private clearAutoConfirmTimer(roomId: string) {
-    const timer = this.autoConfirmTimers.get(roomId);
-    if (timer) {
-      clearTimeout(timer);
-      this.autoConfirmTimers.delete(roomId);
-    }
-  }
-
-  private setAutoConfirmTimer(roomId: string, callback: () => void, delayMs = 20000) {
-    this.clearAutoConfirmTimer(roomId);
-    const timer = setTimeout(() => {
-      this.autoConfirmTimers.delete(roomId);
-      callback();
-    }, delayMs);
-    this.autoConfirmTimers.set(roomId, timer);
+  private findModerator(room: WeredogRoom): WeredogPlayer | undefined {
+    return room.players.find((p) => p.isModerator);
   }
 
   private clearEmptyRoomCleanup(roomId: string) {
@@ -145,7 +142,6 @@ export class WeredogEngine {
       this.emptyRoomCleanupTimers.delete(roomId);
       if (!room) return;
       if (room.players.some((p) => p.status === "connected")) return;
-      this.clearAutoConfirmTimer(roomId);
       this.clearBroadcastDebounce(roomId);
       this.rooms.delete(roomId);
     }, 15000);
@@ -157,6 +153,25 @@ export class WeredogEngine {
   private setupListeners() {
     this.io.on("connection", (socket: Socket) => {
       console.log("Weredog client connected:", socket.id);
+
+      socket.use(([event], next) => {
+        if (["checkRoom", "createRoom", "joinRoom"].includes(event)) return next();
+        const roomId = socket.data.roomId as string | undefined;
+        const userId = socket.data.userId as string | undefined;
+        const player = roomId && userId
+          ? this.rooms.get(roomId)?.players.find((candidate) => candidate.userId === userId)
+          : undefined;
+        if (!player || player.id !== socket.id || player.status !== "connected") {
+          return next(new Error("UNAUTHORIZED_SESSION"));
+        }
+        if (
+          player.isSpectator &&
+          !["chatMessage", "changeName", "updateAvatar", "measurePing", "updatePing", "explicitLeave"].includes(event)
+        ) {
+          return next(new Error("SPECTATOR_ACTION_FORBIDDEN"));
+        }
+        next();
+      });
 
       socket.on("checkRoom", (roomId: string, callback: (exists: boolean) => void) => {
         if (typeof callback === "function") callback(this.rooms.has(roomId));
@@ -171,11 +186,14 @@ export class WeredogEngine {
         }
       });
 
-      socket.on("joinRoom", ({ roomId, playerName, userId, avatarUrl }) => {
+      socket.on("joinRoom", ({ roomId, playerName, userId, avatarUrl, reconnectToken }) => {
         if (!userId) return;
-        this.joinRoom(roomId, { id: socket.id, userId, name: playerName, avatarUrl }, socket);
-        socket.data.roomId = roomId;
-        socket.data.userId = userId;
+        this.joinRoom(roomId, { id: socket.id, userId, name: playerName, avatarUrl, reconnectToken }, socket);
+      });
+
+      socket.on("explicitLeave", (callback?: () => void) => {
+        if (socket.data.roomId) this.explicitLeave(socket.data.roomId, socket);
+        if (typeof callback === "function") callback();
       });
 
       socket.on("disconnect", () => {
@@ -330,10 +348,18 @@ export class WeredogEngine {
       id: roomId,
       players: [],
       state: "LOBBY",
+      timing: {
+        roleReveal: disabledGameplayTimer(),
+        wolfVote: disabledGameplayTimer(),
+        bodyguard: disabledGameplayTimer(),
+        seer: disabledGameplayTimer(),
+        cupid: disabledGameplayTimer(),
+        witch: disabledGameplayTimer(),
+        dayVote: disabledGameplayTimer(),
+      },
       settings: {
         wolfCount: 1,
         enabledRoles: [],
-        discussionTimeSeconds: 180,
       },
       messages: [],
       messageStartIndex: 0,
@@ -351,7 +377,7 @@ export class WeredogEngine {
 
   public joinRoom(
     roomId: string,
-    pData: { id: string; userId: string; name: string; avatarUrl?: string },
+    pData: { id: string; userId: string; name: string; avatarUrl?: string; reconnectToken?: string },
     socket: Socket,
   ) {
     if (!this.rooms.has(roomId)) {
@@ -363,30 +389,65 @@ export class WeredogEngine {
 
     const existing = room.players.find((p) => p.userId === pData.userId);
     if (existing) {
-      existing.id = pData.id;
+      const isCurrentSocket = existing.id === socket.id;
+      if (
+        !isCurrentSocket &&
+        !verifyReconnectCapability(existing.reconnectTokenHash, pData.reconnectToken)
+      ) {
+        socket.emit("weredogError", "Không thể khôi phục ghế: reconnect capability không hợp lệ.");
+        return;
+      }
+      if (!isCurrentSocket) {
+        const previousSocket = this.io.sockets.get(existing.id);
+        existing.id = pData.id;
+        previousSocket?.emit("sessionReplaced");
+        previousSocket?.disconnect(true);
+      }
       existing.name = pData.name;
       if (pData.avatarUrl !== undefined) existing.avatarUrl = pData.avatarUrl;
       existing.status = "connected";
+      markConnectionRestored(existing);
+      this.clearReconnectGrace(roomId, existing.userId);
+      const capability = issueReconnectCapability();
+      existing.reconnectTokenHash = capability.reconnectTokenHash;
+      socket.emit("sessionEstablished", { reconnectToken: capability.reconnectToken });
     } else {
       const isHost = room.players.length === 0;
       const isMidGame = room.state !== "LOBBY";
+      if (
+        isMidGame &&
+        room.players.filter((player) => player.isSpectator).length >= MAX_SPECTATORS_PER_ROOM
+      ) {
+        socket.emit("weredogError", {
+          code: "SPECTATOR_LIMIT_REACHED",
+          message: `Phòng đã đủ ${MAX_SPECTATORS_PER_ROOM} khán giả.`,
+        });
+        return;
+      }
+      const capability = issueReconnectCapability();
       room.players.push({
         id: pData.id,
         userId: pData.userId,
         name: pData.name,
         avatarUrl: pData.avatarUrl,
         isHost: isHost && !isMidGame,
+        isModerator: isHost && !isMidGame,
         isSpectator: isMidGame,
         isReady: false,
         status: "connected",
+        connectionState: "connected",
+        reconnectTokenHash: capability.reconnectTokenHash,
         isAlive: true,
         witchHasSaveBottle: true,
         witchHasKillBottle: true,
         elderLives: 2,
         isLover: false,
       });
+      socket.emit("sessionEstablished", { reconnectToken: capability.reconnectToken });
     }
 
+    socket.data.roomId = roomId;
+    socket.data.userId = pData.userId;
     socket.join(roomId);
     this.syncPlayerMap(room);
     this.scheduleBroadcast(roomId);
@@ -400,26 +461,8 @@ export class WeredogEngine {
     if (pIndex === -1) return;
     const player = room.players[pIndex];
     player.status = "disconnected";
-
-    const canRemove = room.state === "LOBBY" || player.isSpectator;
-    if (canRemove) {
-      room.players.splice(pIndex, 1);
-      if (room.players.length === 0) {
-        this.scheduleEmptyRoomCleanup(roomId);
-        return;
-      }
-      if (player.isHost) {
-        const newHost = room.players.find((p) => p.status === "connected" && !p.isSpectator) ?? room.players[0];
-        newHost.isHost = true;
-      }
-      // Auto-clamp wolf count on player exit
-      const activePlayersCount = room.players.filter((p) => !p.isSpectator && !p.isHost).length;
-      const maxWolves = Math.max(1, Math.floor((activePlayersCount - 1) / 2));
-      if (room.settings.wolfCount > maxWolves) {
-        room.settings.wolfCount = maxWolves;
-      }
-      this.syncPlayerMap(room);
-    }
+    markConnectionInterrupted(player);
+    this.scheduleReconnectGrace(roomId, player.userId);
 
     // If wolf disconnected mid-vote, check if remaining wolves all voted
     if (room.state === "NIGHT_ACTION" && room.currentNightActiveRole === "Wolf" && player.role === "Wolf") {
@@ -430,6 +473,100 @@ export class WeredogEngine {
   }
 
   // ─── Chat ───
+
+  private explicitLeave(roomId: string, socket: Socket) {
+    const room = this.rooms.get(roomId);
+    const player = room?.players.find((candidate) => candidate.id === socket.id);
+    if (!room || !player) return;
+    this.clearReconnectGrace(roomId, player.userId);
+
+    if (player.isModerator) {
+      const successor = room.players.find(
+        (candidate) =>
+          candidate.userId !== player.userId &&
+          candidate.isModerator &&
+          candidate.status === "connected" &&
+          !candidate.isSpectator &&
+          !candidate.role,
+      );
+      if (successor) player.isModerator = false;
+      // No eligible pre-existing non-player moderator: keep the authority on the
+      // abandoned record so moderator-only progression remains paused securely.
+    }
+
+    if (room.state !== "LOBBY" && !player.isSpectator && !player.isHost) {
+      player.status = "disconnected";
+      markConnectionAbandoned(player);
+    } else {
+      if (room.state !== "LOBBY" && player.isHost) {
+        this.returnToLobby(roomId, player.userId);
+      }
+      room.players = room.players.filter((candidate) => candidate.userId !== player.userId);
+      this.syncPlayerMap(room);
+      if (room.players.length === 0) {
+        this.scheduleEmptyRoomCleanup(roomId);
+      } else if (player.isHost) {
+        const nextHost = room.players.find(
+          (candidate) => candidate.status === "connected" && !candidate.isSpectator,
+        );
+        if (nextHost) nextHost.isHost = true;
+      }
+    }
+
+    socket.leave(roomId);
+    delete socket.data.roomId;
+    delete socket.data.userId;
+    this.scheduleBroadcast(roomId);
+  }
+
+  private scheduleReconnectGrace(roomId: string, userId: string) {
+    this.clearReconnectGrace(roomId, userId);
+    const key = `${roomId}:${userId}`;
+    const player = this.rooms.get(roomId)?.players.find((candidate) => candidate.userId === userId);
+    const delay = Math.max(0, (player?.reconnectDeadlineAt ?? Date.now()) - Date.now());
+    const timer = setTimeout(() => {
+      this.reconnectGraceTimers.delete(key);
+      const room = this.rooms.get(roomId);
+      const current = room?.players.find((candidate) => candidate.userId === userId);
+      if (!room || !current || current.connectionState !== "temporarily_disconnected") return;
+      markConnectionAbandoned(current);
+      if (current.isModerator) {
+        const successor = room.players.find(
+          (candidate) =>
+            candidate.userId !== current.userId &&
+            candidate.isModerator &&
+            candidate.status === "connected" &&
+            !candidate.isSpectator &&
+            !candidate.role,
+        );
+        if (successor) current.isModerator = false;
+      }
+      if (current.isHost) {
+        current.isHost = false;
+        const nextHost = room.players.find(
+          (candidate) => candidate.status === "connected" && !candidate.isSpectator,
+        );
+        if (nextHost) nextHost.isHost = true;
+      }
+      if (room.state === "LOBBY") {
+        room.players = room.players.filter((candidate) => candidate.userId !== userId);
+        this.syncPlayerMap(room);
+        if (room.players.length === 0) {
+          this.scheduleEmptyRoomCleanup(roomId);
+          return;
+        }
+      }
+      this.scheduleBroadcast(roomId);
+    }, delay);
+    this.reconnectGraceTimers.set(key, timer);
+  }
+
+  private clearReconnectGrace(roomId: string, userId: string) {
+    const key = `${roomId}:${userId}`;
+    const timer = this.reconnectGraceTimers.get(key);
+    if (timer) clearTimeout(timer);
+    this.reconnectGraceTimers.delete(key);
+  }
 
   private chatMessage(roomId: string, userId: string, text: string) {
     if (!text || text.length > 500) return;
@@ -480,12 +617,9 @@ export class WeredogEngine {
     if (!player?.isHost) return;
 
     if (settings.wolfCount !== undefined) {
-      const activePlayersCount = room.players.filter((p) => !p.isSpectator && !p.isHost).length;
+      const activePlayersCount = room.players.filter((p) => !p.isSpectator && !p.isModerator).length;
       const maxWolves = Math.max(1, Math.floor((activePlayersCount - 1) / 2));
       settings.wolfCount = Math.max(1, Math.min(maxWolves, settings.wolfCount));
-    }
-    if (settings.discussionTimeSeconds !== undefined) {
-      settings.discussionTimeSeconds = Math.max(60, Math.min(600, settings.discussionTimeSeconds));
     }
     if (settings.enabledRoles !== undefined) {
       const validRoles: WeredogRole[] = ["Bodyguard", "Seer", "Hunter", "Cupid", "Witch", "Elder"];
@@ -502,7 +636,7 @@ export class WeredogEngine {
     const room = this.rooms.get(roomId);
     if (!room || room.state !== "LOBBY") return;
     const player = this.findPlayer(room, userId);
-    if (!player || player.isHost) return;
+    if (!player || player.isHost || player.isModerator) return;
     player.isSpectator = !player.isSpectator;
     this.scheduleBroadcast(roomId);
   }
@@ -533,12 +667,15 @@ export class WeredogEngine {
     const player = this.findPlayer(room, userId);
     if (!player?.isHost) return;
     const target = this.findPlayer(room, targetUserId);
-    if (!target || target.userId === userId) return;
+    if (
+      !target ||
+      target.userId === userId ||
+      target.isSpectator ||
+      target.status !== "connected"
+    ) return;
 
     player.isHost = false;
-    player.isSpectator = false;
     target.isHost = true;
-    target.isSpectator = false;
     this.broadcastState(roomId);
   }
 
@@ -546,12 +683,12 @@ export class WeredogEngine {
     const room = this.rooms.get(roomId);
     if (!room || room.state !== "ROLE_REVEAL") return;
     const player = this.findPlayer(room, userId);
-    if (!player || player.isHost || player.isSpectator) return;
+    if (!player || player.isModerator || player.isSpectator) return;
 
     player.isReady = true;
 
     const activePlayers = this.getActivePlayers(room);
-    if (activePlayers.every((p) => p.isReady || p.status === "disconnected")) {
+    if (activePlayers.every((p) => p.isReady)) {
       this.beginNight(roomId, room);
     }
     this.broadcastState(roomId);
@@ -563,7 +700,6 @@ export class WeredogEngine {
     const player = this.findPlayer(room, userId);
     if (!player?.isHost) return;
 
-    this.clearAutoConfirmTimer(roomId);
     room.state = "LOBBY";
     room.nightNumber = 0;
     room.messageStartIndex = 0;
@@ -603,7 +739,7 @@ export class WeredogEngine {
       p.witchHasKillBottle = true;
       p.elderLives = 2;
       p.hasVoted = false;
-      if (!p.isHost) p.isSpectator = false;
+      if (!p.isModerator) p.isSpectator = false;
     });
     this.invalidateAliveCache(room);
 
@@ -621,6 +757,12 @@ export class WeredogEngine {
     const player = this.findPlayer(room, userId);
     if (!player?.isHost) {
       if (socket) socket.emit("weredogError", "Chỉ có Host mới có quyền bắt đầu game!");
+      return;
+    }
+
+    const moderator = this.findModerator(room);
+    if (!moderator || moderator.status !== "connected") {
+      if (socket) socket.emit("weredogError", "Cần một quản trò đang kết nối để bắt đầu game.");
       return;
     }
 
@@ -729,8 +871,6 @@ export class WeredogEngine {
   }
 
   private advanceNightRole(roomId: string, room: WeredogRoom) {
-    this.clearAutoConfirmTimer(roomId);
-    
     if (room.currentNightActiveRole === "Cupid" && room.cupidLoverUserIds && room.cupidLoverUserIds.length === 2) {
       room.cupidLoversConfirmed = true;
     }
@@ -755,13 +895,14 @@ export class WeredogEngine {
     if (!role) return false;
 
     if (role === "Wolf") {
-      const connectedAliveWolves = this.getAlivePlayers(room).filter((p) => p.role === "Wolf" && p.status === "connected");
+      const connectedAliveWolves = this.getAlivePlayers(room).filter((p) => p.role === "Wolf");
       if (connectedAliveWolves.length === 0) return true;
       return room.wolfVictimUserId !== undefined;
     }
 
     const actor = this.getActivePlayers(room).find((p) => p.role === role);
-    if (!actor || !actor.isAlive || actor.status === "disconnected") return true;
+    if (!actor || !actor.isAlive) return true;
+    if (actor.status !== "connected") return false;
     if (this.isElderDead(room)) return true;
 
     switch (role) {
@@ -793,7 +934,7 @@ export class WeredogEngine {
   }
 
   private checkWolfVoteComplete(roomId: string, room: WeredogRoom) {
-    const aliveWolves = this.getAlivePlayers(room).filter((p) => p.role === "Wolf" && p.status === "connected");
+    const aliveWolves = this.getAlivePlayers(room).filter((p) => p.role === "Wolf");
     const allVoted = aliveWolves.every((w) => room.wolfVotes[w.userId]);
     if (!allVoted) return;
 
@@ -808,17 +949,8 @@ export class WeredogEngine {
 
     if (topTargets.length === 1) {
       room.wolfVictimUserId = topTargets[0][0];
-      // Start auto-confirm timer for host
-      this.setAutoConfirmTimer(roomId, () => {
-        const r = this.rooms.get(roomId);
-        if (r && r.state === "NIGHT_ACTION" && r.currentNightActiveRole === "Wolf") {
-          this.advanceNightRole(roomId, r);
-          this.broadcastState(roomId);
-        }
-      });
     } else {
       room.wolfVictimUserId = null; // Tie = no one dies
-      this.clearAutoConfirmTimer(roomId); // Do not auto-confirm / remove countdown on tie
     }
 
     this.scheduleBroadcast(roomId);
@@ -831,13 +963,12 @@ export class WeredogEngine {
     if (!player) return;
 
     // Allow if player is a live Wolf OR if they are the Host (to resolve a tie)
-    const isAllowed = (player.role === "Wolf" && player.isAlive) || player.isHost;
+    const isAllowed = (player.role === "Wolf" && player.isAlive) || player.isModerator;
     if (!isAllowed) return;
 
     // Only allow revote if wolves have finished voting (either decided a victim or tied)
     if (room.wolfVictimUserId === undefined) return;
 
-    this.clearAutoConfirmTimer(roomId);
     room.wolfVotes = {};
     room.wolfVictimUserId = undefined;
     this.broadcastState(roomId);
@@ -858,14 +989,6 @@ export class WeredogEngine {
 
     room.bodyguardTargetUserId = targetUserId;
 
-    // Auto-advance with 10s host confirm
-    this.setAutoConfirmTimer(roomId, () => {
-      const r = this.rooms.get(roomId);
-      if (r && r.state === "NIGHT_ACTION" && r.currentNightActiveRole === "Bodyguard") {
-        this.advanceNightRole(roomId, r);
-        this.broadcastState(roomId);
-      }
-    });
     this.broadcastState(roomId);
   }
 
@@ -882,13 +1005,6 @@ export class WeredogEngine {
     room.seerTargetUserId = targetUserId;
     room.seerResult = target.role === "Wolf" ? "Wolf" : "Human";
 
-    this.setAutoConfirmTimer(roomId, () => {
-      const r = this.rooms.get(roomId);
-      if (r && r.state === "NIGHT_ACTION" && r.currentNightActiveRole === "Seer") {
-        this.advanceNightRole(roomId, r);
-        this.broadcastState(roomId);
-      }
-    });
     this.broadcastState(roomId);
   }
 
@@ -914,13 +1030,6 @@ export class WeredogEngine {
     p2.isLover = true;
     p2.loverUserId = userId1;
 
-    this.setAutoConfirmTimer(roomId, () => {
-      const r = this.rooms.get(roomId);
-      if (r && r.state === "NIGHT_ACTION" && r.currentNightActiveRole === "Cupid") {
-        this.advanceNightRole(roomId, r);
-        this.broadcastState(roomId);
-      }
-    });
     this.broadcastState(roomId);
   }
 
@@ -942,27 +1051,11 @@ export class WeredogEngine {
       if (!room.wolfVictimUserId) {
         room.witchActionSelected = "none";
         room.witchTargetUserId = undefined;
-        // Auto-advance: skip turn silently
-        this.setAutoConfirmTimer(roomId, () => {
-          const r = this.rooms.get(roomId);
-          if (r && r.state === "NIGHT_ACTION" && r.currentNightActiveRole === "Witch") {
-            this.advanceNightRole(roomId, r);
-            this.broadcastState(roomId);
-          }
-        });
       }
       // If someone was bitten, client will show who — witch then calls witchUsePotion
     }
 
     if (action === "none") {
-      // Skip turn
-      this.setAutoConfirmTimer(roomId, () => {
-        const r = this.rooms.get(roomId);
-        if (r && r.state === "NIGHT_ACTION" && r.currentNightActiveRole === "Witch") {
-          this.advanceNightRole(roomId, r);
-          this.broadcastState(roomId);
-        }
-      });
     }
 
     this.broadcastState(roomId);
@@ -988,13 +1081,6 @@ export class WeredogEngine {
       return;
     }
 
-    this.setAutoConfirmTimer(roomId, () => {
-      const r = this.rooms.get(roomId);
-      if (r && r.state === "NIGHT_ACTION" && r.currentNightActiveRole === "Witch") {
-        this.advanceNightRole(roomId, r);
-        this.broadcastState(roomId);
-      }
-    });
     this.broadcastState(roomId);
   }
 
@@ -1004,7 +1090,7 @@ export class WeredogEngine {
     const room = this.rooms.get(roomId);
     if (!room || room.state !== "NIGHT_ACTION") return;
     const player = this.findPlayer(room, userId);
-    if (!player?.isHost) return;
+    if (!player?.isModerator) return;
     if (!this.isCurrentNightRoleResolved(room)) return;
 
     this.advanceNightRole(roomId, room);
@@ -1014,7 +1100,6 @@ export class WeredogEngine {
   // ─── Morning Resolution ───
 
   private resolveMorning(roomId: string, room: WeredogRoom) {
-    this.clearAutoConfirmTimer(roomId);
     const deaths: string[] = [];
 
     const isElderDead = this.isElderDead(room);
@@ -1149,9 +1234,8 @@ export class WeredogEngine {
     const room = this.rooms.get(roomId);
     if (!room || room.state === "LOBBY" || room.state === "GAME_OVER") return;
     const player = this.findPlayer(room, userId);
-    if (!player?.isHost) return;
+    if (!player?.isModerator) return;
 
-    this.clearAutoConfirmTimer(roomId);
     room.winner = "Wolf";
     room.wolfParityPending = false;
     room.state = "GAME_OVER";
@@ -1162,7 +1246,7 @@ export class WeredogEngine {
     const room = this.rooms.get(roomId);
     if (!room || !room.wolfParityPending) return;
     const player = this.findPlayer(room, userId);
-    if (!player?.isHost) return;
+    if (!player?.isModerator) return;
 
     const key = this.wolfParityKey(room);
     if (key) room.wolfParityAcknowledgedKey = key;
@@ -1245,14 +1329,13 @@ export class WeredogEngine {
     if (!room || (room.state !== "DAY_START" && room.state !== "DAY_VOTING")) return;
     if (room.pendingHunterShotUserId || room.wolfParityPending) return;
     const player = this.findPlayer(room, userId);
-    if (!player || !player.isAlive || player.isHost) return;
+    if (!player || !player.isAlive || player.isModerator || player.isSpectator) return;
 
     room.state = "DAY_VOTING";
 
     if (targetUserId === "cancel") {
       delete room.dayVotes[userId];
       player.hasVoted = false;
-      this.clearAutoConfirmTimer(roomId);
     } else {
       if (targetUserId !== "skip") {
         const target = this.findPlayer(room, targetUserId);
@@ -1261,18 +1344,6 @@ export class WeredogEngine {
       room.dayVotes[userId] = targetUserId;
       player.hasVoted = true;
 
-      // Check if all alive non-host players voted
-      const aliveVoters = this.getAlivePlayers(room);
-      const allVoted = aliveVoters.every((p) => room.dayVotes[p.userId] !== undefined || p.status === "disconnected");
-
-      if (allVoted) {
-        this.setAutoConfirmTimer(roomId, () => {
-          const r = this.rooms.get(roomId);
-          if (r && r.state === "DAY_VOTING") {
-            this.resolveDayVote(roomId, r);
-          }
-        });
-      }
     }
 
     this.scheduleBroadcast(roomId);
@@ -1282,20 +1353,17 @@ export class WeredogEngine {
     const room = this.rooms.get(roomId);
     if (!room || room.state !== "DAY_VOTING") return;
     const player = this.findPlayer(room, userId);
-    if (!player?.isHost) return;
+    if (!player?.isModerator) return;
 
     // Verify all alive players have voted (or disconnected)
     const aliveVoters = this.getAlivePlayers(room);
-    const allVoted = aliveVoters.every((p) => room.dayVotes[p.userId] !== undefined || p.status === "disconnected");
+    const allVoted = aliveVoters.every((p) => room.dayVotes[p.userId] !== undefined);
     if (!allVoted) return;
 
-    this.clearAutoConfirmTimer(roomId);
     this.resolveDayVote(roomId, room);
   }
 
   private resolveDayVote(roomId: string, room: WeredogRoom) {
-    this.clearAutoConfirmTimer(roomId);
-
     // Tally votes (Elder counts as 2)
     const voteCounts: Record<string, number> = {}; // targetUserId|'skip' -> count
     for (const [voterUserId, target] of Object.entries(room.dayVotes)) {
@@ -1357,7 +1425,7 @@ export class WeredogEngine {
     const room = this.rooms.get(roomId);
     if (!room || !room.tiebreakerActive) return;
     const player = this.findPlayer(room, userId);
-    if (!player?.isHost) return;
+    if (!player?.isModerator) return;
 
     room.tiebreakerActive = false;
     room.tiebreakerCandidates = [];
@@ -1378,7 +1446,7 @@ export class WeredogEngine {
     if (!room || room.state !== "DAY_START") return;
     if (room.pendingHunterShotUserId || room.wolfParityPending) return;
     const player = this.findPlayer(room, userId);
-    if (!player?.isHost) return;
+    if (!player?.isModerator) return;
 
     if (room.dayStartNextAction === "night") {
       if (room.wolfParityPending) {
@@ -1520,7 +1588,9 @@ export class WeredogEngine {
     this.io.in(roomId).fetchSockets().then((socketList) => {
       for (const s of socketList) {
         const userId = s.data.userId as string | undefined;
-        const me = userId ? room.players.find((p) => p.userId === userId) : undefined;
+        const me = userId
+          ? room.players.find((p) => p.userId === userId && p.id === s.id)
+          : undefined;
         const view = this.buildPlayerView(room, me);
         s.emit("stateUpdate", view);
       }
@@ -1529,7 +1599,8 @@ export class WeredogEngine {
 
   private buildPlayerView(room: WeredogRoom, me: WeredogPlayer | undefined): Partial<WeredogRoom> {
     const clone: WeredogRoom = structuredClone(room);
-    const isHost = me?.isHost;
+    clone.players.forEach(stripConnectionMetadata);
+    const isHost = me?.isModerator;
     const isGameActive = room.state !== "LOBBY" && room.state !== "GAME_OVER";
 
     clone.isElderDead = this.isElderDead(room);

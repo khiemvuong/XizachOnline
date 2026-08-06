@@ -91,10 +91,15 @@ export interface WeredogPlayer {
   name: string;
   avatarUrl?: string;
   role?: WeredogRole;
-  isHost: boolean; // moderator / host
+  isHost: boolean; // room ownership and lobby authority
+  isModerator: boolean; // non-playing game-master authority
   isSpectator: boolean;
   isReady: boolean;
   status: 'connected' | 'disconnected';
+  reconnectTokenHash?: string;
+  connectionState?: 'connected' | 'temporarily_disconnected' | 'abandoned';
+  disconnectedAt?: number;
+  reconnectDeadlineAt?: number;
 
   // Gameplay status
   isAlive: boolean;
@@ -132,10 +137,12 @@ export interface WeredogRoom {
   players: WeredogPlayer[];
   playerMap?: Map<string, WeredogPlayer>; // Cache for O(1) lookups by userId
   state: WeredogGameState;
+  timing: RoomTimingConfig<
+    "roleReveal" | "wolfVote" | "bodyguard" | "seer" | "cupid" | "witch" | "dayVote"
+  >;
   settings: {
     wolfCount: number;
     enabledRoles: WeredogRole[]; // Witch, Seer, etc.
-    discussionTimeSeconds: number;
   };
   messages: WeredogChatMessage[];
   messageStartIndex: number; // For circular message buffer (Phase 2)
@@ -177,3 +184,4 @@ export interface WeredogRoom {
   wolfParityAcknowledgedKey?: string;
   isElderDead?: boolean;
 }
+import type { RoomTimingConfig } from "./shared/timing";

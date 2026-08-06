@@ -15,6 +15,7 @@ interface Player {
   avatar: string;
   isAlive: boolean;
   isHost: boolean;
+  isModerator: boolean;
   role?: string;
   avatarUrl?: string | null;
   isLover?: boolean;
@@ -48,7 +49,7 @@ export default function WeredogGameOver({
   });
 
   // Filter out host from list
-  const gamePlayers = players.filter((p) => !p.isHost);
+  const gamePlayers = players.filter((p) => !p.isModerator);
 
   // Divide into Humans vs Wolves
   const humans = gamePlayers.filter((p) => p.role !== "Wolf");
