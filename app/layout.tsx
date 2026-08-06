@@ -78,13 +78,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PanGames",
+  title: "Pangames",
   description: "Trò chơi nhập vai chiến lược nhiều người chơi",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "PanGames",
+    title: "Pangames",
   },
   other: {
     "mobile-web-app-capable": "yes",

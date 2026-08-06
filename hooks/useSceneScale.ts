@@ -62,11 +62,15 @@ export function useSceneScale({
     // Fallback for older browsers
     window.addEventListener("resize", compute);
     window.addEventListener("orientationchange", compute);
+    window.visualViewport?.addEventListener("resize", compute);
+    window.visualViewport?.addEventListener("scroll", compute);
 
     return () => {
       observer?.disconnect();
       window.removeEventListener("resize", compute);
       window.removeEventListener("orientationchange", compute);
+      window.visualViewport?.removeEventListener("resize", compute);
+      window.visualViewport?.removeEventListener("scroll", compute);
     };
   }, [
     viewportRef, 

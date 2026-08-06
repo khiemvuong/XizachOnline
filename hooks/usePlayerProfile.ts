@@ -1,16 +1,18 @@
 import { useState, useCallback, useEffect } from "react";
+import { getAppStorage } from "@/lib/client/appStorage";
 
 export interface PlayerProfile {
   name: string;
   avatarUrl: string | null;
 }
 
-const STORAGE_KEY = "xz_player_profile";
+const STORAGE_KEY = "pangames.player-profile.v1";
 
 function readProfile(): PlayerProfile {
   if (typeof window === "undefined") return { name: "", avatarUrl: null };
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const storage = getAppStorage();
+    const raw = storage?.getItem(STORAGE_KEY) ?? storage?.getItem("xz_player_profile");
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<PlayerProfile>;
       return {
@@ -25,12 +27,13 @@ function readProfile(): PlayerProfile {
 }
 
 function writeProfile(profile: PlayerProfile) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  const storage = getAppStorage();
+  storage?.setItem(STORAGE_KEY, JSON.stringify(profile));
+  storage?.removeItem("xz_player_profile");
 }
 
 /**
- * Shared player profile (name + avatar) persisted in localStorage.
+ * Shared player profile (name + avatar) persisted in environment-selected storage.
  * Works across Deception, Avalon, and any future game modes.
  */
 export function usePlayerProfile() {

@@ -1,7 +1,7 @@
 {
-  "name": "Board Games",
-  "short_name": "Board Games",
-  "description": "Nền tảng chơi board game trực tuyến: Avalon, Deception và nhiều hơn nữa",
+  "name": "Pangames",
+  "short_name": "Pangames",
+  "description": "Nền tảng board game trực tuyến gồm Avalon, Deception, Weredog và Glitcher",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
