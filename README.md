@@ -1,6 +1,6 @@
-# Immersive Real-Time Multiplayer Board Game Suite
+# Pangames
 
-A high-performance, real-time multiplayer board game platform built with **Next.js**, **Node.js**, and **Socket.io**. This suite brings popular social deduction and strategy board games—**Avalon**, **Deception**, and **Werewolf**—to the web with an authoritative server architecture, seamless state synchronization, and a highly responsive, atmospheric UI/UX.
+A real-time multiplayer board game platform built with **Next.js**, **Node.js**, and **Socket.IO**. Pangames hosts **Avalon**, **Deception**, **Weredog**, and **Glitcher** with server-authoritative rules and viewer-specific state synchronization.
 
 > [!NOTE]
 > This project is designed as a production-grade, portfolio-worthy application demonstrating advanced full-stack engineering, complex game engine state machines, real-time network orchestration, and modern responsive design.
@@ -9,11 +9,12 @@ A high-performance, real-time multiplayer board game platform built with **Next.
 
 ## 🎮 Featured Games
 
-The platform orchestrates three distinct, complex board games, each complete with its own rule engine, visual identity, and action mechanics:
+The platform orchestrates four games, each with its own rule engine, visual identity, and action mechanics:
 
 1. **Avalon**: A medieval-themed Arthurian deduction game. Players are secretly assigned roles (Loyal Servants of Arthur vs. Minions of Mordred). Features include quest voting, dynamic team proposal phases, Merlin/Assassin mechanics, and real-time choice tracking.
 2. **Deception (Forensic Investigation)**: An investigation mystery game set in Hong Kong. A forensic scientist guides investigators in identifying the murderer, key evidence, and means of crime through dynamic clue plaques, while the murderer attempts to deflect blame.
 3. **Werewolf (Weredog - Gothic Fairytale Edition)**: A gothic-styled social deduction game featuring night-hunting active roles (Seer, Witch, Cupid, Hunter, Bodyguard, Elder) and daytime voting cycles. Includes interactive voting circles, custom role reveals, night-action modals, and host-delegation controls.
+4. **The Glitcher**: A performance and deduction game where players compare answers, identify inconsistent information, and vote for the hidden Glitcher.
 
 ---
 
@@ -21,13 +22,14 @@ The platform orchestrates three distinct, complex board games, each complete wit
 
 ### 1. Server-Authoritative State Machine
 To guarantee game state integrity and eliminate client-side cheating:
-* **Decoupled Rule Engines**: All game transitions, roles, card decks, and voting phases are calculated and processed purely on the Node.js/Express server (`AvalonEngine.ts`, `DeceptionEngine.ts`, `WeredogEngine.ts`).
-* **Deterministic Event Loop**: Game phases advance automatically based on timers or once all active players submit their socket actions.
+* **Decoupled Rule Engines**: Game transitions, roles, data, and voting phases are processed on the Node.js server by `AvalonEngine`, `DeceptionEngine`, `WeredogEngine`, and `GlitcherEngine`.
+* **Deterministic Event Loop**: Configured timers remain server-authoritative; untimed phases wait for every seated player or an explicit authority action.
 * **Granular Validation**: The server validates client requests against the current game state and the active player's role permissions (e.g., preventing a dead Wolf from voting or an inactive role from triggering night actions).
 
 ### 2. Real-Time Network Orchestration (Socket.io)
-* **Dynamic Room Allocation**: A centralized `GameEngine` orchestrator handles dynamic room creation, automated host assignment, and graceful reconnection handling.
-* **State Synchronization**: Instead of transmitting the entire state database on every update, the server pushes incremental, delta-based state updates (`WeredogGameState`, etc.) to minimize network overhead and latency.
+* **Namespaced Room Engines**: Each game owns its Socket.IO namespace, room lifecycle, authoritative validation, and private-state projection.
+* **State Synchronization**: Each connected viewer receives a state projection appropriate to their room membership and game role.
+* **Secure Reconnection**: One browser identity is shared across games, while rotating reconnect capabilities remain bound to a specific room seat and protect private state.
 * **Bi-directional Communication**: Handled via custom Socket.io event schemas, coordinating lobby join/leave operations, chat messages, mic statuses, and role actions.
 
 ### 3. Responsive UI/UX & Proportional Scaling
@@ -36,16 +38,16 @@ To guarantee game state integrity and eliminate client-side cheating:
 * **Viewport-Constrained Design (100vh Layouts)**: Structured layouts to fit perfectly on a single screen without scrolling. It uses dynamic grid layouts that split/stack side-by-side in mobile landscape orientation to optimize space.
 * **Theme-Driven Visual Systems**: Features CSS-first design systems including metallic borders, gothic typefaces (`font-gothic-heading`), linear gradients, and dark-ambient backdrops.
 
-### 4. Real-Time Peer-to-Peer Integration
-* **Voice Signaling**: Orchestrates voice channel signaling over the active socket connection to toggle real-time speaking indicators, microphone toggles, and PeerJS connections for spatial audio.
+### 4. Real-Time Voice
+* **LiveKit Voice**: Avalon and Deception share the LiveKit voice panel and token endpoint without coupling voice state to a game engine.
 
 ---
 
 ## 💻 Tech Stack
 
 * **Frontend**: Next.js (App Router), React, Tailwind CSS (v4 gradients & transitions), Zustand (Global State Management), Lucide React.
-* **Backend**: Node.js, Express, Socket.io (WebSocket framework).
-* **Communication & Signaling**: WebRTC, Socket-based Peer Signalling.
+* **Backend**: Node.js and Socket.IO.
+* **Communication & Signaling**: Socket.IO and LiveKit/WebRTC.
 * **Tooling & Environments**: TypeScript, npm, Docker (Production deployment).
 
 ---
@@ -57,13 +59,15 @@ To guarantee game state integrity and eliminate client-side cheating:
 │   ├── avalon/           # Avalon frontend entry & views
 │   ├── deception/        # Deception frontend entry & views
 │   ├── weredog/          # Werewolf/Weredog entry & styles
-│   └── page.tsx          # Main Game Selector Portal (Responsive 3-Column Layout)
+│   ├── glitcher/         # Glitcher entry, room, and styles
+│   └── page.tsx          # Main four-game selector
 ├── components/           # Reusable UI & Game components
-│   ├── weredog/          # Werewolf state UIs (Lobby, Night, Vote, Role reveal, Accessories)
-│   └── store/            # Zustand store client states
+│   ├── weredog/          # Weredog state UIs and client store
+│   ├── glitcher/         # Glitcher state UIs
+│   └── shared/           # Shared profile, avatar, chat, and layout primitives
 ├── server/               # Backend logic
 │   ├── game/             # Game core mechanics & server engines
-│   └── server-backend.ts # Server Express/Socket orchestration entry
+│   └── game/             # Four namespaced authoritative engines
 ├── utils/                # Helper utilities & configuration constants
 └── public/               # Asset catalog (images, audio, logos)
 ```
