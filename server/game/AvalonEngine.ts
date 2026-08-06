@@ -6,6 +6,16 @@ import {
   AvalonSkillType,
   AvalonVoteOutcome,
 } from "./AvalonTypes";
+import {
+  MAX_SPECTATORS_PER_ROOM,
+  issueReconnectCapability,
+  markConnectionAbandoned,
+  markConnectionInterrupted,
+  markConnectionRestored,
+  stripConnectionMetadata,
+  verifyReconnectCapability,
+} from "./shared/connection";
+import { disabledGameplayTimer } from "./shared/timing";
 
 export class AvalonEngine {
   private rooms: Map<string, AvalonRoom> = new Map();
@@ -15,6 +25,7 @@ export class AvalonEngine {
   private chatRateLimits: Map<string, number[]> = new Map();
   private questResolutionTimers: Map<string, ReturnType<typeof setTimeout>[]> =
     new Map();
+  private reconnectGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   private getQuestHistoryByPlayerCount(playerCount: number) {
     const questSizeMap: Record<number, number[]> = {
@@ -200,7 +211,7 @@ export class AvalonEngine {
   private getQuestSkillParticipantUserIds(room: AvalonRoom): string[] {
     const participantSet = new Set(room.proposedTeam);
     const mordred = room.players.find(
-      (p) => p.role === "Mordred" && !p.isSpectator && p.status === "connected",
+      (p) => p.role === "Mordred" && !p.isSpectator,
     );
     if (mordred) {
       participantSet.add(mordred.userId);
@@ -330,7 +341,7 @@ export class AvalonEngine {
     room: AvalonRoom,
   ): AvalonRoom["skillDecisionState"] {
     const merlin = room.players.find(
-      (p) => p.role === "Merlin" && !p.isSpectator && p.status === "connected",
+      (p) => p.role === "Merlin" && !p.isSpectator,
     );
 
     if (!room.settings.advancedMode || !merlin) {
@@ -383,6 +394,25 @@ export class AvalonEngine {
     this.io.on("connection", (socket: Socket) => {
       console.log("Avalon client connected:", socket.id);
 
+      socket.use(([event], next) => {
+        if (["checkRoom", "createRoom", "joinRoom"].includes(event)) return next();
+        const roomId = socket.data.roomId as string | undefined;
+        const userId = socket.data.userId as string | undefined;
+        const player = roomId && userId
+          ? this.rooms.get(roomId)?.players.find((candidate) => candidate.userId === userId)
+          : undefined;
+        if (!player || player.id !== socket.id || player.status !== "connected") {
+          return next(new Error("UNAUTHORIZED_SESSION"));
+        }
+        if (
+          player.isSpectator &&
+          !["chatMessage", "changeName", "updateAvatar", "measurePing", "updatePing", "explicitLeave"].includes(event)
+        ) {
+          return next(new Error("SPECTATOR_ACTION_FORBIDDEN"));
+        }
+        next();
+      });
+
       socket.on(
         "checkRoom",
         (roomId: string, callback: (exists: boolean) => void) => {
@@ -404,15 +434,18 @@ export class AvalonEngine {
         },
       );
 
-      socket.on("joinRoom", ({ roomId, playerName, userId, avatarUrl }) => {
+      socket.on("joinRoom", ({ roomId, playerName, userId, avatarUrl, reconnectToken }) => {
         if (!userId) return;
         this.joinRoom(
           roomId,
-          { id: socket.id, userId, name: playerName, avatarUrl },
+          { id: socket.id, userId, name: playerName, avatarUrl, reconnectToken },
           socket,
         );
-        socket.data.roomId = roomId;
-        socket.data.userId = userId;
+      });
+
+      socket.on("explicitLeave", (callback?: () => void) => {
+        if (socket.data.roomId) this.explicitLeave(socket.data.roomId, socket);
+        if (typeof callback === "function") callback();
       });
 
       socket.on("disconnect", () => {
@@ -603,6 +636,13 @@ export class AvalonEngine {
         id: roomId,
         players: [],
         state: "LOBBY",
+        timing: {
+          roleReveal: disabledGameplayTimer(),
+          teamVote: disabledGameplayTimer(),
+          skillDecision: disabledGameplayTimer(),
+          questVote: disabledGameplayTimer(),
+          assassination: disabledGameplayTimer(),
+        },
         settings: {
           advancedMode: false,
           merlin: true,
@@ -659,7 +699,7 @@ export class AvalonEngine {
 
   public joinRoom(
     roomId: string,
-    pData: { id: string; userId: string; name: string; avatarUrl?: string },
+    pData: { id: string; userId: string; name: string; avatarUrl?: string; reconnectToken?: string },
     socket: Socket,
   ) {
     if (!this.rooms.has(roomId)) {
@@ -674,11 +714,29 @@ export class AvalonEngine {
 
     const existingPlayer = room.players.find((p) => p.userId === pData.userId);
     if (existingPlayer) {
+      const isCurrentSocket = existingPlayer.id === socket.id;
+      if (
+        !isCurrentSocket &&
+        !verifyReconnectCapability(existingPlayer.reconnectTokenHash, pData.reconnectToken)
+      ) {
+        socket.emit("avalonError", "Không thể khôi phục ghế: reconnect capability không hợp lệ.");
+        return;
+      }
+      if (!isCurrentSocket) {
+        const previousSocket = this.io.sockets.get(existingPlayer.id);
+        existingPlayer.id = pData.id;
+        previousSocket?.emit("sessionReplaced");
+        previousSocket?.disconnect(true);
+      }
       // Reconnect logic — keep existing role/team/spectator status
-      existingPlayer.id = pData.id;
       existingPlayer.name = pData.name;
       if (pData.avatarUrl !== undefined) existingPlayer.avatarUrl = pData.avatarUrl;
       existingPlayer.status = "connected";
+      markConnectionRestored(existingPlayer);
+      this.clearReconnectGrace(roomId, existingPlayer.userId);
+      const capability = issueReconnectCapability();
+      existingPlayer.reconnectTokenHash = capability.reconnectTokenHash;
+      socket.emit("sessionEstablished", { reconnectToken: capability.reconnectToken });
 
       // In LOBBY: if this player lost host (e.g. disconnected earlier), push to bottom
       if (room.state === "LOBBY" && !existingPlayer.isHost) {
@@ -692,6 +750,17 @@ export class AvalonEngine {
       // Brand new player
       const isHost = room.players.length === 0;
       const isMidGame = room.state !== "LOBBY";
+      if (
+        isMidGame &&
+        room.players.filter((player) => player.isSpectator).length >= MAX_SPECTATORS_PER_ROOM
+      ) {
+        socket.emit("avalonError", {
+          code: "SPECTATOR_LIMIT_REACHED",
+          message: `Phòng đã đủ ${MAX_SPECTATORS_PER_ROOM} khán giả.`,
+        });
+        return;
+      }
+      const capability = issueReconnectCapability();
       room.players.push({
         id: pData.id,
         userId: pData.userId,
@@ -699,11 +768,16 @@ export class AvalonEngine {
         avatarUrl: pData.avatarUrl,
         isHost: isHost && !isMidGame, // don't give host to mid-game joiners
         status: "connected",
+        connectionState: "connected",
+        reconnectTokenHash: capability.reconnectTokenHash,
         isHandRaised: false,
         ...(isMidGame ? { isSpectator: true } : {}),
       });
+      socket.emit("sessionEstablished", { reconnectToken: capability.reconnectToken });
     }
 
+    socket.data.roomId = roomId;
+    socket.data.userId = pData.userId;
     socket.join(roomId);
     this.broadcastState(roomId);
   }
@@ -716,28 +790,80 @@ export class AvalonEngine {
     if (pIndex !== -1) {
       const player = room.players[pIndex];
       player.status = "disconnected";
-
-      // Spectators can be safely removed anytime — they don't affect game indices
-      // In LOBBY, all players can be safely removed
-      const canRemove = room.state === "LOBBY" || player.isSpectator;
-      if (canRemove) {
-        room.players.splice(pIndex, 1);
-        if (room.players.length === 0) {
-          this.clearQuestResolutionTimers(roomId);
-          this.rooms.delete(roomId);
-        } else if (player.isHost) {
-          // Shift host to first remaining connected non-spectator, or first player
-          const newHost =
-            room.players.find(
-              (p) => p.status === "connected" && !p.isSpectator,
-            ) ?? room.players[0];
-          newHost.isHost = true;
-        }
-      }
-      // Active players mid-game: keep in array as disconnected to preserve indices
+      markConnectionInterrupted(player);
+      this.scheduleReconnectGrace(roomId, player.userId);
 
       this.broadcastState(roomId);
     }
+  }
+
+  private explicitLeave(roomId: string, socket: Socket) {
+    const room = this.rooms.get(roomId);
+    const player = room?.players.find((candidate) => candidate.id === socket.id);
+    if (!room || !player) return;
+    this.clearReconnectGrace(roomId, player.userId);
+
+    if (room.state !== "LOBBY" && !player.isSpectator && !player.isHost) {
+      player.status = "disconnected";
+      markConnectionAbandoned(player);
+    } else {
+      if (room.state !== "LOBBY" && player.isHost) {
+        this.restartAvalonGame(roomId, player.userId);
+      }
+      room.players = room.players.filter((candidate) => candidate.userId !== player.userId);
+      if (room.players.length === 0) {
+        this.clearQuestResolutionTimers(roomId);
+        this.rooms.delete(roomId);
+      } else if (player.isHost) {
+        const nextHost = room.players.find(
+          (candidate) => candidate.status === "connected" && !candidate.isSpectator,
+        );
+        if (nextHost) nextHost.isHost = true;
+      }
+    }
+
+    socket.leave(roomId);
+    delete socket.data.roomId;
+    delete socket.data.userId;
+    if (this.rooms.has(roomId)) this.broadcastState(roomId);
+  }
+
+  private scheduleReconnectGrace(roomId: string, userId: string) {
+    this.clearReconnectGrace(roomId, userId);
+    const key = `${roomId}:${userId}`;
+    const player = this.rooms.get(roomId)?.players.find((candidate) => candidate.userId === userId);
+    const delay = Math.max(0, (player?.reconnectDeadlineAt ?? Date.now()) - Date.now());
+    const timer = setTimeout(() => {
+      this.reconnectGraceTimers.delete(key);
+      const room = this.rooms.get(roomId);
+      const current = room?.players.find((candidate) => candidate.userId === userId);
+      if (!room || !current || current.connectionState !== "temporarily_disconnected") return;
+      markConnectionAbandoned(current);
+      if (current.isHost) {
+        current.isHost = false;
+        const nextHost = room.players.find(
+          (candidate) => candidate.status === "connected" && !candidate.isSpectator,
+        );
+        if (nextHost) nextHost.isHost = true;
+      }
+      if (room.state === "LOBBY") {
+        room.players = room.players.filter((candidate) => candidate.userId !== userId);
+        if (room.players.length === 0) {
+          this.clearQuestResolutionTimers(roomId);
+          this.rooms.delete(roomId);
+          return;
+        }
+      }
+      this.broadcastState(roomId);
+    }, delay);
+    this.reconnectGraceTimers.set(key, timer);
+  }
+
+  private clearReconnectGrace(roomId: string, userId: string) {
+    const key = `${roomId}:${userId}`;
+    const timer = this.reconnectGraceTimers.get(key);
+    if (timer) clearTimeout(timer);
+    this.reconnectGraceTimers.delete(key);
   }
 
   public chatMessage(roomId: string, userId: string, text: string) {
@@ -906,9 +1032,9 @@ export class AvalonEngine {
 
     player.isReady = true;
 
-    // Check if everyone connected (non-spectator) is ready
+    // Untimed phases wait for every seated player, including temporarily offline players.
     const allReady = room.players
-      .filter((p) => p.status === "connected" && !p.isSpectator)
+      .filter((p) => !p.isSpectator)
       .every((p) => p.isReady);
     if (allReady) {
       room.state = "TEAM_BUILDING";
@@ -972,7 +1098,7 @@ export class AvalonEngine {
 
     // Check if everyone voted (non-spectator)
     const activePlayers = room.players.filter(
-      (p) => p.status === "connected" && !p.isSpectator,
+      (p) => !p.isSpectator,
     );
     const allVoted = activePlayers.every((p) => p.hasVoted);
 
@@ -1864,6 +1990,7 @@ export class AvalonEngine {
 
   private getSafeStateForPlayer(room: AvalonRoom, userId: string) {
     const clone = JSON.parse(JSON.stringify(room)) as AvalonRoom;
+    clone.players.forEach(stripConnectionMetadata);
     const me = clone.players.find((p) => p.userId === userId);
 
     if (!me) return clone;

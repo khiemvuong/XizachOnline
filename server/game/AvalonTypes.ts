@@ -88,6 +88,10 @@ export interface AvalonPlayer {
   team?: AvalonTeam;
   isHost: boolean;
   status: 'connected' | 'disconnected';
+  reconnectTokenHash?: string;
+  connectionState?: 'connected' | 'temporarily_disconnected' | 'abandoned';
+  disconnectedAt?: number;
+  reconnectDeadlineAt?: number;
   isReady?: boolean;
   isSpectator?: boolean;
   // UI states
@@ -101,6 +105,9 @@ export interface AvalonRoom {
   id: string;
   players: AvalonPlayer[];
   state: AvalonGameState;
+  timing: RoomTimingConfig<
+    "roleReveal" | "teamVote" | "skillDecision" | "questVote" | "assassination"
+  >;
   settings: {
     advancedMode: boolean;
     merlin: boolean;
@@ -143,3 +150,4 @@ export interface AvalonRoom {
   publicRevealedRoleUserIds?: string[];
   minionSoulmates?: string[];
 }
+import type { RoomTimingConfig } from "./shared/timing";
