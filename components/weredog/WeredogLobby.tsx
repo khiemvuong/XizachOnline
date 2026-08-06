@@ -13,6 +13,7 @@ interface Player {
   name: string;
   avatar: string;
   isHost: boolean;
+  isModerator: boolean;
   avatarUrl?: string | null;
 }
 
@@ -78,7 +79,7 @@ export default function WeredogLobby({
     return selectedRoles ?? ["Wolf", "Bodyguard", "Seer", "Witch", "Hunter", "Cupid"];
   }, [selectedRoles]);
 
-  const activePlayersCount = players.filter(p => !p.isHost).length;
+  const activePlayersCount = players.filter(p => !p.isModerator).length;
 
   const playerAccessoryMap = useMemo(() => {
     const sorted = [...players].sort((a, b) => (a.userId || "").localeCompare(b.userId || ""));

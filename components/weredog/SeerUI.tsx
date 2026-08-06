@@ -27,7 +27,7 @@ export default function SeerUI({
   const display = ROLE_DISPLAY.Seer;
 
   const disabledIds = players
-    .filter(p => !p.isAlive || p.isHost || p.userId === myUserId)
+    .filter(p => !p.isAlive || p.isModerator || p.userId === myUserId)
     .map(p => p.userId);
 
   // Reset local state when it's no longer my turn (handled safely during render phase)

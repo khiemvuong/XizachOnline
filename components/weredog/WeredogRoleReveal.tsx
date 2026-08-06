@@ -12,6 +12,7 @@ interface Player {
   name: string;
   avatar: string;
   isHost: boolean;
+  isModerator: boolean;
   avatarUrl?: string | null;
   isReady?: boolean;
   role?: string;
@@ -163,7 +164,7 @@ export default function WeredogRoleReveal({
             <div className="w-full bg-black/55 border border-[#445257]/30 rounded-2xl p-4 shadow-[inset_0_4px_16px_rgba(0,0,0,0.9)] backdrop-blur-md">
               {/* Grid of Players and Roles */}
               <div className="w-full max-h-[200px] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pr-1 scrollbar-thin scrollbar-thumb-[#cda372]/30 scrollbar-track-transparent">
-                {players.filter(p => !p.isHost && !p.isSpectator).map((p) => {
+                {players.filter(p => !p.isModerator && !p.isSpectator).map((p) => {
                   const isPlayerReady = p.isReady;
                   const roleName = getRoleNameVi(p.role);
                   

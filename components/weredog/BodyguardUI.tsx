@@ -26,7 +26,7 @@ export default function BodyguardUI({
 
   // Cannot protect same person two nights in a row (can protect self)
   const disabledIds = players
-    .filter(p => !p.isAlive || p.isHost || p.userId === lastProtectedUserId)
+    .filter(p => !p.isAlive || p.isModerator || p.userId === lastProtectedUserId)
     .map(p => p.userId);
 
   // Reset local state when it's no longer my turn (handled safely during render phase)

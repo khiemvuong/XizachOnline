@@ -155,7 +155,7 @@ function PlayerNode({
   isSaved = false,
 }: PlayerNodeProps) {
   const isDead = !player.isAlive;
-  const canClick = !isDead && !isDisabled && !player.isHost && onSelect;
+  const canClick = !isDead && !isDisabled && !player.isModerator && onSelect;
   const frameColors = player.visibleFrameType
     ? ROLE_FRAME_COLORS[player.visibleFrameType]
     : null;
@@ -281,7 +281,7 @@ function PlayerNode({
       </span>
 
       {/* Host badge */}
-      {player.isHost && (
+      {player.isModerator && (
         <span className="text-[7px] text-amber-400 font-gothic-ui font-bold uppercase tracking-wider">
           Host
         </span>
@@ -355,7 +355,7 @@ export default function NightPlayerCircle({
   };
 
   // Filter out host from player slots (host is moderator, not in circle)
-  const gamePlayers = players.filter(p => !p.isHost);
+  const gamePlayers = players.filter(p => !p.isModerator);
   const avatarSize = gamePlayers.length > 8 ? 54 : 70;
   const total = gamePlayers.length;
 

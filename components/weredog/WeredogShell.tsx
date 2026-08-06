@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import useScreenWakeLock from "@/hooks/useScreenWakeLock";
+import { useViewportMode } from "@/hooks/useViewportMode";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
 import PlayerProfileModal from "@/components/shared/PlayerProfileModal";
 import { useWeredogStore } from "./store/useWeredogStore";
@@ -34,6 +35,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
   // Zustand Store binding
   const {
     gameState,
+    errorMessage,
     userId,
     updateProfile: syncProfileOnServer,
     startGame,
@@ -61,27 +63,19 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
 
   const router = useRouter();
   const [showLeaveConfirmModal, setShowLeaveConfirmModal] = useState(false);
-  const [isLandscape, setIsLandscape] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const { isLandscape, isMobile } = useViewportMode();
 
   const handleBack = () => {
     if (gameState && gameState.state !== "LOBBY") {
       setShowLeaveConfirmModal(true);
     } else {
-      useWeredogStore.getState().disconnect();
-      router.push("/weredog");
+      useWeredogStore.getState().leaveRoom(() => router.push("/weredog"));
     }
   };
 
   const handleConfirmLeave = () => {
     setShowLeaveConfirmModal(false);
-    const me = gameState?.players.find((p) => p.userId === userId);
-    if (me?.isHost) {
-      returnToLobby();
-    } else {
-      useWeredogStore.getState().disconnect();
-      router.push("/weredog");
-    }
+    useWeredogStore.getState().leaveRoom(() => router.push("/weredog"));
   };
 
   // Sync WebSocket connection on profile or roomId change
@@ -98,33 +92,15 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
     mobileOnly: false,
   });
 
-  useEffect(() => {
-    const update = () => {
-      const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-      const noHover = window.matchMedia("(hover: none)").matches;
-      const smallViewport = Math.min(window.innerWidth, window.innerHeight) <= 900;
-      const touchCapable = navigator.maxTouchPoints > 0 || "ontouchstart" in window;
-      const isiPhone = /iPhone/i.test(navigator.userAgent);
-      setIsMobile((smallViewport && (coarsePointer || noHover || touchCapable)) || isiPhone);
-      setIsLandscape(window.matchMedia("(orientation: landscape)").matches);
-    };
-
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("orientationchange", update);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("orientationchange", update);
-    };
-  }, []);
-
   // Display loading spinner while connecting/waiting for initial state
   if (!gameState) {
     return (
       <div className="w-full min-h-screen flex items-center justify-center bg-[#0b0d11] text-[#829ea2] font-serif">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-[#cda372]/30 border-t-[#cda372] rounded-full animate-spin" />
-          <p className="text-sm uppercase tracking-widest font-bold">Đang kết nối đến máy chủ...</p>
+          <p className="text-sm uppercase tracking-widest font-bold" role={errorMessage ? "alert" : "status"}>
+            {errorMessage || "Đang kết nối đến máy chủ..."}
+          </p>
         </div>
       </div>
     );
@@ -132,7 +108,8 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
 
   // Derive me (current player in gameState)
   const me = gameState.players.find((p) => p.userId === userId);
-  const isHost = me?.isHost || false;
+  const isRoomHost = me?.isHost || false;
+  const isModerator = me?.isModerator || false;
   const myRole = me?.role || "Villager";
 
   // Derive active players mapped with fallback avatar emoji
@@ -143,6 +120,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
     avatar: getFallbackAvatar(p.name, idx),
     avatarUrl: p.avatarUrl || null,
     isHost: p.isHost,
+    isModerator: p.isModerator,
     isSpectator: p.isSpectator,
     isReady: p.isReady,
     isAlive: p.isAlive,
@@ -158,7 +136,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
     let isInspected = false;
     let isProtected = false;
 
-    if (isHost || p.userId === userId) {
+    if (isModerator || p.userId === userId) {
       frameType = p.role ? ROLE_DISPLAY[p.role]?.frameType : undefined;
     } else if (me?.role === "Wolf" && p.role === "Wolf") {
       frameType = "wolf";
@@ -207,10 +185,10 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
     gameState.state === "GAME_OVER" ? 6 : 1;
 
   const isLobby = stateNum === 1;
-  const alivePlayersForParity = gameState.players.filter((p) => p.isAlive && !p.isHost && !p.isSpectator);
+  const alivePlayersForParity = gameState.players.filter((p) => p.isAlive && !p.isModerator && !p.isSpectator);
   const aliveWolfCount = alivePlayersForParity.filter((p) => p.role === "Wolf").length;
   const aliveNonWolfCount = alivePlayersForParity.length - aliveWolfCount;
-  const shouldShowWolfParityModal = isHost && !!gameState.wolfParityPending && gameState.state !== "GAME_OVER";
+  const shouldShowWolfParityModal = isModerator && !!gameState.wolfParityPending && gameState.state !== "GAME_OVER";
 
   const shellClass = [
     "weredog-theme",
@@ -258,7 +236,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
               onOpenProfile={() => setShowProfileModal(true)}
               myUserId={userId}
               onBack={handleBack}
-              isHost={isHost}
+              isHost={isRoomHost}
               players={onlinePlayers}
               onTransferHost={transferHost}
             />
@@ -270,10 +248,10 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
               onReady={playerReady}
               roomId={roomId}
               readyCount={gameState.players.filter(p => p.isReady).length}
-              totalPlayers={gameState.players.filter(p => !p.isSpectator && !p.isHost).length}
+              totalPlayers={gameState.players.filter(p => !p.isSpectator && !p.isModerator).length}
               hasClickedReady={me?.isReady || false}
               onBack={handleBack}
-              isHost={isHost}
+              isHost={isModerator}
               players={onlinePlayers}
             />
           )}
@@ -283,7 +261,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
               players={visiblePlayers}
               myUserId={userId}
               myRole={myRole}
-              isHost={isHost}
+              isHost={isModerator}
               roomId={roomId}
               currentActiveRole={gameState.currentNightActiveRole as WeredogRoleName}
               nightNumber={gameState.nightNumber}
@@ -317,7 +295,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
             <WeredogDayStart
               roomId={roomId}
               dayNumber={gameState.nightNumber}
-              isHost={isHost}
+              isHost={isModerator}
               players={visiblePlayers}
               myUserId={userId}
               deathsThisNight={gameState.deathsThisNight}
@@ -333,7 +311,7 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
             <WeredogDayVoting
               roomId={roomId}
               dayNumber={gameState.nightNumber}
-              isHost={isHost}
+              isHost={isModerator}
               players={visiblePlayers}
               myUserId={userId}
               isAlive={me?.isAlive ?? true}
@@ -421,10 +399,10 @@ export default function WeredogShell({ roomId }: { roomId: string }) {
             <div className="absolute -top-30 left-1/2 -translate-x-1/2 w-60 h-37.5 bg-red-900/20 blur-[60px] rounded-full pointer-events-none" />
 
             <h3 className="font-serif italic font-extrabold text-[#e1c7a5] text-lg uppercase tracking-wide mb-2 drop-shadow-md">
-              {isHost ? "Rời Phòng & Hủy Trận?" : "Thoát Khỏi Trận Đấu?"}
+              {isRoomHost ? "Rời Phòng & Hủy Trận?" : "Thoát Khỏi Trận Đấu?"}
             </h3>
             <p className="font-serif italic text-[#829ea2]/90 text-xs leading-relaxed mb-6">
-              {isHost
+              {isRoomHost
                 ? "Bạn là Quản trò. Nếu bạn rời phòng, trận đấu đang diễn ra sẽ bị hủy và toàn bộ người chơi khác sẽ được đưa trở lại phòng chờ (Lobby)."
                 : "Bạn đang tham gia trận đấu. Nếu bạn rời đi bây giờ, bạn sẽ bị ngắt kết nối khỏi phòng chơi và mất quyền tham gia trận này."}
             </p>

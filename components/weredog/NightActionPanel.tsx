@@ -14,7 +14,6 @@ interface NightActionPanelProps {
   children?: ReactNode;
   isHost?: boolean;
   onHostConfirm?: () => void;
-  hostTimerSeconds?: number;
   hasRoleActed?: boolean;
   hostActionSummary?: string;
   onWolfRevote?: () => void;
@@ -32,7 +31,6 @@ export default function NightActionPanel({
   children,
   isHost = false,
   onHostConfirm,
-  hostTimerSeconds,
   hasRoleActed = false,
   hostActionSummary,
   onWolfRevote,
@@ -71,7 +69,7 @@ export default function NightActionPanel({
               </div>
             )}
 
-            {/* Timer status */}
+            {/* Untimed phases wait for an explicit moderator action. */}
             <div className="flex items-center gap-1.5 text-[10px] font-serif uppercase tracking-widest text-[#829ea2]/60 select-none">
               {hasRoleActed ? (
                 isActiveRoleDead ? (
@@ -81,10 +79,7 @@ export default function NightActionPanel({
                 ) : roleKey === "Wolf" && hostActionSummary?.includes("Bất đồng") ? (
                   <span className="text-amber-400 font-bold">⚠️ Hòa phiếu! Quản trò hãy quyết định</span>
                 ) : (
-                  <>
-                    <span>Tự động chuyển tiếp sau:</span>
-                    <span className="font-mono font-bold text-rose-400">{hostTimerSeconds ?? 20}s</span>
-                  </>
+                  <span>Đã sẵn sàng — chờ quản trò xác nhận</span>
                 )
               ) : (
                 <span className="text-amber-500 font-bold">⏳ Đang chờ người chơi chọn...</span>

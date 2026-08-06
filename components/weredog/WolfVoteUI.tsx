@@ -80,7 +80,7 @@ export default function WolfVoteUI({
     );
   }
   const disabledIds = players
-    .filter(p => !p.isAlive || p.isHost)
+    .filter(p => !p.isAlive || p.isModerator)
     .map(p => p.userId);
 
   const handleSelect = (userId: string) => {

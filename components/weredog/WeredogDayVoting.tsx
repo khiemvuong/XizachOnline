@@ -12,6 +12,7 @@ interface Player {
   avatar: string;
   isAlive: boolean;
   isHost: boolean;
+  isModerator: boolean;
   voteWeight?: number;
 }
 
@@ -67,7 +68,7 @@ export default function WeredogDayVoting({
   // Dead players and host cannot be target of voting (can vote for self)
   const disabledIds = useMemo(() => {
     return players
-      .filter((p) => !p.isAlive || p.isHost)
+      .filter((p) => !p.isAlive || p.isModerator)
       .map((p) => p.userId);
   }, [players]);
 
@@ -96,7 +97,7 @@ export default function WeredogDayVoting({
     });
   }, [players, votes, myUserId]);
 
-  const totalAlive = players.filter((p) => p.isAlive && !p.isHost).length;
+  const totalAlive = players.filter((p) => p.isAlive && !p.isModerator).length;
   const votedCount = Object.keys(votes).length;
 
 
@@ -359,7 +360,7 @@ export default function WeredogDayVoting({
             </span>
             <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-[#cda372]/20 scrollbar-track-transparent space-y-2">
               {players
-                .filter((p) => p.isAlive && !p.isHost)
+                .filter((p) => p.isAlive && !p.isModerator)
                 .map((p) => {
                   const targetId = votes[p.userId];
                   const targetPlayer = targetId

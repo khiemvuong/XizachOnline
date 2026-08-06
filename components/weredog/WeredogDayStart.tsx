@@ -49,7 +49,7 @@ export default function WeredogDayStart({
     : null;
   const isHunterShooter = !!pendingHunterShotUserId && myUserId === pendingHunterShotUserId;
   const hunterDisabledIds = players
-    .filter((p) => !p.isAlive || p.isHost || p.userId === pendingHunterShotUserId)
+    .filter((p) => !p.isAlive || p.isModerator || p.userId === pendingHunterShotUserId)
     .map((p) => p.userId);
   const hunterSelectedPlayer = hunterSelectedId
     ? players.find((p) => p.userId === hunterSelectedId)
