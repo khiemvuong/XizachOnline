@@ -1,6 +1,6 @@
-# Avalon Mobile UI Scaling Rules
+# Pangames Mobile UI Scaling Rules
 
-To guarantee a pristine, scroll-free, completely immersive experience on mobile landscape environments, the Avalon project utilizes a "Measure-then-Scale" layout pattern instead of fighting with native CSS Media Queries on exact pixel breakpoints.
+Pangames uses shared viewport measurement for all four game shells and a measure-then-scale pattern only for fixed-size boards that genuinely share that requirement.
 
 This ensures custom game boards, cinematic election overlays, and role inspection grids uniformly shrink to fit the viewable screen WITHOUT breaking their original aspect or forcing scrollbars, maintaining absolute positional integrity.
 
@@ -53,35 +53,9 @@ export default function MyOverlay() {
 }
 ```
 
-### 2. `useScrollFitScale`
-Use this when dealing with **long flowing vertical content that you want to squish** so that it fits the screen specifically to hide scrollbars. It dynamically measures `clientHeight` vs `scrollHeight` and compresses the internal content if it overhangs. (Used by `RoleReveal.tsx` side panels).
-
-```tsx
-import { useScrollFitScale } from '@/hooks/useScrollFitScale';
-import { useRef } from 'react';
-
-export default function MyScrollFittedPanel({ isCompactMode }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const scale = useScrollFitScale({
-    containerRef,
-    contentRef,
-    active: isCompactMode,
-    minScale: 0.55 // Prevent text from becoming absolutely unreadable
-  });
-
-  const shouldScale = isCompactMode && scale < 0.999;
-
-  return (
-     <section ref={containerRef} className={shouldScale ? 'overflow-hidden' : 'overflow-auto'}>
-        <div ref={contentRef} style={shouldScale ? { transform: `scale(${scale})`, transformOrigin: 'top left', width: `${100 / scale}%` } : {}}>
-           {/* Long vertical flowing content */}
-        </div>
-     </section>
-  )
-}
-```
-
 ### Performance Notes
-Both hooks wrap `ResizeObserver` under the hood. They're heavily optimized, safe to be called in unison across nested views, correctly handle unmounting events, and have fallback polyfill behaviors baked internally preventing browser issues.
+`useSceneScale` wraps `ResizeObserver`, cleans up its listeners when the component unmounts, and provides window resize/orientation fallbacks.
+
+### 2. `useViewportMode`
+
+Use this in game shells for mobile/orientation decisions. It reads `visualViewport` when available, falls back to `innerWidth`/`innerHeight`, throttles updates with `requestAnimationFrame`, and owns cleanup for resize, orientation-change, address-bar, and viewport-scroll listeners.

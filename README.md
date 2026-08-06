@@ -66,8 +66,7 @@ To guarantee game state integrity and eliminate client-side cheating:
 │   ├── glitcher/         # Glitcher state UIs
 │   └── shared/           # Shared profile, avatar, chat, and layout primitives
 ├── server/               # Backend logic
-│   ├── game/             # Game core mechanics & server engines
-│   └── game/             # Four namespaced authoritative engines
+│   └── game/             # Four namespaced engines plus shared connection/timing policy
 ├── utils/                # Helper utilities & configuration constants
 └── public/               # Asset catalog (images, audio, logos)
 ```
@@ -84,7 +83,7 @@ To guarantee game state integrity and eliminate client-side cheating:
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd xz
+   cd pangames
    ```
 2. Install dependencies:
    ```bash
