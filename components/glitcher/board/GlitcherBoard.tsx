@@ -16,19 +16,14 @@ import DiscussionScreen from "../screens/DiscussionScreen";
 import QuestionRoundScreen from "../screens/QuestionRoundScreen";
 import RevealScreen from "../screens/RevealScreen";
 import GlitcherLobby from "./GlitcherLobby";
+import { getOrCreateBrowserIdentity } from "@/lib/client/playerIdentity";
+import { readRoomCapability, writeRoomCapability } from "@/lib/client/roomCapabilityStorage";
 
 function createActionId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function createUserId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `glitcher-${crypto.randomUUID()}`;
-  }
-  return `glitcher-${Math.random().toString(36).slice(2, 12)}`;
 }
 
 function normalizeSocketError(error: unknown) {
@@ -38,10 +33,6 @@ function normalizeSocketError(error: unknown) {
     if (message) return message;
   }
   return "Dữ liệu vừa gửi không được máy chủ chấp nhận.";
-}
-
-function reconnectTokenKey(roomId: string, userId: string) {
-  return `glitcher_reconnect:${roomId}:${userId}`;
 }
 
 export default function GlitcherBoard({ roomId }: { roomId: string }) {
@@ -54,16 +45,7 @@ export default function GlitcherBoard({ roomId }: { roomId: string }) {
   const { profile, updateProfile } = usePlayerProfile();
   const [nameDraft, setNameDraft] = useState("");
   const [joinedName, setJoinedName] = useState<string | null>(null);
-  const [userId] = useState(() => {
-    if (typeof window === "undefined") return "";
-
-    const storedUserId = sessionStorage.getItem("xz_userId");
-    if (storedUserId) return storedUserId;
-
-    const nextUserId = createUserId();
-    sessionStorage.setItem("xz_userId", nextUserId);
-    return nextUserId;
-  });
+  const [userId] = useState(() => getOrCreateBrowserIdentity());
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<GlitcherClientState | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -82,7 +64,7 @@ export default function GlitcherBoard({ roomId }: { roomId: string }) {
     socketio.on("connect", () => {
       setSocket(socketio);
       setErrorMessage("");
-      const reconnectToken = sessionStorage.getItem(reconnectTokenKey(roomId, userId)) ?? undefined;
+      const reconnectToken = readRoomCapability("glitcher", roomId, userId);
       socketio.emit("joinRoom", {
         roomId,
         playerName,
@@ -92,14 +74,12 @@ export default function GlitcherBoard({ roomId }: { roomId: string }) {
     });
 
     socketio.on("stateUpdate", (nextState: GlitcherClientState) => {
-      if (nextState.reconnectToken) {
-        sessionStorage.setItem(
-          reconnectTokenKey(nextState.roomId, userId),
-          nextState.reconnectToken,
-        );
-      }
       setGameState(nextState);
       setErrorMessage("");
+    });
+
+    socketio.on("sessionEstablished", ({ reconnectToken }: { reconnectToken: string }) => {
+      writeRoomCapability("glitcher", roomId, userId, reconnectToken);
     });
 
     socketio.on("glitcherError", (error: unknown) => {
@@ -148,7 +128,6 @@ export default function GlitcherBoard({ roomId }: { roomId: string }) {
     const finishLeaving = () => {
       if (finished) return;
       finished = true;
-      sessionStorage.removeItem(reconnectTokenKey(roomId, userId));
       router.push("/glitcher");
     };
 
@@ -166,7 +145,7 @@ export default function GlitcherBoard({ roomId }: { roomId: string }) {
         finishLeaving();
       },
     );
-  }, [roomId, router, socket, userId]);
+  }, [router, socket]);
 
   if (!validRoomId) {
     return (
@@ -237,6 +216,24 @@ export default function GlitcherBoard({ roomId }: { roomId: string }) {
         <button type="button" onClick={leaveRoom} className="glitcher-secondary-button">
           <ArrowLeft aria-hidden="true" />
           <span>Quay lại</span>
+        </button>
+      </div>
+    );
+  }
+
+  if (me?.isSpectator) {
+    return (
+      <div className="glitcher-status-screen">
+        <span>Khán giả · Phòng {roomId}</span>
+        <h1>Trận đấu đang diễn ra</h1>
+        <p>
+          Bạn đang xem ở chế độ khán giả. Vai bí mật và hành động của người chơi
+          không được gửi tới phiên này.
+        </p>
+        <p>Giai đoạn hiện tại: {gameState.state}</p>
+        <button type="button" onClick={leaveRoom} className="glitcher-secondary-button">
+          <ArrowLeft aria-hidden="true" />
+          <span>Rời phòng</span>
         </button>
       </div>
     );

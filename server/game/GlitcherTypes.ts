@@ -101,12 +101,16 @@ export interface GlitcherPlayer {
   id: string;
   /** Persistent browser identity used to reclaim a seat after reconnecting. */
   userId: string;
-  /** Secret capability required to bind a new socket to this persistent seat. */
-  reconnectToken: string;
+  /** Hash of the secret reconnect capability. Never exposed to clients. */
+  reconnectTokenHash?: string;
+  connectionState?: "connected" | "temporarily_disconnected" | "abandoned";
+  disconnectedAt?: number;
+  reconnectDeadlineAt?: number;
   name: string;
   avatarUrl?: string;
   seatIndex: number;
   isHost: boolean;
+  isSpectator: boolean;
   status: GlitcherPlayerStatus;
   isReady: boolean;
   hasConfirmedRole: boolean;
@@ -167,6 +171,7 @@ export interface GlitcherRoom {
   players: GlitcherPlayer[];
   state: GlitcherGameState;
   settings: GlitcherSettings;
+  timing: RoomTimingConfig<"roleReveal" | "question" | "answer" | "vote">;
 
   selectedSceneIndex: number | null; // null = random
   totalAvailableScenes: number;
@@ -203,6 +208,7 @@ export interface GlitcherPublicPlayer {
   avatarUrl?: string;
   seatIndex: number;
   isHost: boolean;
+  isSpectator: boolean;
   status: GlitcherPlayerStatus;
   isReady: boolean;
   hasConfirmedRole: boolean;
@@ -226,9 +232,9 @@ export interface GlitcherClientState {
   roomId: string;
   state: GlitcherGameState;
   settings: GlitcherSettings;
+  timing: RoomTimingConfig<"roleReveal" | "question" | "answer" | "vote">;
   players: GlitcherPublicPlayer[];
   viewerUserId: string | null;
-  reconnectToken: string | null;
 
   selectedSceneIndex: number | null;
   totalAvailableScenes: number;
@@ -344,3 +350,4 @@ export interface GlitcherSocketData {
   roomId?: string;
   userId?: string;
 }
+import type { RoomTimingConfig } from "./shared/timing";

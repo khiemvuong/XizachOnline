@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { ArrowLeft, LockKeyhole, Eye, EyeOff, Sparkles, UsersRound, Zap, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Sparkles, UsersRound, Zap, CheckCircle2 } from "lucide-react";
 import type { GlitcherClientState, GlitcherPublicPlayer } from "@/server/game/GlitcherTypes";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import { GLITCHER_ASSETS } from "@/utils/glitcherAssets";
@@ -39,7 +39,9 @@ export default function RoleReveal({
 
   const card = gameState.privateCard;
   const confirmedCount = gameState.players.filter((player) => player.hasConfirmedRole).length;
-  const connectedCount = gameState.players.filter((player) => player.status === "connected").length;
+  const connectedCount = gameState.players.filter(
+    (player) => player.status === "connected" && !player.isSpectator,
+  ).length;
 
   return (
     <div ref={viewportRef} className="glitcher-scene-viewport">

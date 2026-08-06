@@ -20,7 +20,7 @@ export default function GlitcherLobby({
   onExit: () => void;
 }) {
   const connectedPlayers = gameState.players
-    .filter((player) => player.status === "connected")
+    .filter((player) => player.status === "connected" && !player.isSpectator)
     .sort((left, right) => left.seatIndex - right.seatIndex);
   const readyCount = connectedPlayers.filter((player) => player.isReady).length;
   const allReady = connectedPlayers.length > 0 && readyCount === connectedPlayers.length;
@@ -178,4 +178,3 @@ export default function GlitcherLobby({
     </div>
   );
 }
-

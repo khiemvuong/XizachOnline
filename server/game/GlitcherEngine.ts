@@ -25,6 +25,15 @@ import type {
   GlitcherSubmitVotePayload,
   GlitcherTransferHostPayload,
 } from "./GlitcherTypes";
+import {
+  MAX_SPECTATORS_PER_ROOM,
+  issueReconnectCapability,
+  markConnectionAbandoned,
+  markConnectionInterrupted,
+  markConnectionRestored,
+  verifyReconnectCapability,
+} from "./shared/connection";
+import { disabledGameplayTimer } from "./shared/timing";
 
 type ActionAckCallback = (ack: GlitcherActionAck) => void;
 type BooleanAckCallback = (result: boolean) => void;
@@ -79,6 +88,7 @@ export class GlitcherEngine {
     string,
     ReturnType<typeof setTimeout>
   >();
+  private readonly reconnectGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(server: Server) {
     this.io = server.of(GLITCHER_NAMESPACE);
@@ -88,6 +98,8 @@ export class GlitcherEngine {
   public dispose() {
     this.emptyRoomCleanupTimers.forEach((timer) => clearTimeout(timer));
     this.emptyRoomCleanupTimers.clear();
+    this.reconnectGraceTimers.forEach((timer) => clearTimeout(timer));
+    this.reconnectGraceTimers.clear();
     this.rooms.clear();
   }
 
@@ -201,8 +213,12 @@ export class GlitcherEngine {
       socket.on(
         "explicitLeave",
         (payload: GlitcherActionPayload, callback?: ActionAckCallback) => {
-          this.runRoomAction(socket, payload, callback, (room, player) =>
-            this.explicitLeave(room, player, socket),
+          this.runRoomAction(
+            socket,
+            payload,
+            callback,
+            (room, player) => this.explicitLeave(room, player, socket),
+            { allowSpectator: true },
           );
         },
       );
@@ -223,7 +239,13 @@ export class GlitcherEngine {
           ? room?.players.find((candidate) => candidate.userId === userId)
           : undefined;
         const normalizedName = normalizeName(newName);
-        if (!room || !player || !normalizedName || room.state !== "LOBBY") return;
+        if (
+          !room ||
+          !player ||
+          player.id !== socket.id ||
+          !normalizedName ||
+          room.state !== "LOBBY"
+        ) return;
         player.name = normalizedName;
         this.broadcastState(room.id);
       });
@@ -260,6 +282,12 @@ export class GlitcherEngine {
       players: [],
       state: "LOBBY",
       settings: { ...GLITCHER_SETTINGS },
+      timing: {
+        roleReveal: disabledGameplayTimer(),
+        question: disabledGameplayTimer(),
+        answer: disabledGameplayTimer(),
+        vote: disabledGameplayTimer(),
+      },
       selectedSceneIndex: null,
       totalAvailableScenes: GLITCHER_SCENES.length,
       sceneNumber: 0,
@@ -328,7 +356,10 @@ export class GlitcherEngine {
 
     if (existing) {
       const isCurrentSocket = existing.id === socket.id;
-      if (!isCurrentSocket && reconnectToken !== existing.reconnectToken) {
+      if (
+        !isCurrentSocket &&
+        !verifyReconnectCapability(existing.reconnectTokenHash, reconnectToken)
+      ) {
         socket.emit(
           "glitcherError",
           "Không thể khôi phục ghế: reconnect token không hợp lệ.",
@@ -337,41 +368,60 @@ export class GlitcherEngine {
       }
 
       if (!isCurrentSocket) {
+        const previousSocket = this.io.sockets.get(existing.id);
         existing.id = socket.id;
+        previousSocket?.emit("sessionReplaced");
+        previousSocket?.disconnect(true);
       }
       existing.name = playerName;
       if (avatarUrl) existing.avatarUrl = avatarUrl;
       existing.status = "connected";
+      markConnectionRestored(existing);
+      this.clearReconnectGrace(room.id, existing.userId);
+      const capability = issueReconnectCapability();
+      existing.reconnectTokenHash = capability.reconnectTokenHash;
 
       socket.data.roomId = room.id;
       socket.data.userId = existing.userId;
       await socket.join(room.id);
+      socket.emit("sessionEstablished", { reconnectToken: capability.reconnectToken });
       this.clearEmptyRoomCleanup(room.id);
       this.broadcastState(room.id);
       return;
     }
 
-    if (room.state !== "LOBBY") {
-      socket.emit("glitcherError", "Trận đấu đang diễn ra, không thể vào lúc này.");
+    const isSpectator = room.state !== "LOBBY";
+    if (
+      isSpectator &&
+      room.players.filter((player) => player.isSpectator).length >= MAX_SPECTATORS_PER_ROOM
+    ) {
+      socket.emit("glitcherError", {
+        code: "SPECTATOR_LIMIT_REACHED",
+        message: `Phòng đã đủ ${MAX_SPECTATORS_PER_ROOM} khán giả.`,
+      });
       return;
     }
 
-    if (room.players.length >= room.settings.maxPlayers) {
+    const seatedPlayers = this.getSeatedPlayers(room);
+    if (!isSpectator && seatedPlayers.length >= room.settings.maxPlayers) {
       socket.emit("glitcherError", "Phòng đã đủ số lượng người chơi.");
       return;
     }
 
-    const isHost = room.players.length === 0;
+    const isHost = seatedPlayers.length === 0;
+    const capability = issueReconnectCapability();
     const newPlayer: GlitcherPlayer = {
       id: socket.id,
       userId,
-      reconnectToken: reconnectToken || randomUUID(),
+      reconnectTokenHash: capability.reconnectTokenHash,
       name: playerName,
       avatarUrl,
-      seatIndex: room.players.length,
-      isHost,
+      seatIndex: isSpectator ? -1 : seatedPlayers.length,
+      isHost: isHost && !isSpectator,
+      isSpectator,
       status: "connected",
-      isReady: isHost,
+      connectionState: "connected",
+      isReady: isHost && !isSpectator,
       hasConfirmedRole: false,
       hasVoted: false,
     };
@@ -380,6 +430,7 @@ export class GlitcherEngine {
     socket.data.roomId = room.id;
     socket.data.userId = newPlayer.userId;
     await socket.join(room.id);
+    socket.emit("sessionEstablished", { reconnectToken: capability.reconnectToken });
     this.clearEmptyRoomCleanup(room.id);
     this.broadcastState(room.id);
   }
@@ -389,6 +440,7 @@ export class GlitcherEngine {
     payload: unknown,
     callback: ActionAckCallback | undefined,
     action: (room: GlitcherRoom, player: GlitcherPlayer) => GlitcherActionAck,
+    options: { allowSpectator?: boolean } = {},
   ) {
     if (!isObject(payload)) {
       this.respondToAction(socket, callback, fail("BAD_PAYLOAD", "Payload không hợp lệ."));
@@ -411,7 +463,13 @@ export class GlitcherEngine {
       ? room?.players.find((candidate) => candidate.userId === userId)
       : undefined;
 
-    if (!room || !player) {
+    if (
+      !room ||
+      !player ||
+      player.id !== socket.id ||
+      player.status !== "connected" ||
+      (player.isSpectator && !options.allowSpectator)
+    ) {
       this.respondToAction(
         socket,
         callback,
@@ -509,7 +567,7 @@ export class GlitcherEngine {
       return fail("HOST_ONLY", "Chỉ chủ phòng mới có thể bắt đầu trận đấu.");
     }
 
-    const connectedPlayers = room.players.filter(
+    const connectedPlayers = this.getSeatedPlayers(room).filter(
       (p) => p.status === "connected",
     );
     if (
@@ -531,16 +589,17 @@ export class GlitcherEngine {
       );
     }
 
-    room.players = connectedPlayers;
+    const spectators = room.players.filter((candidate) => candidate.isSpectator);
+    room.players = [...connectedPlayers, ...spectators];
     this.ensureHost(room);
     this.reindexPlayers(room);
     room.sceneNumber += 1;
-    room.seatOrderUserIds = room.players.map((p) => p.userId);
+    room.seatOrderUserIds = connectedPlayers.map((p) => p.userId);
     room.answerLog = [];
     room.votes = {};
     room.latestReveal = null;
 
-    room.players.forEach((p) => {
+    connectedPlayers.forEach((p) => {
       p.isReady = false;
       p.hasConfirmedRole = false;
       p.hasVoted = false;
@@ -563,7 +622,7 @@ export class GlitcherEngine {
 
     room.currentScene = sceneToPlay;
 
-    const playerCount = room.players.length;
+    const playerCount = connectedPlayers.length;
     const trueRoles = sceneToPlay.roles.slice(0, playerCount - 1);
     const glitchRole =
       sceneToPlay.glitch_scene.roles[
@@ -571,11 +630,11 @@ export class GlitcherEngine {
       ];
 
     const glitchPlayer =
-      room.players[Math.floor(Math.random() * room.players.length)];
+      connectedPlayers[Math.floor(Math.random() * connectedPlayers.length)];
     const shuffledTrueRoles = shuffleGlitcherItems(trueRoles);
     let roleIndex = 0;
 
-    room.players.forEach((scenePlayer) => {
+    connectedPlayers.forEach((scenePlayer) => {
       const isGlitch = scenePlayer.userId === glitchPlayer.userId;
       const assignment: GlitcherAssignment = {
         sceneId: sceneToPlay.id,
@@ -606,7 +665,7 @@ export class GlitcherEngine {
     }
 
     player.hasConfirmedRole = true;
-    const allConfirmed = room.players.every(
+    const allConfirmed = this.getSeatedPlayers(room).every(
       (candidate) => candidate.hasConfirmedRole,
     );
 
@@ -773,7 +832,7 @@ export class GlitcherEngine {
     room.questionRound = null;
     room.phaseId = randomUUID();
     room.votes = {};
-    room.players.forEach((p) => {
+    this.getSeatedPlayers(room).forEach((p) => {
       p.hasVoted = false;
     });
     this.broadcastState(room.id);
@@ -808,7 +867,7 @@ export class GlitcherEngine {
     };
     player.hasVoted = true;
 
-    if (room.players.every((candidate) => candidate.hasVoted)) {
+    if (this.getSeatedPlayers(room).every((candidate) => candidate.hasVoted)) {
       this.resolveVoting(room);
     } else {
       this.broadcastState(room.id);
@@ -831,7 +890,7 @@ export class GlitcherEngine {
 
     // Tally votes per player
     const voteCounts = new Map<string, number>();
-    room.players.forEach((p) => voteCounts.set(p.userId, 0));
+    this.getSeatedPlayers(room).forEach((p) => voteCounts.set(p.userId, 0));
 
     Object.values(room.votes).forEach((vote) => {
       if (vote.targetUserId && voteCounts.has(vote.targetUserId)) {
@@ -881,7 +940,7 @@ export class GlitcherEngine {
       },
       glitchUserId: glitchPlayer.userId,
       glitchPlayerName: glitchPlayer.name,
-      votes: room.players.map((player) => {
+      votes: this.getSeatedPlayers(room).map((player) => {
         const vote = room.votes[player.userId];
         const target = vote?.targetUserId
           ? room.players.find((c) => c.userId === vote.targetUserId)
@@ -934,6 +993,7 @@ export class GlitcherEngine {
       (candidate) =>
         candidate.userId === targetUserId &&
         candidate.status === "connected" &&
+        !candidate.isSpectator &&
         candidate.userId !== player.userId,
     );
     if (!target) {
@@ -950,6 +1010,21 @@ export class GlitcherEngine {
     player: GlitcherPlayer,
     socket: Socket,
   ): GlitcherActionAck {
+    this.clearReconnectGrace(room.id, player.userId);
+    if (room.state !== "LOBBY" && !player.isSpectator && !player.isHost) {
+      player.status = "disconnected";
+      markConnectionAbandoned(player);
+      socket.leave(room.id);
+      delete socket.data.roomId;
+      delete socket.data.userId;
+      this.broadcastState(room.id);
+      return ok("SEAT_ABANDONED");
+    }
+
+    if (room.state !== "LOBBY" && player.isHost) {
+      this.resetToLobby(room);
+    }
+
     room.players = room.players.filter(
       (candidate) => candidate.userId !== player.userId,
     );
@@ -968,16 +1043,12 @@ export class GlitcherEngine {
       return ok();
     }
 
-    if (room.state !== "LOBBY" && room.players.length < room.settings.minPlayers) {
-      this.resetToLobby(room);
-    }
-
     this.broadcastState(room.id);
     return ok();
   }
 
   private resetToLobby(room: GlitcherRoom) {
-    room.players = room.players.filter((p) => p.status === "connected");
+    room.players = room.players.filter((p) => p.status === "connected" || !p.isSpectator);
     this.ensureHost(room);
     this.reindexPlayers(room);
     room.state = "LOBBY";
@@ -1003,36 +1074,64 @@ export class GlitcherEngine {
     const player = room.players.find((c) => c.id === socket.id);
     if (!player) return;
 
-    if (room.state === "LOBBY") {
-      room.players = room.players.filter((c) => c.userId !== player.userId);
-      this.ensureHost(room);
-      this.reindexPlayers(room);
-      if (room.players.length === 0) {
-        this.scheduleEmptyRoomCleanup(room.id);
-        return;
-      }
-    } else {
-      player.status = "disconnected";
-      if (!room.players.some((c) => c.status === "connected")) {
-        this.scheduleEmptyRoomCleanup(room.id);
-      }
-    }
+    player.status = "disconnected";
+    markConnectionInterrupted(player);
+    this.scheduleReconnectGrace(room, player);
     this.broadcastState(room.id);
+  }
+
+  private scheduleReconnectGrace(room: GlitcherRoom, player: GlitcherPlayer) {
+    this.clearReconnectGrace(room.id, player.userId);
+    const key = `${room.id}:${player.userId}`;
+    const delay = Math.max(0, (player.reconnectDeadlineAt ?? Date.now()) - Date.now());
+    const timer = setTimeout(() => {
+      this.reconnectGraceTimers.delete(key);
+      const currentRoom = this.rooms.get(room.id);
+      const current = currentRoom?.players.find((candidate) => candidate.userId === player.userId);
+      if (!currentRoom || !current || current.connectionState !== "temporarily_disconnected") return;
+      markConnectionAbandoned(current);
+      if (current.isHost) {
+        current.isHost = false;
+        this.ensureHost(currentRoom);
+      }
+      if (currentRoom.state === "LOBBY") {
+        currentRoom.players = currentRoom.players.filter((candidate) => candidate.userId !== current.userId);
+        this.reindexPlayers(currentRoom);
+        if (currentRoom.players.length === 0) {
+          this.scheduleEmptyRoomCleanup(currentRoom.id);
+          return;
+        }
+      }
+      this.broadcastState(currentRoom.id);
+    }, delay);
+    this.reconnectGraceTimers.set(key, timer);
+  }
+
+  private clearReconnectGrace(roomId: string, userId: string) {
+    const key = `${roomId}:${userId}`;
+    const timer = this.reconnectGraceTimers.get(key);
+    if (timer) clearTimeout(timer);
+    this.reconnectGraceTimers.delete(key);
+  }
+
+  private getSeatedPlayers(room: GlitcherRoom) {
+    return room.players.filter((player) => !player.isSpectator);
   }
 
   private ensureHost(room: GlitcherRoom) {
     if (room.players.length === 0) return;
-    const host = room.players.find((player) => player.isHost);
+    const host = room.players.find((player) => player.isHost && !player.isSpectator);
     if (host) return;
-    const nextHost =
-      room.players.find((player) => player.status === "connected") ??
-      room.players[0];
-    nextHost.isHost = true;
+    const nextHost = room.players.find(
+      (player) => player.status === "connected" && !player.isSpectator,
+    );
+    if (nextHost) nextHost.isHost = true;
   }
 
   private reindexPlayers(room: GlitcherRoom) {
-    room.players.forEach((player, index) => {
-      player.seatIndex = index;
+    let seatIndex = 0;
+    room.players.forEach((player) => {
+      player.seatIndex = player.isSpectator ? -1 : seatIndex++;
     });
   }
 
@@ -1059,6 +1158,12 @@ export class GlitcherEngine {
 
   private deleteRoom(roomId: string) {
     this.clearEmptyRoomCleanup(roomId);
+    for (const [key, timer] of this.reconnectGraceTimers) {
+      if (key.startsWith(`${roomId}:`)) {
+        clearTimeout(timer);
+        this.reconnectGraceTimers.delete(key);
+      }
+    }
     this.rooms.delete(roomId);
   }
 
@@ -1129,6 +1234,7 @@ export class GlitcherEngine {
         avatarUrl: player.avatarUrl,
         seatIndex: player.seatIndex,
         isHost: player.isHost,
+        isSpectator: player.isSpectator,
         status: player.status,
         isReady: player.isReady,
         hasConfirmedRole: player.hasConfirmedRole,
@@ -1140,9 +1246,9 @@ export class GlitcherEngine {
       roomId: room.id,
       state: room.state,
       settings: { ...room.settings },
+      timing: { ...room.timing },
       players: publicPlayers,
       viewerUserId: viewer?.userId ?? null,
-      reconnectToken: viewer?.reconnectToken ?? null,
       selectedSceneIndex: room.selectedSceneIndex,
       totalAvailableScenes: room.totalAvailableScenes,
       sceneNumber: room.sceneNumber,
@@ -1154,8 +1260,8 @@ export class GlitcherEngine {
       voteProgress:
         room.state === "DISCUSSION"
           ? {
-              submitted: room.players.filter((player) => player.hasVoted).length,
-              required: room.players.length,
+              submitted: this.getSeatedPlayers(room).filter((player) => player.hasVoted).length,
+              required: this.getSeatedPlayers(room).length,
             }
           : null,
       latestReveal: room.state === "REVEAL" ? room.latestReveal : null,
