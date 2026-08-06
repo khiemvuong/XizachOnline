@@ -16,6 +16,11 @@ import VoiceChatPanel from "@/components/avalon/VoiceChatPanel";
 import DeceptionLobby from "./DeceptionLobby";
 import ForensicPanel from "../ForensicPanel";
 import PlayerProfileModal from "@/components/shared/PlayerProfileModal";
+import { getAppStorage } from "@/lib/client/appStorage";
+import { getOrCreateBrowserIdentity } from "@/lib/client/playerIdentity";
+import { readRoomCapability, writeRoomCapability } from "@/lib/client/roomCapabilityStorage";
+import { normalizeSocketError } from "@/lib/client/socketError";
+import { emitExplicitLeave } from "@/lib/client/explicitLeave";
 
 const DECEPTION_BGM_SOURCE = "/deception_audio/deception_bg_audio.opt.ogg";
 const DECEPTION_BGM_DEFAULT_VOLUME = 0.38;
@@ -27,11 +32,6 @@ const DECEPTION_BGM_STATES: Array<DeceptionRoom["state"]> = [
   "WITNESS_HUNT",
   "GAME_OVER",
 ];
-
-function generateUserId() {
-  return Math.random().toString(36).slice(2, 11);
-}
-
 
 function getStateLabel(state: DeceptionRoom["state"]) {
   switch (state) {
@@ -72,7 +72,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   const [roleMaskEnabled, setRoleMaskEnabled] = useState(true);
   const [isDiscussionBgmMuted, setIsDiscussionBgmMuted] = useState(() => {
     if (typeof window === "undefined") return false;
-    return localStorage.getItem("deception_bgm_muted") === "1";
+    return getAppStorage()?.getItem("deception_bgm_muted") === "1";
   });
   const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
   const [showReturnConfirm, setShowReturnConfirm] = useState(false);
@@ -93,14 +93,10 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
         };
       }
 
-      let storedUserId = localStorage.getItem("xz_userId");
-      if (!storedUserId) {
-        storedUserId = generateUserId();
-        localStorage.setItem("xz_userId", storedUserId);
-      }
+      const storedUserId = getOrCreateBrowserIdentity();
 
       // Prefer shared profile name, fall back to legacy session key
-      const storedPlayerName = profile.name || localStorage.getItem("deception_playerName");
+      const storedPlayerName = profile.name || getAppStorage()?.getItem("deception_playerName");
 
       return {
         userId: storedUserId,
@@ -128,7 +124,17 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
     socketio.on("connect", () => {
       setErrorMsg("");
       setSocket(socketio);
-      socketio.emit("joinRoom", { roomId, playerName, userId, avatarUrl: profile.avatarUrl });
+      socketio.emit("joinRoom", {
+        roomId,
+        playerName,
+        userId,
+        avatarUrl: profile.avatarUrl,
+        reconnectToken: readRoomCapability("deception", roomId, userId),
+      });
+    });
+
+    socketio.on("sessionEstablished", ({ reconnectToken }: { reconnectToken: string }) => {
+      writeRoomCapability("deception", roomId, userId, reconnectToken);
     });
 
     socketio.on("stateUpdate", (state: DeceptionRoom) => {
@@ -139,8 +145,8 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       setPlayerPings((prev) => ({ ...prev, [pingUserId]: ping }));
     });
 
-    socketio.on("deceptionError", (msg: string) => {
-      setErrorMsg(msg || "Không thể vào phòng.");
+    socketio.on("deceptionError", (error: unknown) => {
+      setErrorMsg(normalizeSocketError(error, "Không thể vào phòng."));
     });
 
     socketio.on("slackerAlert", (names: string[]) => {
@@ -208,7 +214,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
 
-    localStorage.setItem(
+    getAppStorage()?.setItem(
       "deception_bgm_muted",
       isDiscussionBgmMuted ? "1" : "0",
     );
@@ -233,7 +239,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
   );
 
   const requestReturn = (intent?: ReturnIntent) => {
-    const nextIntent = intent ?? (hostCanReturnLobby ? "lobby" : "home");
+    const nextIntent = intent ?? "home";
     setReturnIntent(nextIntent);
     setShowReturnConfirm(true);
   };
@@ -250,7 +256,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       return;
     }
 
-    router.push("/deception");
+    emitExplicitLeave(socket, () => router.push("/deception"));
   };
 
   const returnConfirmTitle =
@@ -267,7 +273,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
       socket.emit("changeName", newName);
       socket.emit("updateAvatar", newAvatarUrl);
     }
-    localStorage.setItem("deception_playerName", newName);
+    getAppStorage()?.setItem("deception_playerName", newName);
     setJoinedName(newName);
     setNameDraft(newName);
   };
@@ -329,7 +335,7 @@ export default function DeceptionBoard({ roomId }: { roomId: string }) {
           <button
             onClick={() => {
               const finalName = playerName.trim();
-              localStorage.setItem("deception_playerName", finalName);
+              getAppStorage()?.setItem("deception_playerName", finalName);
               updateProfile({ name: finalName });
               setJoinedName(finalName);
               setNameDraft(finalName);

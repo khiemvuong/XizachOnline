@@ -13,6 +13,19 @@ import {
   shuffle,
   generateSceneTiles,
 } from "./DeceptionData";
+import {
+  MAX_SPECTATORS_PER_ROOM,
+  issueReconnectCapability,
+  markConnectionAbandoned,
+  markConnectionInterrupted,
+  markConnectionRestored,
+  stripConnectionMetadata,
+  verifyReconnectCapability,
+} from "./shared/connection";
+import {
+  configuredDurationMs,
+  enabledGameplayTimer,
+} from "./shared/timing";
 
 
 export class DeceptionEngine {
@@ -23,6 +36,7 @@ export class DeceptionEngine {
   private solvingNoticeTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private emptyRoomCleanupTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private voicePolicyNoticeCooldown: Map<string, number> = new Map();
+  private reconnectGraceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(server: Server) {
     this.io = server.of("/deception");
@@ -413,6 +427,25 @@ export class DeceptionEngine {
     this.io.on("connection", (socket: Socket) => {
       console.log("Deception client connected:", socket.id);
 
+      socket.use(([event], next) => {
+        if (["checkRoom", "createRoom", "joinRoom"].includes(event)) return next();
+        const roomId = socket.data.roomId as string | undefined;
+        const userId = socket.data.userId as string | undefined;
+        const player = roomId && userId
+          ? this.rooms.get(roomId)?.players.find((candidate) => candidate.userId === userId)
+          : undefined;
+        if (!player || player.id !== socket.id || player.status !== "connected") {
+          return next(new Error("UNAUTHORIZED_SESSION"));
+        }
+        if (
+          player.isSpectator &&
+          !["chatMessage", "changeName", "updateAvatar", "measurePing", "updatePing", "explicitLeave"].includes(event)
+        ) {
+          return next(new Error("SPECTATOR_ACTION_FORBIDDEN"));
+        }
+        next();
+      });
+
       socket.on(
         "checkRoom",
         (roomId: string, callback: (exists: boolean) => void) => {
@@ -434,15 +467,18 @@ export class DeceptionEngine {
         },
       );
 
-      socket.on("joinRoom", ({ roomId, playerName, userId, avatarUrl }) => {
+      socket.on("joinRoom", ({ roomId, playerName, userId, avatarUrl, reconnectToken }) => {
         if (!userId) return;
         this.joinRoom(
           roomId,
-          { id: socket.id, userId, name: playerName, avatarUrl },
+          { id: socket.id, userId, name: playerName, avatarUrl, reconnectToken },
           socket,
         );
-        socket.data.roomId = roomId;
-        socket.data.userId = userId;
+      });
+
+      socket.on("explicitLeave", (callback?: () => void) => {
+        if (socket.data.roomId) this.explicitLeave(socket.data.roomId, socket);
+        if (typeof callback === "function") callback();
       });
 
       socket.on("disconnect", () => {
@@ -611,6 +647,9 @@ export class DeceptionEngine {
       id: roomId,
       players: [],
       state: "LOBBY",
+      timing: {
+        discussion: enabledGameplayTimer(180_000),
+      },
       settings: {
         enableAccomplice: true,
         enableWitness: true,
@@ -647,7 +686,7 @@ export class DeceptionEngine {
 
   public joinRoom(
     roomId: string,
-    pData: { id: string; userId: string; name: string; avatarUrl?: string },
+    pData: { id: string; userId: string; name: string; avatarUrl?: string; reconnectToken?: string },
     socket: Socket,
   ) {
     if (!this.rooms.has(roomId)) {
@@ -660,10 +699,28 @@ export class DeceptionEngine {
     const existing = room.players.find((p) => p.userId === pData.userId);
 
     if (existing) {
-      existing.id = pData.id;
+      const isCurrentSocket = existing.id === socket.id;
+      if (
+        !isCurrentSocket &&
+        !verifyReconnectCapability(existing.reconnectTokenHash, pData.reconnectToken)
+      ) {
+        socket.emit("deceptionError", "Không thể khôi phục ghế: reconnect capability không hợp lệ.");
+        return;
+      }
+      if (!isCurrentSocket) {
+        const previousSocket = this.io.sockets.get(existing.id);
+        existing.id = pData.id;
+        previousSocket?.emit("sessionReplaced");
+        previousSocket?.disconnect(true);
+      }
       existing.name = pData.name;
       if (pData.avatarUrl !== undefined) existing.avatarUrl = pData.avatarUrl;
       existing.status = "connected";
+      markConnectionRestored(existing);
+      this.clearReconnectGrace(roomId, existing.userId);
+      const capability = issueReconnectCapability();
+      existing.reconnectTokenHash = capability.reconnectTokenHash;
+      socket.emit("sessionEstablished", { reconnectToken: capability.reconnectToken });
 
       if (room.state === "LOBBY" && !existing.isHost) {
         const idx = room.players.indexOf(existing);
@@ -675,6 +732,17 @@ export class DeceptionEngine {
     } else {
       const isHost = room.players.length === 0;
       const isMidGame = room.state !== "LOBBY";
+      if (
+        isMidGame &&
+        room.players.filter((player) => player.isSpectator).length >= MAX_SPECTATORS_PER_ROOM
+      ) {
+        socket.emit("deceptionError", {
+          code: "SPECTATOR_LIMIT_REACHED",
+          message: `Phòng đã đủ ${MAX_SPECTATORS_PER_ROOM} khán giả.`,
+        });
+        return;
+      }
+      const capability = issueReconnectCapability();
       room.players.push({
         id: pData.id,
         userId: pData.userId,
@@ -682,13 +750,18 @@ export class DeceptionEngine {
         avatarUrl: pData.avatarUrl,
         isHost: isHost && !isMidGame,
         status: "connected",
+        connectionState: "connected",
+        reconnectTokenHash: capability.reconnectTokenHash,
         meansCards: [],
         clueCards: [],
         hasBadge: false,
         ...(isMidGame ? { isSpectator: true } : {}),
       });
+      socket.emit("sessionEstablished", { reconnectToken: capability.reconnectToken });
     }
 
+    socket.data.roomId = roomId;
+    socket.data.userId = pData.userId;
     socket.join(roomId);
     this.broadcastState(roomId);
   }
@@ -702,26 +775,80 @@ export class DeceptionEngine {
 
     const player = room.players[pIndex];
     player.status = "disconnected";
-
-    const canRemove = room.state === "LOBBY" || player.isSpectator;
-    if (canRemove) {
-      room.players.splice(pIndex, 1);
-      if (room.players.length === 0) {
-        this.scheduleEmptyRoomCleanup(roomId);
-        return;
-      }
-      if (player.isHost) {
-        const newHost =
-          room.players.find((p) => p.status === "connected" && !p.isSpectator) ??
-          room.players[0];
-        newHost.isHost = true;
-      }
-    }
+    markConnectionInterrupted(player);
+    this.scheduleReconnectGrace(roomId, player.userId);
 
     this.broadcastState(roomId);
   }
 
   // ─── Chat ───
+
+  private explicitLeave(roomId: string, socket: Socket) {
+    const room = this.rooms.get(roomId);
+    const player = room?.players.find((candidate) => candidate.id === socket.id);
+    if (!room || !player) return;
+    this.clearReconnectGrace(roomId, player.userId);
+
+    if (room.state !== "LOBBY" && !player.isSpectator && !player.isHost) {
+      player.status = "disconnected";
+      markConnectionAbandoned(player);
+    } else {
+      if (room.state !== "LOBBY" && player.isHost) {
+        this.returnToLobby(roomId, player.userId);
+      }
+      room.players = room.players.filter((candidate) => candidate.userId !== player.userId);
+      if (room.players.length === 0) {
+        this.scheduleEmptyRoomCleanup(roomId);
+      } else if (player.isHost) {
+        const nextHost = room.players.find(
+          (candidate) => candidate.status === "connected" && !candidate.isSpectator,
+        );
+        if (nextHost) nextHost.isHost = true;
+      }
+    }
+
+    socket.leave(roomId);
+    delete socket.data.roomId;
+    delete socket.data.userId;
+    this.broadcastState(roomId);
+  }
+
+  private scheduleReconnectGrace(roomId: string, userId: string) {
+    this.clearReconnectGrace(roomId, userId);
+    const key = `${roomId}:${userId}`;
+    const player = this.rooms.get(roomId)?.players.find((candidate) => candidate.userId === userId);
+    const delay = Math.max(0, (player?.reconnectDeadlineAt ?? Date.now()) - Date.now());
+    const timer = setTimeout(() => {
+      this.reconnectGraceTimers.delete(key);
+      const room = this.rooms.get(roomId);
+      const current = room?.players.find((candidate) => candidate.userId === userId);
+      if (!room || !current || current.connectionState !== "temporarily_disconnected") return;
+      markConnectionAbandoned(current);
+      if (current.isHost) {
+        current.isHost = false;
+        const nextHost = room.players.find(
+          (candidate) => candidate.status === "connected" && !candidate.isSpectator,
+        );
+        if (nextHost) nextHost.isHost = true;
+      }
+      if (room.state === "LOBBY") {
+        room.players = room.players.filter((candidate) => candidate.userId !== userId);
+        if (room.players.length === 0) {
+          this.scheduleEmptyRoomCleanup(roomId);
+          return;
+        }
+      }
+      this.broadcastState(roomId);
+    }, delay);
+    this.reconnectGraceTimers.set(key, timer);
+  }
+
+  private clearReconnectGrace(roomId: string, userId: string) {
+    const key = `${roomId}:${userId}`;
+    const timer = this.reconnectGraceTimers.get(key);
+    if (timer) clearTimeout(timer);
+    this.reconnectGraceTimers.delete(key);
+  }
 
   public chatMessage(roomId: string, userId: string, text: string) {
     if (!text || text.length > 500) return;
@@ -766,6 +893,7 @@ export class DeceptionEngine {
     // Clamp discussion time
     if (settings.discussionTimeSeconds !== undefined) {
       settings.discussionTimeSeconds = Math.max(60, Math.min(600, settings.discussionTimeSeconds));
+      room.timing.discussion = enabledGameplayTimer(settings.discussionTimeSeconds * 1000);
     }
 
     // Validate sceneDifficulty
@@ -826,7 +954,7 @@ export class DeceptionEngine {
     player.isReady = true;
 
     const allReady = room.players
-      .filter((p) => p.status === "connected" && !p.isSpectator)
+      .filter((p) => !p.isSpectator)
       .every((p) => p.isReady);
 
     if (allReady) {
@@ -977,7 +1105,15 @@ export class DeceptionEngine {
     room.state = "DISCUSSION";
     
     // Auto-start timer
-    const durationMs = room.settings.discussionTimeSeconds * 1000;
+    const durationMs = configuredDurationMs(room.timing.discussion);
+    if (durationMs === null) {
+      room.timerEndAt = null;
+      room.timerPausedRemaining = null;
+      this.clearDiscussionTimer(roomId);
+      this.addSystemMessage(room, `Hiện trường đã được niêm phong. Round ${room.currentRound} bắt đầu!`);
+      this.broadcastState(roomId);
+      return;
+    }
     room.timerEndAt = Date.now() + durationMs;
     this.clearDiscussionTimer(roomId);
     this.clearSolvingNoticeTimer(roomId);
@@ -1010,7 +1146,12 @@ export class DeceptionEngine {
       room.timerPausedRemaining = null;
       this.addSystemMessage(room, `Thời gian thảo luận được tiếp tục.`);
     } else {
-      durationMs = room.settings.discussionTimeSeconds * 1000;
+      const configuredMs = configuredDurationMs(room.timing.discussion);
+      if (configuredMs === null) {
+        this.broadcastState(roomId);
+        return;
+      }
+      durationMs = configuredMs;
       this.addSystemMessage(
         room,
         `Round ${room.currentRound} bắt đầu! Thời gian: ${room.settings.discussionTimeSeconds}s`,
@@ -1285,7 +1426,7 @@ export class DeceptionEngine {
     if (!player || player.role !== "Murderer") return;
 
     const target = this.findPlayer(room, targetUserId);
-    if (!target || target.isSpectator) return;
+    if (!target || target.isSpectator || target.status !== "connected") return;
 
     room.witnessHuntTarget = targetUserId;
     room.state = "GAME_OVER";
@@ -1428,7 +1569,9 @@ export class DeceptionEngine {
     sockets.fetchSockets().then((socketList) => {
       for (const s of socketList) {
         const userId = s.data.userId as string | undefined;
-        const me = userId ? room.players.find((p) => p.userId === userId) : undefined;
+        const me = userId
+          ? room.players.find((p) => p.userId === userId && p.id === s.id)
+          : undefined;
         const view = this.buildPlayerView(room, me);
         s.emit("stateUpdate", view);
       }
@@ -1440,6 +1583,7 @@ export class DeceptionEngine {
     me: DeceptionPlayer | undefined,
   ): Partial<DeceptionRoom> {
     const clone: DeceptionRoom = JSON.parse(JSON.stringify(room));
+    clone.players.forEach(stripConnectionMetadata);
     delete clone.isDepersonalizationActive;
 
     const isGameActive =

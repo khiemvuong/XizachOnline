@@ -80,6 +80,10 @@ export interface DeceptionPlayer {
   team?: DeceptionTeam;
   isHost: boolean;
   status: "connected" | "disconnected";
+  reconnectTokenHash?: string;
+  connectionState?: "connected" | "temporarily_disconnected" | "abandoned";
+  disconnectedAt?: number;
+  reconnectDeadlineAt?: number;
   isSpectator?: boolean;
   isReady?: boolean;
   meansCards: MeansCard[];
@@ -120,6 +124,7 @@ export interface DeceptionRoom {
   id: string;
   players: DeceptionPlayer[];
   state: DeceptionGameState;
+  timing: RoomTimingConfig<"discussion">;
   settings: DeceptionSettings;
   messages: DeceptionChatMessage[];
 
@@ -163,3 +168,4 @@ export interface DeceptionRoom {
   /** Runtime flag — coin-flipped per game when settings.enableDepersonalization is ON */
   isDepersonalizationActive?: boolean;
 }
+import type { RoomTimingConfig } from "./shared/timing";
