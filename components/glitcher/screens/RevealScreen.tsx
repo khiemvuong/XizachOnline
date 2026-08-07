@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowRight, Fingerprint, RotateCcw, ShieldCheck, Vote } from "lucide-react";
+import { ArrowRight, BookOpenText, Fingerprint, RotateCcw, ShieldCheck, Vote } from "lucide-react";
 import type { GlitcherClientState, GlitcherPublicPlayer } from "@/server/game/GlitcherTypes";
 import { getGlitcherAvatarSrc, GLITCHER_ASSETS } from "@/utils/glitcherAssets";
 import ResultSceneFrame from "../ResultSceneFrame";
@@ -155,6 +155,16 @@ export default function RevealScreen({
         </div>
 
         <footer className="glitcher-reveal__footer">
+          {gameState.privateCard ? (
+            <section className="glitcher-reveal__my-role" aria-labelledby="glitcher-my-role-title">
+              <BookOpenText aria-hidden="true" />
+              <div>
+                <span>Vai của bạn</span>
+                <h2 id="glitcher-my-role-title">{gameState.privateCard.role.name}</h2>
+              </div>
+              <p>{gameState.privateCard.role.action}</p>
+            </section>
+          ) : null}
           {me?.isHost ? (
             <div className="glitcher-reveal__actions">
               <button
