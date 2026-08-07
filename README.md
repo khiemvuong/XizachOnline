@@ -94,3 +94,7 @@ To guarantee game state integrity and eliminate client-side cheating:
    npm run dev
    ```
 4. Open your browser and navigate to `http://localhost:3000` to select a game and create a room.
+
+## Production deployment
+
+The repository includes a production Docker image and Fly.io configuration for the combined Next.js and Socket.IO server. Follow [the Fly.io deployment guide](docs/DEPLOY_FLYIO.md) for secrets, build-time public variables, Machine sizing, custom domains, and smoke tests.

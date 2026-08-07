@@ -1,6 +1,10 @@
 "use client";
 
-import type { GlitcherClientState, GlitcherPublicPlayer } from "@/server/game/GlitcherTypes";
+import { Check, CircleHelp, History, Radio, X } from "lucide-react";
+import type {
+  GlitcherClientState,
+  GlitcherPublicPlayer,
+} from "@/server/game/GlitcherTypes";
 import GameTableFrame from "../GameTableFrame";
 import PlayerRing from "../PlayerRing";
 import type { EmitGlitcherAction } from "../gameTypes";
@@ -28,8 +32,130 @@ export default function QuestionRoundScreen({
   );
 
   const isTargetTurn = Boolean(me && me.userId === round?.targetUserId);
-  const isQuestionerTurn = Boolean(me && me.userId === round?.currentQuestionerUserId);
+  const isQuestionerTurn = Boolean(
+    me && me.userId === round?.currentQuestionerUserId,
+  );
   const usedQuestions = new Set(round?.usedQuestionIds ?? []);
+  const firstAvailableQuestionId = gameState.questions.find(
+    (question) => !usedQuestions.has(question.id),
+  )?.id;
+  const isAnswering = round?.stage === "ANSWERING" && Boolean(selectedQuestion);
+  const turnNumber = (round?.turnIndex ?? 0) + 1;
+  const performerNumber = (round?.performerIndex ?? 0) + 1;
+  const totalPerformers = round?.totalPerformers ?? gameState.players.length;
+
+  const actionModal = (
+    <section
+      className="glitcher-question-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="glitcher-question-dialog-title"
+      aria-describedby="glitcher-question-dialog-description"
+    >
+      <div className="glitcher-question-dialog__ambient" aria-hidden="true" />
+
+      <header className="glitcher-question-dialog__header">
+        <div className="glitcher-question-dialog__eyebrow">
+          <span>Màn {String(gameState.sceneNumber).padStart(2, "0")}</span>
+          <i aria-hidden="true" />
+          <span>Người diễn {performerNumber}/{totalPerformers}</span>
+          <i aria-hidden="true" />
+          <span>Câu {turnNumber}/3</span>
+        </div>
+
+        <div className="glitcher-question-dialog__title-row">
+          <div className="glitcher-question-dialog__symbol" aria-hidden="true">
+            {isAnswering ? <Radio /> : <CircleHelp />}
+          </div>
+          <div>
+            <span>{isAnswering ? "Phản hồi trực tiếp" : "Chọn tín hiệu thẩm vấn"}</span>
+            <h1 id="glitcher-question-dialog-title">
+              {isAnswering
+                ? `${targetPlayer?.name ?? "Người diễn"}, hãy trả lời`
+                : isQuestionerTurn
+                  ? `Chọn câu hỏi cho ${targetPlayer?.name ?? "người diễn"}`
+                  : `${currentQuestioner?.name ?? "Người chơi"} đang chọn câu hỏi`}
+            </h1>
+          </div>
+        </div>
+
+        <p id="glitcher-question-dialog-description">
+          {isAnswering
+            ? isTargetTurn
+              ? "Chọn đúng một câu trả lời. Kết quả sẽ được công khai ngay cho cả bàn."
+              : `Đang chờ ${targetPlayer?.name ?? "người diễn"} xác nhận câu trả lời.`
+            : isQuestionerTurn
+              ? "Câu đã dùng sẽ bị khóa. Hãy chọn câu giúp cả bàn đọc được màn trình diễn."
+              : `Lượt này thuộc về ${currentQuestioner?.name ?? "người hỏi"}. Danh sách sẽ cập nhật ngay khi họ chọn.`}
+        </p>
+      </header>
+
+      {isAnswering && selectedQuestion ? (
+        <div className="glitcher-answer-stage">
+          <div className="glitcher-answer-stage__question">
+            <span>Câu hỏi từ {currentQuestioner?.name ?? "người hỏi"}</span>
+            <blockquote>&ldquo;{selectedQuestion.text}&rdquo;</blockquote>
+          </div>
+
+          {isTargetTurn ? (
+            <div className="glitcher-answer-stage__actions" aria-label="Chọn câu trả lời">
+              <button
+                type="button"
+                autoFocus
+                onClick={() => emitAction("answerQuestion", { answer: true })}
+                className="glitcher-answer-choice is-yes"
+              >
+                <span className="glitcher-answer-choice__icon"><Check aria-hidden="true" /></span>
+                <span>
+                  <strong>Có</strong>
+                  <small>Xác nhận đúng</small>
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => emitAction("answerQuestion", { answer: false })}
+                className="glitcher-answer-choice is-no"
+              >
+                <span className="glitcher-answer-choice__icon"><X aria-hidden="true" /></span>
+                <span>
+                  <strong>Không</strong>
+                  <small>Xác nhận sai</small>
+                </span>
+              </button>
+            </div>
+          ) : (
+            <div className="glitcher-question-dialog__waiting" role="status">
+              <span aria-hidden="true" />
+              <p><strong>{targetPlayer?.name ?? "Người diễn"}</strong> đang cân nhắc câu trả lời</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="glitcher-question-dialog__list" aria-label="Danh sách câu hỏi">
+          {gameState.questions.map((question, index) => {
+            const wasUsed = usedQuestions.has(question.id);
+            return (
+              <button
+                key={question.id}
+                type="button"
+                autoFocus={isQuestionerTurn && question.id === firstAvailableQuestionId}
+                onClick={() => emitAction("selectQuestion", { questionId: question.id })}
+                disabled={!isQuestionerTurn || wasUsed}
+                className={wasUsed ? "is-used" : undefined}
+              >
+                <span className="glitcher-question-dialog__number">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <strong>{question.text}</strong>
+                <small>{wasUsed ? "Đã dùng" : isQuestionerTurn ? "Chọn" : "Đang chờ"}</small>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
 
   return (
     <GameTableFrame
@@ -40,115 +166,49 @@ export default function QuestionRoundScreen({
           viewerUserId={gameState.viewerUserId}
           questionerUserIds={round?.questionerUserIds}
           currentQuestionerUserId={round?.currentQuestionerUserId}
+          emphasisUserId={round?.targetUserId}
         />
       }
+      overlay={actionModal}
       onExit={onExit}
     >
-      <div className="glitcher-question-panel" style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem" }}>
-        {/* Main Action Area */}
-        <div>
-          <div className="glitcher-panel-heading">
-            <span>
-              Người diễn {(round?.performerIndex ?? 0) + 1}/{(round?.totalPerformers ?? gameState.players.length)} — Câu hỏi {(round?.turnIndex ?? 0) + 1}/3
-            </span>
-            <h1>Đang diễn: <strong style={{ color: "#ec4899" }}>{targetPlayer?.name}</strong></h1>
-          </div>
-
-          {round?.stage === "ANSWERING" && selectedQuestion ? (
-            <div className="glitcher-selected-question" style={{ marginTop: "1rem", background: "rgba(15, 23, 42, 0.8)", padding: "1.25rem", borderRadius: "1rem", border: "1px solid rgba(255, 255, 255, 0.1)" }}>
-              <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Câu hỏi từ {currentQuestioner?.name}:</span>
-              <blockquote style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0.5rem 0 1rem 0", color: "#f8fafc" }}>
-                &ldquo;{selectedQuestion.text}&rdquo;
-              </blockquote>
-
-              {isTargetTurn ? (
-                <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-                  <button
-                    type="button"
-                    onClick={() => emitAction("answerQuestion", { answer: true })}
-                    className="glitcher-primary-button"
-                    style={{ flex: 1, backgroundColor: "#10b981", borderColor: "#059669", fontSize: "1.1rem" }}
-                  >
-                    CÓ
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => emitAction("answerQuestion", { answer: false })}
-                    className="glitcher-primary-button"
-                    style={{ flex: 1, backgroundColor: "#ef4444", borderColor: "#dc2626", fontSize: "1.1rem" }}
-                  >
-                    KHÔNG
-                  </button>
-                </div>
-              ) : (
-                <p className="glitcher-waiting-note">
-                  {targetPlayer?.name} đang xác nhận câu trả lời...
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="glitcher-question-list" style={{ marginTop: "1rem" }}>
-              {gameState.questions.map((question, index) => {
-                const wasUsed = usedQuestions.has(question.id);
-                return (
-                  <button
-                    key={question.id}
-                    type="button"
-                    onClick={() => emitAction("selectQuestion", { questionId: question.id })}
-                    disabled={!isQuestionerTurn || wasUsed}
-                    className={wasUsed ? "is-used" : ""}
-                  >
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    <strong>{question.text}</strong>
-                    {wasUsed ? <small>Đã dùng</small> : null}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+      <div className="glitcher-question-context">
+        <div className="glitcher-panel-heading">
+          <span>Nhịp lượt hiện tại</span>
+          <h2>Đang diễn: <strong>{targetPlayer?.name ?? "—"}</strong></h2>
         </div>
 
-        {/* Realtime Answer History Log Drawer/Sidebar */}
-        <div style={{
-          background: "rgba(15, 23, 42, 0.7)",
-          border: "1px solid rgba(255, 255, 255, 0.15)",
-          borderRadius: "0.75rem",
-          padding: "1rem",
-          display: "flex",
-          flexDirection: "column",
-        }}>
-          <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f8fafc", marginBottom: "0.75rem", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "0.5rem" }}>
-            Nhật ký Hỏi & Đáp
-          </h3>
+        <div className="glitcher-question-context__status">
+          <Radio aria-hidden="true" />
+          <div>
+            <span>{isAnswering ? "Đang chờ phản hồi" : "Đang chọn câu hỏi"}</span>
+            <strong>{isAnswering ? targetPlayer?.name : currentQuestioner?.name}</strong>
+          </div>
+        </div>
 
-          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.5rem", paddingRight: "0.25rem" }}>
+        <div className="glitcher-question-context__history">
+          <div className="glitcher-question-context__history-title">
+            <History aria-hidden="true" />
+            <h3>Nhật ký hỏi & đáp</h3>
+            <span>{gameState.answerLog.length}</span>
+          </div>
+
+          <div className="glitcher-question-context__history-list">
             {gameState.answerLog.length === 0 ? (
-              <p style={{ fontSize: "0.8rem", color: "#64748b", fontStyle: "italic", textAlign: "center", marginTop: "2rem" }}>
-                Chưa có câu trả lời nào được lưu.
-              </p>
+              <div className="glitcher-question-context__empty">
+                <CircleHelp aria-hidden="true" />
+                <p>Câu trả lời đầu tiên sẽ xuất hiện tại đây.</p>
+              </div>
             ) : (
-              gameState.answerLog.map((log) => (
-                <div
-                  key={log.id}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.05)",
-                    borderRadius: "0.5rem",
-                    padding: "0.5rem 0.75rem",
-                    fontSize: "0.8rem",
-                    borderLeft: log.answer ? "3px solid #10b981" : "3px solid #ef4444"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "0.75rem" }}>
-                    <span><strong>{log.targetName}</strong></span>
-                    <span style={{ fontWeight: 700, color: log.answer ? "#34d399" : "#f87171" }}>
-                      {log.answer ? "CÓ" : "KHÔNG"}
-                    </span>
+              [...gameState.answerLog].reverse().map((log) => (
+                <article key={log.id} className={log.answer ? "is-yes" : "is-no"}>
+                  <div>
+                    <span>{log.targetName}</span>
+                    <strong>{log.answer ? "Có" : "Không"}</strong>
                   </div>
-                  <div style={{ color: "#e2e8f0", marginTop: "0.2rem", fontWeight: 500 }}>
-                    &ldquo;{log.questionText}&rdquo;
-                  </div>
-                </div>
+                  <p>&ldquo;{log.questionText}&rdquo;</p>
+                  <small>Hỏi bởi {log.questionerName}</small>
+                </article>
               ))
             )}
           </div>

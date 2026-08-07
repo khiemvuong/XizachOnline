@@ -25,12 +25,14 @@ export default function GameTableFrame({
   timerLabel,
   table,
   children,
+  overlay,
   onExit,
 }: {
   gameState: GlitcherClientState;
   timerLabel?: string;
   table: ReactNode;
   children: ReactNode;
+  overlay?: ReactNode;
   onExit: () => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -83,6 +85,8 @@ export default function GameTableFrame({
           </section>
           <aside className="glitcher-game-panel">{children}</aside>
         </div>
+
+        {overlay ? <div className="glitcher-game-overlay">{overlay}</div> : null}
 
         <PhaseRail state={gameState.state} />
       </div>
