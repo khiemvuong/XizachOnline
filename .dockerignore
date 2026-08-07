@@ -9,3 +9,10 @@ yarn-error.log*
 pnpm-debug.log*
 .vscode
 .agent
+.agents
+.claude
+.gitnexus
+output
+docs
+*.tsbuildinfo
+.env*

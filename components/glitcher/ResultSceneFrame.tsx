@@ -6,8 +6,8 @@ import { ArrowLeft } from "lucide-react";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import BrandMark from "./BrandMark";
 
-const RESULT_SCENE_WIDTH = 1740;
-const RESULT_SCENE_HEIGHT = 1110;
+const RESULT_SCENE_WIDTH = 1600;
+const RESULT_SCENE_HEIGHT = 860;
 
 export default function ResultSceneFrame({
   eyebrow,
@@ -25,7 +25,7 @@ export default function ResultSceneFrame({
     viewportRef,
     sceneWidth: RESULT_SCENE_WIDTH,
     sceneHeight: RESULT_SCENE_HEIGHT,
-    padding: 12,
+    padding: 10,
     minScale: 0.28,
     maxScale: 1.28,
     minViewportWidth: 320,
@@ -59,4 +59,3 @@ export default function ResultSceneFrame({
     </div>
   );
 }
-
