@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import ImageKit from "imagekit";
-
-const imagekit = new ImageKit({
-  publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || "",
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
-  urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || "",
-});
+import { getImageKitClient } from "@/lib/server/imageKitClient";
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (Vercel limit is ~4.5MB)
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -50,6 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const imagekit = getImageKitClient();
 
     const result = await imagekit.upload({
       file: buffer,

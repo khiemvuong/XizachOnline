@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import ImageKit from "imagekit";
-
-const imagekit = new ImageKit({
-  publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || "",
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
-  urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || "",
-});
+import { getImageKitClient } from "@/lib/server/imageKitClient";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +8,8 @@ export async function POST(request: NextRequest) {
     if (!filename || typeof filename !== "string") {
       return NextResponse.json({ error: "Missing filename" }, { status: 400 });
     }
+
+    const imagekit = getImageKitClient();
 
     // List files in /avatars folder and find matching filename
     const files = await imagekit.listFiles({

@@ -1,12 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRef } from "react";
-import { ArrowLeft } from "lucide-react";
+import { useRef, useState } from "react";
+import { ArrowLeft, BookOpenText } from "lucide-react";
 import type { GlitcherClientState } from "@/server/game/GlitcherTypes";
 import { useSceneScale } from "@/hooks/useSceneScale";
 import BrandMark from "./BrandMark";
 import PhaseRail from "./PhaseRail";
+import PrivateCardModal from "./PrivateCardModal";
 
 const GLITCHER_SCENE_WIDTH = 1440;
 const GLITCHER_SCENE_HEIGHT = 810;
@@ -36,6 +37,8 @@ export default function GameTableFrame({
   onExit: () => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const privateCardTriggerRef = useRef<HTMLButtonElement>(null);
+  const [isPrivateCardOpen, setIsPrivateCardOpen] = useState(false);
   const scale = useSceneScale({
     viewportRef,
     sceneWidth: GLITCHER_SCENE_WIDTH,
@@ -73,6 +76,18 @@ export default function GameTableFrame({
             {timerLabel ? (
               <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>{timerLabel}</span>
             ) : null}
+            {gameState.privateCard ? (
+              <button
+                ref={privateCardTriggerRef}
+                type="button"
+                onClick={() => setIsPrivateCardOpen(true)}
+                className="glitcher-game-header__private-card"
+                aria-haspopup="dialog"
+              >
+                <BookOpenText aria-hidden="true" />
+                <span>Hồ sơ của tôi</span>
+              </button>
+            ) : null}
             <button type="button" onClick={onExit} className="glitcher-icon-button" aria-label="Rời phòng">
               <ArrowLeft aria-hidden="true" />
             </button>
@@ -86,7 +101,21 @@ export default function GameTableFrame({
           <aside className="glitcher-game-panel">{children}</aside>
         </div>
 
-        {overlay ? <div className="glitcher-game-overlay">{overlay}</div> : null}
+        {overlay ? (
+          <div className="glitcher-game-overlay" aria-hidden={isPrivateCardOpen || undefined}>
+            {overlay}
+          </div>
+        ) : null}
+
+        {isPrivateCardOpen && gameState.privateCard ? (
+          <PrivateCardModal
+            card={gameState.privateCard}
+            onClose={() => {
+              setIsPrivateCardOpen(false);
+              window.requestAnimationFrame(() => privateCardTriggerRef.current?.focus());
+            }}
+          />
+        ) : null}
 
         <PhaseRail state={gameState.state} />
       </div>
