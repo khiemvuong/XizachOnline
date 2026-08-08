@@ -86,7 +86,7 @@ export interface GlitcherGameData {
 
 export interface GlitcherSettings {
   minPlayers: 6;
-  maxPlayers: 12;
+  maxPlayers: 13;
   scenesPerTour: 4;
 }
 
@@ -161,6 +161,10 @@ export interface GlitcherSceneReveal {
   glitchScene: GlitcherSceneSummary;
   glitchUserId: string;
   glitchPlayerName: string;
+  /** All glitch player userIds (1 or 2 depending on player count) */
+  glitchUserIds: string[];
+  /** All glitch player names */
+  glitchPlayerNames: string[];
   votes: GlitcherRevealedVote[];
   outcome: GlitcherOutcome;
   revealedAt: number;
@@ -182,6 +186,8 @@ export interface GlitcherRoom {
   phaseId: string;
   currentScene?: GlitcherScene;
   glitchUserId?: string;
+  /** All glitch userIds. Length = 1 for ≤10 players, 2 for >10 players. */
+  glitchUserIds?: string[];
   questionRound: GlitcherQuestionRound | null;
   answerLog: GlitcherAnswerLogEntry[];
   votes: Record<string, GlitcherVoteRecord>;

@@ -55,7 +55,7 @@ export default function WeredogHeader({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 font-mono font-black text-xs sm:text-sm text-emerald-400 bg-emerald-950/20 border border-emerald-500/25 px-2.5 py-0.5 rounded shadow-sm">
               <Users className="h-3.5 w-3.5 text-emerald-400/80 shrink-0" />
-              <span>{playerCount} / 12</span>
+              <span>{playerCount} / 13</span>
             </div>
           </div>
         ) : (

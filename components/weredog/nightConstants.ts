@@ -1,20 +1,21 @@
 "use client";
 
-// ─── Player Circle Positions (Full circle, 12 slots max) ───
+// ─── Player Circle Positions (Full circle, 13 slots max) ───
 
 export const CIRCLE_POSITIONS = [
-  { left: "50%", top: "18%" },   // 1. Top center
-  { left: "33%", top: "19%" },   // 2. Top left
-  { left: "67%", top: "19%" },   // 3. Top right
-  { left: "19%", top: "32%" },   // 4. Upper left
-  { left: "81%", top: "32%" },   // 5. Upper right
-  { left: "9%",  top: "50%" },   // 6. Middle left
-  { left: "91%", top: "50%" },   // 7. Middle right
-  { left: "12%", top: "68%" },   // 8. Lower left
-  { left: "88%", top: "68%" },   // 9. Lower right
-  { left: "26%", top: "80%" },   // 10. Bottom left
-  { left: "74%", top: "80%" },   // 11. Bottom right
-  { left: "50%", top: "81%" },   // 12. Bottom center
+  { left: "50%", top: "13%" },
+  { left: "69%", top: "17%" },
+  { left: "84%", top: "30%" },
+  { left: "91%", top: "46%" },
+  { left: "88%", top: "63%" },
+  { left: "77%", top: "76%" },
+  { left: "60%", top: "84%" },
+  { left: "40%", top: "84%" },
+  { left: "23%", top: "76%" },
+  { left: "12%", top: "63%" },
+  { left: "9%", top: "46%" },
+  { left: "16%", top: "30%" },
+  { left: "31%", top: "17%" },
 ];
 
 // ─── Role Types ───
@@ -27,6 +28,7 @@ export type WeredogRoleName =
   | "Cupid"
   | "Witch"
   | "Elder"
+  | "Silence"
   | "Villager";
 
 // ─── Role Display Config ───
@@ -120,6 +122,17 @@ export const ROLE_DISPLAY: Record<WeredogRoleName, RoleDisplayConfig> = {
     glowColor: "rgba(205, 163, 114, 0.4)",
     frameType: "crown",
     icon: "👴",
+  },
+  Silence: {
+    nameVi: "Tĩnh Lặng",
+    actionTitle: "Tĩnh Lặng",
+    actionDesc: "Không có hành động ban đêm. Hãy quan sát và bỏ phiếu cùng phe Dân vào ban ngày.",
+    actionHeading: "TĨNH LẶNG",
+    confirmLabel: "",
+    highlightColor: "#829ea2",
+    glowColor: "rgba(130, 158, 162, 0.4)",
+    frameType: "shiba",
+    icon: "🌙",
   },
   Villager: {
     nameVi: "Dân Làng",

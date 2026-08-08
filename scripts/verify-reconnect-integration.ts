@@ -37,6 +37,7 @@ async function verifyNamespace(options: {
   stateEvent: string;
   errorEvent: string;
   hasDefaultGameplayTimer: boolean;
+  lobbyDisconnectRemovesSeat?: boolean;
 }) {
   const url = `${options.baseUrl}${options.namespace}`;
   const identityId = `identity-${options.namespace.slice(1)}`;
@@ -60,6 +61,22 @@ async function verifyNamespace(options: {
     options.hasDefaultGameplayTimer,
   );
   host.disconnect();
+
+  if (options.lobbyDisconnectRemovesSeat) {
+    const rejoined = await connect(url);
+    const newCapabilityPromise = once<{ reconnectToken: string }>(rejoined, "sessionEstablished");
+    const newStatePromise = once(rejoined, options.stateEvent);
+    rejoined.emit("joinRoom", {
+      roomId: options.roomId,
+      playerName: "New lobby member",
+      userId: identityId,
+    });
+    const newCapability = (await newCapabilityPromise).reconnectToken;
+    await newStatePromise;
+    assert.notEqual(newCapability, firstCapability);
+    rejoined.disconnect();
+    return;
+  }
 
   const impostor = await connect(url);
   const rejectionPromise = once<unknown>(impostor, options.errorEvent);
@@ -104,7 +121,7 @@ async function main() {
   try {
     await verifyNamespace({ baseUrl, namespace: "/avalon", roomId: "4101", stateEvent: "avalonGameState", errorEvent: "avalonError", hasDefaultGameplayTimer: false });
     await verifyNamespace({ baseUrl, namespace: "/deception", roomId: "4102", stateEvent: "stateUpdate", errorEvent: "deceptionError", hasDefaultGameplayTimer: true });
-    await verifyNamespace({ baseUrl, namespace: "/weredog", roomId: "4103", stateEvent: "stateUpdate", errorEvent: "weredogError", hasDefaultGameplayTimer: false });
+    await verifyNamespace({ baseUrl, namespace: "/weredog", roomId: "4103", stateEvent: "stateUpdate", errorEvent: "weredogError", hasDefaultGameplayTimer: false, lobbyDisconnectRemovesSeat: true });
     await verifyNamespace({ baseUrl, namespace: "/glitcher", roomId: "410004", stateEvent: "stateUpdate", errorEvent: "glitcherError", hasDefaultGameplayTimer: false });
     console.log("Reconnect integration checks passed for all four games.");
   } finally {

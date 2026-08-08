@@ -377,8 +377,9 @@ export default function NightPlayerCircle({
       case 11:
         return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
       case 12:
+      case 13:
       default:
-        return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        return Array.from({ length: Math.min(totalCount, 13) }, (_, index) => index);
     }
   };
 
