@@ -57,6 +57,7 @@ const AVAILABLE_ROLES = {
   Hunter: { name: "Thợ Săn", desc: "Kéo kẻ thù cùng xuống mồ khi ngã xuống." },
   Cupid: { name: "Cupid", desc: "Xe duyên kết tơ lòng cho hai người chơi." },
   Elder: { name: "Già Làng", desc: "Gánh chịu 2 lần cắn từ bầy sói đói." },
+  Silence: { name: "Tĩnh Lặng", desc: "Không có hành động ban đêm; thảo luận và bỏ phiếu cùng phe Dân." },
 };
 
 export default function WeredogLobby({
@@ -136,7 +137,7 @@ export default function WeredogLobby({
       {/* Top UI Bar */}
       <WeredogHeader 
         roomId={roomId} 
-        playerCount={players.length} 
+        playerCount={activePlayersCount}
         profileAvatarUrl={profileAvatarUrl}
         profileName={profileName}
         onOpenProfile={onOpenProfile}
@@ -203,6 +204,7 @@ export default function WeredogLobby({
                         if (isHost) toggleRole(key);
                       }}
                       disabled={!isHost || isLimitReached}
+                      aria-pressed={isActive}
                       className={`px-2.5 py-1 rounded border text-[9px] sm:text-[10px] font-gothic-label uppercase tracking-widest font-black transition-all duration-200 ${
                         isHost && !isLimitReached ? "hover:scale-[1.03] active:scale-95 cursor-pointer" : "opacity-60 cursor-not-allowed"
                       } ${
@@ -215,7 +217,7 @@ export default function WeredogLobby({
                       {role.name}
                     </button>
                   );
-                })}
+              })}
             </div>
 
             {/* 4. Start Game wax-seal button / Waiting text */}
@@ -229,7 +231,7 @@ export default function WeredogLobby({
                   <>
                     {activePlayersCount < 2 && (
                       <span className="font-gothic-body text-rose-400 text-[10px] sm:text-xs font-semibold mb-2 animate-pulse">
-                        ⚠️ Cần tối thiểu 2 người chơi để bắt đầu (Hiện tại: {activePlayersCount}/12)
+                        ⚠️ Cần tối thiểu 2 người chơi để bắt đầu (Hiện tại: {activePlayersCount}/13)
                       </span>
                     )}
                     {activeWolfCount >= activePlayersCount && (

@@ -37,7 +37,8 @@ export default function RevealScreen({
   onExit: () => void;
 }) {
   const reveal = gameState.latestReveal;
-  const glitchPlayer = gameState.players.find((player) => player.userId === reveal?.glitchUserId);
+  const glitchUserIds = reveal?.glitchUserIds ?? (reveal ? [reveal.glitchUserId] : []);
+  const glitchPlayers = gameState.players.filter((player) => glitchUserIds.includes(player.userId));
 
   if (!reveal) {
     return (
@@ -53,8 +54,8 @@ export default function RevealScreen({
 
   const outcome = OUTCOME_COPY[reveal.outcome];
   const submittedVotes = reveal.votes.filter((vote) => vote.targetUserId !== null).length;
-  const votesAgainstGlitch = reveal.votes.filter(
-    (vote) => vote.targetUserId === reveal.glitchUserId,
+  const votesAgainstGlitch = reveal.votes.filter((vote) =>
+    vote.targetUserId !== null && glitchUserIds.includes(vote.targetUserId),
   ).length;
 
   return (
@@ -94,18 +95,20 @@ export default function RevealScreen({
               <Fingerprint aria-hidden="true" />
               <span>Danh tính thật sự</span>
             </div>
-            <div className="glitcher-reveal__identity-person">
-              <Image
-                src={getGlitcherAvatarSrc(glitchPlayer?.seatIndex ?? 0)}
-                alt={`Ảnh đại diện của ${reveal.glitchPlayerName}`}
-                width={70}
-                height={70}
-              />
-              <div>
-                <h2 id="glitcher-identity-title">{reveal.glitchPlayerName}</h2>
-                <span>Vai Glitch</span>
+            {glitchPlayers.map((glitchPlayer, index) => (
+              <div className="glitcher-reveal__identity-person" key={glitchPlayer.userId}>
+                <Image
+                  src={getGlitcherAvatarSrc(glitchPlayer.seatIndex)}
+                  alt={`Ảnh đại diện của ${glitchPlayer.name}`}
+                  width={70}
+                  height={70}
+                />
+                <div>
+                  <h2 id={index === 0 ? "glitcher-identity-title" : undefined}>{glitchPlayer.name}</h2>
+                  <span>Vai Glitch{glitchPlayers.length > 1 ? ` ${index + 1}` : ""}</span>
+                </div>
               </div>
-            </div>
+            ))}
           </aside>
         </section>
 
@@ -139,7 +142,7 @@ export default function RevealScreen({
             </header>
             <ul>
               {reveal.votes.map((vote) => {
-                const foundGlitch = vote.targetUserId === reveal.glitchUserId;
+                const foundGlitch = vote.targetUserId !== null && glitchUserIds.includes(vote.targetUserId);
                 return (
                   <li key={vote.voterUserId} className={foundGlitch ? "is-correct" : undefined}>
                     <span title={vote.voterName}>{vote.voterName}</span>

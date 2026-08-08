@@ -9,7 +9,7 @@ import type {
 
 export const GLITCHER_SETTINGS: GlitcherSettings = {
   minPlayers: 6,
-  maxPlayers: 12,
+  maxPlayers: 13,
   scenesPerTour: 4,
 };
 

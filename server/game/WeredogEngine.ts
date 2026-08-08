@@ -17,6 +17,8 @@ import {
 } from "./shared/connection";
 import { disabledGameplayTimer } from "./shared/timing";
 
+const MAX_WEREDOG_PLAYERS = 13;
+
 export class WeredogEngine {
   private rooms: Map<string, WeredogRoom> = new Map();
   private io: Namespace;
@@ -414,6 +416,10 @@ export class WeredogEngine {
     } else {
       const isHost = room.players.length === 0;
       const isMidGame = room.state !== "LOBBY";
+      if (!isMidGame && this.getActivePlayers(room).length >= MAX_WEREDOG_PLAYERS) {
+        socket.emit("weredogError", `Phòng đã đủ ${MAX_WEREDOG_PLAYERS} người chơi.`);
+        return;
+      }
       if (
         isMidGame &&
         room.players.filter((player) => player.isSpectator).length >= MAX_SPECTATORS_PER_ROOM
@@ -460,6 +466,31 @@ export class WeredogEngine {
     const pIndex = room.players.findIndex((p) => p.id === socketId);
     if (pIndex === -1) return;
     const player = room.players[pIndex];
+
+    // Lobby seats are not recoverable: closing a browser tab immediately removes
+    // the player, while in-progress matches retain the reconnect grace policy.
+    if (room.state === "LOBBY") {
+      this.clearReconnectGrace(roomId, player.userId);
+      room.players.splice(pIndex, 1);
+
+      if (player.isHost) {
+        const successor = room.players.find(
+          (candidate) => candidate.status === "connected" && !candidate.isSpectator,
+        );
+        if (successor) {
+          successor.isHost = true;
+          successor.isModerator = true;
+        }
+      }
+
+      this.syncPlayerMap(room);
+      if (room.players.length === 0) {
+        this.scheduleEmptyRoomCleanup(roomId);
+      }
+      this.scheduleBroadcast(roomId);
+      return;
+    }
+
     player.status = "disconnected";
     markConnectionInterrupted(player);
     this.scheduleReconnectGrace(roomId, player.userId);
@@ -622,7 +653,7 @@ export class WeredogEngine {
       settings.wolfCount = Math.max(1, Math.min(maxWolves, settings.wolfCount));
     }
     if (settings.enabledRoles !== undefined) {
-      const validRoles: WeredogRole[] = ["Bodyguard", "Seer", "Hunter", "Cupid", "Witch", "Elder"];
+      const validRoles: WeredogRole[] = ["Bodyguard", "Seer", "Hunter", "Cupid", "Witch", "Elder", "Silence"];
       settings.enabledRoles = [...new Set(settings.enabledRoles.filter((r) => validRoles.includes(r)))];
     }
 
@@ -770,6 +801,10 @@ export class WeredogEngine {
     const totalPlayers = activePlayers.length;
     if (totalPlayers < 2) {
       if (socket) socket.emit("weredogError", `Cần tối thiểu 2 người chơi để bắt đầu! Hiện tại: ${totalPlayers}`);
+      return;
+    }
+    if (totalPlayers > MAX_WEREDOG_PLAYERS) {
+      if (socket) socket.emit("weredogError", `Phòng chỉ hỗ trợ tối đa ${MAX_WEREDOG_PLAYERS} người chơi.`);
       return;
     }
     const maxWolvesLimit = Math.max(1, Math.floor((totalPlayers - 1) / 2));

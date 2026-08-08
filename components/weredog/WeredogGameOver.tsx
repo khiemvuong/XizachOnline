@@ -109,6 +109,8 @@ export default function WeredogGameOver({
         return { name: "Cupid", border: "border-rose-500/50", text: "text-rose-400" };
       case "Elder":
         return { name: "Già Làng", border: "border-gray-400/50", text: "text-gray-300" };
+      case "Silence":
+        return { name: "Tĩnh Lặng", border: "border-slate-400/50", text: "text-slate-200" };
       case "Villager":
       default:
         return { name: "Dân Làng", border: "border-slate-500/40", text: "text-slate-300" };

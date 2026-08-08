@@ -163,9 +163,8 @@ export default function GlitcherHomePage() {
           Tạo phòng mới
         </button>
 
-        <p className="glitcher-entry__capacity">6–12 người</p>
+        <p className="glitcher-entry__capacity">6–13 người</p>
       </section>
     </main>
   );
 }
-

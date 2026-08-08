@@ -6,6 +6,7 @@ export type WeredogRole =
   | 'Cupid'       // Chó cupid
   | 'Witch'       // Chó phù thủy
   | 'Elder'       // Chó già làng
+  | 'Silence'     // Tĩnh lặng
   | 'Villager';   // Chó bình thường (Dân)
 
 export type WeredogTeam = 'Wolf' | 'Villager' | 'ThirdParty';
@@ -67,6 +68,13 @@ export const ROLE_CONFIGS: Record<WeredogRole, RoleConfig> = {
     team: 'Villager',
     nightPriority: 99, // Doesn't wake up to act, but defined for configuration
     description: 'Có 2 mạng chống sói cắn. Nếu chết, toàn bộ dân thường mất chức năng.',
+  },
+  Silence: {
+    role: 'Silence',
+    nameVi: 'Tĩnh Lặng',
+    team: 'Villager',
+    nightPriority: 100,
+    description: 'Không có hành động ban đêm. Thảo luận và bỏ phiếu cùng phe Dân vào ban ngày.',
   },
   Villager: {
     role: 'Villager',

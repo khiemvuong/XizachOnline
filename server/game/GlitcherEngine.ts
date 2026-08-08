@@ -623,19 +623,28 @@ export class GlitcherEngine {
     room.currentScene = sceneToPlay;
 
     const playerCount = connectedPlayers.length;
-    const trueRoles = sceneToPlay.roles.slice(0, playerCount - 1);
-    const glitchRole =
-      sceneToPlay.glitch_scene.roles[
-        Math.floor(Math.random() * sceneToPlay.glitch_scene.roles.length)
-      ];
+    const isDualGlitch = playerCount > 10;
+    const glitchSlots = isDualGlitch ? 2 : 1;
+    const trueRoles = sceneToPlay.roles.slice(0, playerCount - glitchSlots);
 
-    const glitchPlayer =
-      connectedPlayers[Math.floor(Math.random() * connectedPlayers.length)];
+    // Pick glitch role(s): for dual glitch each picks one of the 2 available glitch roles
+    const glitchRoles = sceneToPlay.glitch_scene.roles;
+
+    // Randomly select glitch player(s) — must be distinct
+    const shuffledPlayers = shuffleGlitcherItems(connectedPlayers);
+    const glitchPlayers = shuffledPlayers.slice(0, glitchSlots);
+
     const shuffledTrueRoles = shuffleGlitcherItems(trueRoles);
     let roleIndex = 0;
 
     connectedPlayers.forEach((scenePlayer) => {
-      const isGlitch = scenePlayer.userId === glitchPlayer.userId;
+      const glitchIndex = glitchPlayers.findIndex((gp) => gp.userId === scenePlayer.userId);
+      const isGlitch = glitchIndex !== -1;
+      // For dual glitch: glitchIndex 0 gets roles[0], glitchIndex 1 gets roles[1]
+      // For single glitch: glitchIndex 0 gets a random role from glitchRoles
+      const glitchRole = isDualGlitch
+        ? (glitchRoles[glitchIndex] ?? glitchRoles[0])
+        : glitchRoles[Math.floor(Math.random() * glitchRoles.length)];
       const assignment: GlitcherAssignment = {
         sceneId: sceneToPlay.id,
         role: isGlitch ? glitchRole : shuffledTrueRoles[roleIndex++],
@@ -646,7 +655,8 @@ export class GlitcherEngine {
       scenePlayer.hasVoted = false;
     });
 
-    room.glitchUserId = glitchPlayer.userId;
+    room.glitchUserId = glitchPlayers[0].userId;
+    room.glitchUserIds = glitchPlayers.map((p) => p.userId);
     room.phaseId = randomUUID();
     room.state = "ROLE_REVEAL";
     this.broadcastState(room.id);
@@ -878,55 +888,39 @@ export class GlitcherEngine {
   private resolveVoting(room: GlitcherRoom) {
     if (!room.currentScene || !room.glitchUserId) return;
 
-    const glitchPlayer = room.players.find(
-      (p) => p.userId === room.glitchUserId,
-    );
+    const glitchUserIds = room.glitchUserIds ?? [room.glitchUserId];
+    const glitchPlayers = glitchUserIds
+      .map((id) => room.players.find((p) => p.userId === id))
+      .filter((p): p is GlitcherPlayer => !!p);
 
-    if (!glitchPlayer) {
+    if (glitchPlayers.length === 0) {
       this.resetToLobby(room);
       this.broadcastState(room.id);
       return;
     }
 
-    // Tally votes per player
-    const voteCounts = new Map<string, number>();
-    this.getSeatedPlayers(room).forEach((p) => voteCounts.set(p.userId, 0));
+    const totalPlayers = this.getSeatedPlayers(room).length;
 
-    Object.values(room.votes).forEach((vote) => {
-      if (vote.targetUserId && voteCounts.has(vote.targetUserId)) {
-        voteCounts.set(vote.targetUserId, (voteCounts.get(vote.targetUserId) || 0) + 1);
-      }
+    // Tally combined votes for all glitchers (treat all glitchers as one team)
+    let glitchVoteTotal = 0;
+    glitchUserIds.forEach((glitchId) => {
+      Object.values(room.votes).forEach((vote) => {
+        if (vote.targetUserId === glitchId) glitchVoteTotal++;
+      });
     });
 
-    let maxVotes = -1;
-    voteCounts.forEach((count) => {
-      if (count > maxVotes) maxVotes = count;
-    });
-
-    const topVotedUserIds: string[] = [];
-    voteCounts.forEach((count, userId) => {
-      if (count === maxVotes && maxVotes > 0) {
-        topVotedUserIds.push(userId);
-      }
-    });
-
-    let outcome: GlitcherOutcome = "GLITCH_WIN";
-
-    if (topVotedUserIds.length === 1) {
-      // Single majority top vote
-      if (topVotedUserIds[0] === room.glitchUserId) {
-        outcome = "NORMAL_WIN"; // Dân Thắng
-      } else {
-        outcome = "GLITCH_WIN"; // Glitch Thắng
-      }
-    } else if (topVotedUserIds.length > 1) {
-      // Tie for top votes
-      if (topVotedUserIds.includes(room.glitchUserId)) {
-        outcome = "TIE"; // Hòa
-      } else {
-        outcome = "GLITCH_WIN"; // Glitch Thắng
-      }
+    // Win condition: combined glitch votes must be > half of total players
+    const majority = totalPlayers / 2;
+    let outcome: GlitcherOutcome;
+    if (glitchVoteTotal > majority) {
+      outcome = "NORMAL_WIN"; // Dân thắng
+    } else if (glitchVoteTotal === majority) {
+      outcome = "TIE"; // Hòa (chính xác nửa)
+    } else {
+      outcome = "GLITCH_WIN"; // Glitch thắng
     }
+
+    const primaryGlitch = glitchPlayers[0];
 
     const reveal: GlitcherSceneReveal = {
       sceneNumber: room.sceneNumber,
@@ -938,8 +932,10 @@ export class GlitcherEngine {
         title: room.currentScene.glitch_scene.title,
         description: room.currentScene.glitch_scene.description,
       },
-      glitchUserId: glitchPlayer.userId,
-      glitchPlayerName: glitchPlayer.name,
+      glitchUserId: primaryGlitch.userId,
+      glitchPlayerName: primaryGlitch.name,
+      glitchUserIds,
+      glitchPlayerNames: glitchPlayers.map((p) => p.name),
       votes: this.getSeatedPlayers(room).map((player) => {
         const vote = room.votes[player.userId];
         const target = vote?.targetUserId
@@ -1055,6 +1051,7 @@ export class GlitcherEngine {
     room.seatOrderUserIds = [];
     room.currentScene = undefined;
     room.glitchUserId = undefined;
+    room.glitchUserIds = undefined;
     room.questionRound = null;
     room.answerLog = [];
     room.votes = {};

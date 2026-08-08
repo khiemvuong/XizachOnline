@@ -40,6 +40,7 @@ const getRoleNameVi = (role?: string) => {
   if (role === "Hunter") return "Thợ Săn";
   if (role === "Cupid") return "Cupid";
   if (role === "Elder") return "Già Làng";
+  if (role === "Silence") return "Tĩnh Lặng";
   return "Dân Làng";
 };
 
@@ -100,6 +101,10 @@ export default function WeredogRoleReveal({
     villager: {
       title: "DÂN LÀNG",
       desc: "Bạn không có chức năng thức dậy ban đêm. Hãy thu thập thông tin thảo luận ban ngày để suy đoán và treo cổ bầy sói.",
+    },
+    silence: {
+      title: "TĨNH LẶNG",
+      desc: "Bạn không có chức năng thức dậy ban đêm. Hãy lắng nghe, quan sát và bỏ phiếu cùng phe Dân vào ban ngày.",
     },
   };
 
@@ -176,6 +181,7 @@ export default function WeredogRoleReveal({
                     p.role === "Hunter" ? { text: "text-amber-300", bg: "bg-amber-950/50 border border-amber-800/40" } :
                     p.role === "Cupid" ? { text: "text-pink-300", bg: "bg-pink-950/50 border border-pink-800/40" } :
                     p.role === "Elder" ? { text: "text-purple-300", bg: "bg-purple-950/50 border border-purple-800/40" } :
+                    p.role === "Silence" ? { text: "text-slate-200", bg: "bg-slate-950/70 border border-slate-500/50" } :
                     { text: "text-slate-300", bg: "bg-slate-900/60 border border-slate-700/40" };
 
                   return (
@@ -293,13 +299,21 @@ export default function WeredogRoleReveal({
 
                 {/* Back Side: Role illustration */}
                 <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-xl overflow-hidden shadow-2xl border border-[#cda372]/50">
-                  <Image 
-                    src={getRoleImage(roleKey)}
-                    alt={currentRole.title}
-                    fill
-                    sizes="200px"
-                    className="object-cover"
-                  />
+                  {roleKey === "silence" ? (
+                    <div className="flex h-full w-full flex-col items-center justify-center bg-[#111820] px-5 text-center text-[#d5e0e2]">
+                      <span className="font-gothic-label text-[11px] tracking-[0.35em] text-[#829ea2]">VAI TRÒ</span>
+                      <strong className="mt-4 font-gothic-heading text-3xl tracking-[0.18em]">TĨNH<br />LẶNG</strong>
+                      <span className="mt-5 font-gothic-body text-[10px] leading-relaxed text-[#829ea2]">Không có hành động ban đêm.</span>
+                    </div>
+                  ) : (
+                    <Image
+                      src={getRoleImage(roleKey)}
+                      alt={currentRole.title}
+                      fill
+                      sizes="200px"
+                      className="object-cover"
+                    />
+                  )}
                 </div>
               </div>
             </div>
